@@ -1,26 +1,186 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================================
+   REDECO Design Tokens — dark navy + cyan (design-system/redeco)
+   Semantic tokens: KHÔNG dùng hex thô trong component.
+   ============================================================ */
+@theme {
+  --color-app: #1f293a; /* nền chính (đồng bộ trang login) */
+  --color-app-deep: #16202e; /* nền sâu hơn (sidebar/header) */
+  --color-panel: #2c4766; /* viền + đường kẻ */
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass-strong: rgba(255, 255, 255, 0.09);
+  --color-accent: #00eeff; /* cyan neon */
+  --color-accent-soft: rgba(0, 238, 255, 0.12);
+  --color-ink: #f8fafc; /* chữ chính */
+  --color-ink-muted: #94a3b8; /* chữ phụ */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --font-sans: var(--font-poppins);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-app);
+  color: var(--color-ink);
+  font-family: var(--font-poppins), system-ui, sans-serif;
+}
+
+/* Kính mờ dùng chung cho bento cards */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-hover {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.glass-hover:hover {
+  background: var(--color-glass-strong);
+  border-color: rgba(0, 238, 255, 0.35);
+}
+
+/* ============================================================
+   Trang Login — vòng xoay neon + floating label (theo mẫu duyệt)
+   ============================================================ */
+.login-scene {
+  position: relative;
+  width: 256px;
+  height: 256px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-scene > span {
+  position: absolute;
+  left: 0;
+  width: 32px;
+  height: 6px;
+  background: #2c4766;
+  border-radius: 8px;
+  transform-origin: 128px;
+  transform: scale(2.2) rotate(calc(var(--i) * (360deg / 50)));
+  animation: login-blink 3s linear infinite;
+  animation-delay: calc(var(--i) * (3s / 50));
+}
+
+@keyframes login-blink {
+  0% {
+    background: var(--color-accent);
+  }
+  25% {
+    background: #2c4766;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-scene > span {
+    animation: none;
+  }
+}
+
+/* Vòng xoay thu nhỏ trên màn hình rất hẹp để không tràn ngang */
+@media (max-width: 420px) {
+  .login-scene {
+    transform: scale(0.78);
+  }
+}
+
+.login-box {
+  position: absolute;
+  width: min(400px, calc(100vw - 24px));
+}
+
+.login-box form {
+  width: 100%;
+  padding: 0 50px;
+}
+
+@media (max-width: 420px) {
+  .login-box form {
+    padding: 0 30px;
+  }
+}
+
+.login-title {
+  font-size: 2em;
+  color: var(--color-accent);
+  text-align: center;
+  font-weight: 600;
+}
+
+.input-box {
+  position: relative;
+  margin: 25px 0;
+}
+
+.input-box input {
+  width: 100%;
+  height: 50px;
+  background: transparent;
+  border: 2px solid #2c4766;
+  outline: none;
+  border-radius: 40px;
+  font-size: 1em;
+  color: #fff;
+  padding: 0 20px;
+  transition: 0.5s;
+}
+
+.input-box input:focus,
+.input-box input:valid {
+  border-color: var(--color-accent);
+}
+
+.input-box label {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  font-size: 1em;
+  color: #fff;
+  pointer-events: none;
+  transition: 0.5s ease;
+}
+
+.input-box input:focus ~ label,
+.input-box input:valid ~ label {
+  top: 1px;
+  font-size: 0.8em;
+  background-color: #1f293a;
+  padding: 0 6px;
+  color: var(--color-accent);
+}
+
+.login-btn {
+  width: 100%;
+  height: 45px;
+  border-radius: 45px;
+  background: var(--color-accent);
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 1em;
+  color: #1f293a;
+  font-weight: 600;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+  box-shadow: 0 0 18px rgba(0, 238, 255, 0.45);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-btn:focus-visible,
+.input-box input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }

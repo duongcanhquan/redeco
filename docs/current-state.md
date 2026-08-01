@@ -48,6 +48,19 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Quy trình migration sau này: viết file vào `supabase/migrations/` → `pnpm exec supabase db push --db-url $DIRECT_URL` (KHÔNG chạy SQL thủ công trên dashboard nữa để history không lệch).
 - Tool hỗ trợ: `scripts/inspect-db.cjs` (node, dùng devDep `pg`) — in ra tables/columns/policies/functions/migration history của remote DB.
 
+### ✅ Auth + Login + Superadmin Console UI (2026-08-01)
+
+- **Design System đã sinh & persist**: `design-system/redeco/MASTER.md` (ui-ux-pro-max). Palette chốt: nền navy `#1f293a` (`--color-app`), accent cyan `#00eeff` (`--color-accent`), kính mờ (`.glass`) + bento grid. Font: **Be Vietnam Pro** (Poppins không có glyph tiếng Việt). Tokens semantic khai báo trong `apps/web/src/app/globals.css` qua `@theme` — cấm hex thô trong component.
+- **Superadmin**: `scripts/create-superadmin.cjs` (idempotent) — đã tạo `superadmin@gmail.com` / `123456` (user id `a43744b6-...`), `app_metadata.is_platform_admin=true` + row trong `platform_admins`.
+- **Supabase phía web**: `@supabase/supabase-js` + `@supabase/ssr`; helpers `src/lib/supabase/client.ts` (browser) & `server.ts` (RSC); `apps/web/.env.local` (gitignored) chứa URL + anon key.
+- **Route protection**: `src/proxy.ts` (Next 16 đổi tên middleware→proxy) — refresh session + chặn `/platform`: chưa login → `/login?next=...`, login nhưng không phải platform admin → `/login?error=forbidden`.
+- **`/login`**: đúng mẫu form animated đã duyệt (vòng 50 span neon xoay + floating label, cyan `#0ef`), tiếng Việt, responsive (scale ở <420px), `prefers-reduced-motion`, focus-visible, thông báo lỗi rõ. Sau login: platform admin → `/platform`; user thường → thông báo workspace công ty đang xây.
+- **Console `/platform`** (glassmorphism + bento, icon lucide-react, sidebar desktop / nav ngang mobile):
+  - Tổng quan: 4 stat cards (công ty, HĐ hiệu lực, sắp hết hạn ≤30 ngày, tổng seats) + HĐ gần đây + tóm tắt catalog.
+  - `companies`, `contracts` (bảng + empty state; nút Tạo đang disabled chờ Platform API), `modules` (render cây 3 tầng), `settings` (JSON viewer), `account` (đổi mật khẩu qua `auth.updateUser` + signout).
+  - Data đọc trực tiếp qua RLS (JWT có `is_platform_admin`) — mọi query nằm ở `src/services/platform.service.ts`, KHÔNG trong component.
+- **Đã verify**: typecheck ✓ lint ✓ build ✓; smoke test: `/login` 200, `/platform` 307→login khi chưa đăng nhập, login API superadmin trả claim đúng.
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
@@ -79,16 +92,14 @@ Ghi chú kỹ thuật quan trọng:
 
 - Monorepo build sạch; đã push lên GitHub `duongcanhquan/redeco` (main). Repo đang **PUBLIC** — đã khuyến nghị chuyển private, chờ người dùng quyết.
 - Supabase: migration 0001 ĐÃ áp dụng, history đồng bộ. Credentials đầy đủ trong `apps/api/.env`.
-- Người dùng đang deploy `apps/web` lên Vercel — gặp lỗi "No Output Directory named public" do Root Directory chưa trỏ `apps/web`; đã hướng dẫn sửa trên dashboard, chưa xác nhận kết quả.
+- Người dùng đang deploy `apps/web` lên Vercel — gặp lỗi "No Output Directory named public" do Root Directory chưa trỏ `apps/web`; đã hướng dẫn sửa trên dashboard, chưa xác nhận kết quả. **Lưu ý**: Vercel cần thêm env `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - Chưa cấu hình R2 bucket.
-- Chưa chạy script sinh Design System của ui-ux-pro-max (`design-system/MASTER.md` chưa tồn tại) — bắt buộc chạy khi bắt đầu task UI đầu tiên.
 
 ---
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **NestJS Platform API**: JWT guard (verify qua JWKS, URL đã có trong .env), `PlatformAdminGuard`, `TenantContext`, `ModuleAccessGuard` (dựa `my_module_ids()`); endpoints superadmin: CRUD công ty (tạo kèm admin user + gán app_metadata), CRUD hợp đồng + entitlements; tạo superadmin đầu tiên (script gán `is_platform_admin` vào app_metadata + insert `platform_admins`).
-3. **Sinh Design System** cho REDECO bằng script ui-ux-pro-max (`--design-system --persist -p "REDECO"`) → tạo `design-system/MASTER.md`.
+1. **NestJS Platform API**: JWT guard (verify qua JWKS, URL đã có trong .env), `PlatformAdminGuard`, `TenantContext`, `ModuleAccessGuard` (dựa `my_module_ids()`); endpoints superadmin: CRUD công ty (tạo kèm admin user + gán app_metadata), CRUD hợp đồng + entitlements → sau đó mở khóa các nút "Tạo công ty"/"Lập hợp đồng" đang disabled trong console.
 4. **Xây Metadata Engine phía frontend**: zod schema cho UI metadata, Component Registry, FormRenderer/GridRenderer (tuân `ui-design.mdc` — responsive 3 thiết bị).
 5. **Cấu hình R2**: bucket + service backend đọc/ghi metadata JSON theo key convention `tenants/{tenant_id}/metadata/...`.
 6. **Module nghiệp vụ đầu tiên** (ví dụ WorkOrder): bắt đầu bằng Aggregate Design Blueprint theo `ddd-blueprint.mdc`.
@@ -106,3 +117,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Supabase CLI + supabase init; viết migration 0001 (tenants, user_profiles, RLS, current_tenant_id); tạo .env.example + apps/api/.env — chờ password để apply |
 | 2026-08-01 | Điền đủ credentials (.env); xác minh schema remote khớp migration (user đã chạy SQL thủ công); migration repair → history đồng bộ; thêm scripts/inspect-db.cjs |
 | 2026-08-01 | Brainstorm + duyệt spec Platform Core (5 quyết định, ADR-008); migration 0002 apply (6 bảng mới + 3 functions quyền); seed 13 node catalog; types platform vào @redeco/domain |
+| 2026-08-01 | Design System persist (design-system/redeco); tạo superadmin; trang /login theo mẫu animated; console /platform (bento + glass, 6 trang); proxy bảo vệ route; smoke test pass |
