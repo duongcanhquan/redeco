@@ -120,6 +120,17 @@ Theo góp ý: superadmin chỉ quản lý khách hàng + hợp đồng + theo d�
 - **Bỏ trang Tham số superadmin** (xóa settings page/editor/actions + `updatePlatformSetting`/`listSettings`): cài đặt, tham số vận hành thuộc phần cài đặt của khách hàng (`/app/settings`); `platform_settings` trong DB giữ nguyên cho cron nhắc hạn.
 - **Đã verify**: typecheck/lint/build sạch (10 route, contracts/modules giờ là redirect).
 
+### ✅ Tối ưu hiệu năng toàn diện (2026-08-01)
+
+Người dùng phản ánh bấm/phản hồi chậm, truy xuất dữ liệu chậm. 4 tối ưu:
+
+1. **Migration 0006** (`20260801200000_rls_initplan_perf.sql`, ĐÃ apply): bọc mọi lời gọi hàm trong RLS policy vào `(select ...)` (InitPlan pattern theo Supabase docs) — trước đó `has_module_access('kinh-doanh')` (2 recursive CTE) và `current_tenant_id()` bị đánh giá LẠI TỪNG DÒNG trên 9 bảng sales + toàn bộ bảng platform; giờ tính đúng 1 lần mỗi câu lệnh. Càng nhiều dữ liệu chênh lệch càng lớn.
+2. **Bỏ round-trip Auth mỗi request**: proxy đổi `getUser()` (gọi mạng ~200-500ms) → `getSession()` (đọc cookie, chỉ gọi mạng khi token hết hạn cần refresh ~1 lần/giờ). Server components/services dùng helper mới `getSessionClaims()` (`lib/supabase/server.ts`) — decode claims trực tiếp từ access token, bọc React `cache()` dedupe trong request. **An toàn**: claims lấy từ chính token mà mọi query DB mang theo (token giả → Supabase từ chối chữ ký → RLS chặn); riêng luồng service role: `assertPlatformAdmin` giữ `getUser()` verify đầy đủ, `assertTenantAdmin` được "verify gián tiếp" qua bước đọc role từ `user_profiles` bằng client RLS (token giả → query fail → role member → chặn).
+3. **`loading.tsx` skeleton** cho `/platform` + `/app` (`components/platform/page-skeleton.tsx`): bấm menu là hiện skeleton NGAY, data stream về sau — hết cảm giác "bấm không ăn".
+4. **Router cache** (`next.config.ts` `experimental.staleTimes: {dynamic: 30}`): trang đã xem giữ 30s phía client, bấm qua lại menu tức thì; Server Action + revalidatePath vẫn xóa cache ngay khi dữ liệu đổi. `createServerSupabase` cũng bọc `cache()` — 1 client/request.
+
+- **Đã verify**: typecheck/lint/build sạch; smoke test `test-sales-flow.cjs` (9 bước) + `test-members-flow.cjs` (5 bước) PASS — RLS giữ nguyên hành vi sau InitPlan wrap.
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):

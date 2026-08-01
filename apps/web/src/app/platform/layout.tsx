@@ -1,7 +1,7 @@
 import { Building2, LayoutDashboard, UserRound } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { getSessionClaims } from '@/lib/supabase/server';
 import { NavLink } from '@/components/platform/nav-link';
 import { SignOutButton } from '@/components/platform/sign-out-button';
 
@@ -14,12 +14,9 @@ const NAV_ITEMS = [
 export default async function PlatformLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const claims = await getSessionClaims();
 
-  if (!user || user.app_metadata['is_platform_admin'] !== true) {
+  if (!claims?.isPlatformAdmin) {
     redirect('/login?error=forbidden');
   }
 

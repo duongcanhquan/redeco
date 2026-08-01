@@ -14,7 +14,7 @@ import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
 import { NavLink } from '@/components/platform/nav-link';
 import { SignOutButton } from '@/components/platform/sign-out-button';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getMyRootModules } from '@/services/sales.service';
 
 // Route UI đã có cho từng module key (các module khác hiện "sắp ra mắt")
@@ -30,18 +30,14 @@ const SALES_LINKS = [
 export default async function WorkspaceLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const tenantId = user?.app_metadata['tenant_id'];
-  if (!user || typeof tenantId !== 'string' || !tenantId) {
+  const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
+  if (!claims?.tenantId) {
     redirect('/login?error=forbidden');
   }
 
   const [{ data: tenant }, { data: profile }, modules] = await Promise.all([
-    supabase.from('tenants').select('name').eq('id', tenantId).single(),
-    supabase.from('user_profiles').select('role').eq('id', user.id).single(),
+    supabase.from('tenants').select('name').eq('id', claims.tenantId).single(),
+    supabase.from('user_profiles').select('role').eq('id', claims.userId).single(),
     getMyRootModules(supabase),
   ]);
   const role = (profile as { role?: string } | null)?.role ?? 'member';

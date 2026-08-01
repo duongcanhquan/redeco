@@ -25,10 +25,14 @@ export default async function proxy(request: NextRequest) {
     },
   );
 
-  // Refresh session (bắt buộc gọi getUser để cookie không hết hạn)
+  // Đọc session từ cookie — KHÔNG round-trip tới Auth server khi token còn
+  // hạn; getSession tự refresh (1 lần/giờ) khi token hết hạn và ghi cookie
+  // mới qua setAll. Routing dựa trên claim trong cookie là đủ an toàn:
+  // dữ liệu thật luôn bị Supabase verify JWT + RLS chặn ở tầng DB.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const path = request.nextUrl.pathname;
   const isPlatformAdminUser = user?.app_metadata['is_platform_admin'] === true;

@@ -13,7 +13,7 @@ import {
   type SalesOrderStatus,
 } from '@optimake/domain';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -31,24 +31,21 @@ export interface TenantContext {
 }
 
 export async function getTenantContext(): Promise<TenantContext> {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Chưa đăng nhập.');
-  const tenantId = user.app_metadata['tenant_id'];
-  if (typeof tenantId !== 'string' || !tenantId) {
-    throw new Error('Tài khoản không thuộc công ty nào.');
-  }
+  // Claims decode từ access token (0 round-trip tới Auth). Bước đọc role
+  // dưới đây chạy qua RLS với chính token đó — token giả sẽ bị Supabase
+  // từ chối, query trả rỗng => role 'member' => các assert quyền sẽ chặn.
+  const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
+  if (!claims) throw new Error('Chưa đăng nhập.');
+  if (!claims.tenantId) throw new Error('Tài khoản không thuộc công ty nào.');
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', claims.userId)
     .single();
   return {
     supabase,
-    userId: user.id,
-    tenantId,
+    userId: claims.userId,
+    tenantId: claims.tenantId,
     role: ((profile as { role?: string } | null)?.role ?? 'member') as TenantContext['role'],
   };
 }
