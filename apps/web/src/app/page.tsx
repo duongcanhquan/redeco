@@ -2,11 +2,14 @@ import {
   AlarmClock,
   ArrowRight,
   BadgeDollarSign,
+  BarChart3,
   Boxes,
   Brain,
+  Building2,
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
+  EyeOff,
   FileSpreadsheet,
   FileText,
   Gauge,
@@ -14,33 +17,36 @@ import {
   LineChart,
   MessagesSquare,
   PackageSearch,
+  Puzzle,
   Rocket,
   ScrollText,
   ShieldCheck,
   Sparkles,
+  ToggleRight,
   TrendingUp,
   Truck,
+  Unplug,
   UsersRound,
-  Wallet,
   Workflow,
   Wrench,
   Zap,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Logo } from '@/components/brand/logo';
+import { Logo, LogoMark } from '@/components/brand/logo';
 import { Reveal } from '@/components/landing/reveal';
 import { RobotEasterEgg } from '@/components/landing/robot-easter-egg';
 
 export const metadata: Metadata = {
   title: 'Optimake — Nền tảng ERP/MES tích hợp AI cho doanh nghiệp sản xuất',
   description:
-    'Optimake giải quyết nỗi đau của doanh nghiệp sản xuất từ A đến Z: kinh doanh, kho, sản xuất, kế hoạch, chất lượng — trên một nền tảng thông minh tích hợp AI.',
+    'Optimake đồng bộ mọi bước vận hành theo thời gian thực: kinh doanh, sản xuất, kho, nhân sự, tài chính — tự cá nhân hóa theo mô hình doanh nghiệp của bạn nhờ AI.',
 };
 
 const NAV_LINKS = [
   { href: '#noi-dau', label: 'Vấn đề' },
-  { href: '#modules', label: 'Module' },
+  { href: '#modules', label: 'Nền tảng' },
+  { href: '#ca-nhan-hoa', label: 'Cá nhân hóa' },
   { href: '#ai', label: 'AI' },
   { href: '#quy-trinh', label: 'Quy trình' },
 ] as const;
@@ -77,7 +83,6 @@ export default function LandingPage() {
 
       {/* ===== Hero ===== */}
       <section className="bg-grid relative overflow-hidden pt-32 pb-16 sm:pt-40 sm:pb-24">
-        {/* Aurora nền */}
         <div className="aurora left-[-10%] top-[-10%] h-105 w-105 bg-accent/60" />
         <div className="aurora right-[-12%] top-[20%] h-120 w-120 bg-blue-600/50 [animation-delay:4s]" />
         <div className="aurora bottom-[-30%] left-[30%] h-100 w-100 bg-violet-600/40 [animation-delay:8s]" />
@@ -101,8 +106,8 @@ export default function LandingPage() {
             </Reveal>
             <Reveal delay={180}>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-muted sm:text-lg">
-                Optimake gom kinh doanh, kho, sản xuất, kế hoạch và tài chính về một nơi — dữ liệu
-                thời gian thực, AI dự báo và trợ lý ảo giúp bạn quyết định nhanh hơn đối thủ.
+                Mọi bước — từ chốt đơn, sản xuất đến thu tiền — đồng bộ theo thời gian thực. AI dự
+                báo, trợ lý ảo và quy trình tự cá nhân hóa theo đúng cách doanh nghiệp bạn vận hành.
               </p>
             </Reveal>
             <Reveal delay={270}>
@@ -119,13 +124,13 @@ export default function LandingPage() {
                   href="#modules"
                   className="inline-flex h-12 items-center gap-2 rounded-2xl border border-panel/70 px-6 text-sm font-medium text-ink transition-colors hover:border-accent/50 hover:bg-glass"
                 >
-                  Khám phá module
+                  Khám phá nền tảng
                 </a>
               </div>
             </Reveal>
             <Reveal delay={360}>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted">
-                {['Triển khai theo module', 'Dữ liệu cách ly tuyệt đối (RLS)', 'Dùng được trên mọi thiết bị'].map(
+                {['Đồng bộ realtime mọi phòng ban', 'Dữ liệu cách ly tuyệt đối (RLS)', 'Tự cá nhân hóa bằng AI'].map(
                   (t) => (
                     <li key={t} className="inline-flex items-center gap-1.5">
                       <CheckCircle2 size={15} className="text-success" aria-hidden />
@@ -137,7 +142,6 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Mock dashboard nổi */}
           <Reveal delay={200} className="relative">
             <HeroMock />
           </Reveal>
@@ -148,9 +152,9 @@ export default function LandingPage() {
       <section aria-label="Con số nổi bật" className="relative border-y border-panel/30 bg-app-deep/50">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px px-4 py-8 sm:px-6 lg:grid-cols-4">
           {[
-            { icon: Layers, value: '8+', label: 'Module lõi mở rộng dần' },
+            { icon: Layers, value: '9+', label: 'Nền tảng nghiệp vụ liên thông' },
             { icon: ShieldCheck, value: '100%', label: 'Cách ly dữ liệu từng công ty' },
-            { icon: Zap, value: '< 1 giây', label: 'Kiểm tra tồn kho & tín dụng' },
+            { icon: Zap, value: 'Realtime', label: 'Mọi bước đồng bộ tức thì' },
             { icon: Brain, value: '24/7', label: 'AI Copilot đồng hành' },
           ].map(({ icon: Icon, value, label }, i) => (
             <Reveal key={label} delay={i * 80} className="flex items-center gap-4 px-4 py-3">
@@ -173,11 +177,24 @@ export default function LandingPage() {
             Nỗi đau quen thuộc của <span className="text-accent">doanh nghiệp sản xuất</span>
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
-            Dữ liệu rời rạc, quyết định chậm, khách hàng chờ đợi — Optimake sinh ra để xóa bỏ tất cả.
+            Quy trình chạy trong bóng tối, các phòng ban lệch nhịp nhau — mỗi ngày chậm kiểm soát là
+            một ngày mất tiền.
           </p>
         </Reveal>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
+            {
+              icon: EyeOff,
+              title: 'Quy trình chạy "trong bóng tối"',
+              desc: 'Đơn hàng đang nằm ở bước nào? Ai đang giữ? Tắc ở đâu? Không ai trả lời được ngay — kiểm soát luôn chậm một nhịp so với thực tế.',
+              hot: true,
+            },
+            {
+              icon: Unplug,
+              title: 'Các bước lệch nhịp, không realtime',
+              desc: 'Kinh doanh chốt đơn nhưng kho chưa biết, sản xuất chưa nhận lệnh, giao hàng chờ giấy tờ — mỗi khâu một nhịp, sai lệch dồn về cuối chuỗi.',
+              hot: true,
+            },
             {
               icon: FileSpreadsheet,
               title: 'Excel chồng Excel',
@@ -198,39 +215,81 @@ export default function LandingPage() {
               title: 'Báo cáo luôn trễ nhịp',
               desc: 'Số liệu tổng hợp tay mất nhiều ngày — ra quyết định dựa trên quá khứ.',
             },
-          ].map(({ icon: Icon, title, desc }, i) => (
-            <Reveal key={title} delay={i * 90}>
-              <article className="glass glass-hover h-full rounded-2xl p-6">
-                <span className="grid size-12 place-items-center rounded-xl border border-danger/30 bg-danger/10 text-danger">
-                  <Icon size={22} aria-hidden />
-                </span>
+          ].map(({ icon: Icon, title, desc, hot }, i) => (
+            <Reveal key={title} delay={i * 80}>
+              <article
+                className={`glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1 ${
+                  hot ? 'border-danger/30' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <span className="grid size-12 place-items-center rounded-xl border border-danger/30 bg-danger/10 text-danger">
+                    <Icon size={22} aria-hidden />
+                  </span>
+                  {hot && (
+                    <span className="rounded-full bg-danger/10 px-2.5 py-1 text-[10px] font-bold tracking-wide text-danger">
+                      ĐAU NHẤT
+                    </span>
+                  )}
+                </div>
                 <h3 className="mt-4 font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-muted">{desc}</p>
               </article>
             </Reveal>
           ))}
         </div>
+
+        {/* Dải đồng bộ realtime — lời giải trực quan */}
+        <Reveal delay={200}>
+          <div className="glass mt-10 rounded-2xl border-accent/25 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="flex items-center gap-2 font-semibold">
+                <span className="relative flex size-2.5">
+                  <span className="pulse-ring absolute inline-flex size-full rounded-full bg-success" />
+                  <span className="blink-dot relative inline-flex size-2.5 rounded-full bg-success" />
+                </span>
+                Với Optimake: mọi bước tự khai báo trạng thái — bạn nhìn thấy cả chuỗi{' '}
+                <span className="text-accent">ngay lúc nó diễn ra</span>
+              </p>
+              <span className="rounded-full bg-success/10 px-3 py-1 text-[11px] font-bold tracking-wider text-success">
+                LIVE
+              </span>
+            </div>
+            <div aria-hidden className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {['Chốt đơn', 'Lệnh kho', 'Sản xuất', 'QC', 'Giao hàng', 'Thu tiền'].map((s, i) => (
+                <span
+                  key={s}
+                  className="step-live rounded-xl border border-panel/40 px-3 py-2.5 text-center text-xs font-medium text-ink-muted"
+                  style={{ animationDelay: `${i * 1.2}s` }}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </section>
 
-      {/* ===== Bento modules ===== */}
+      {/* ===== Các nền tảng ===== */}
       <section id="modules" className="relative scroll-mt-24 border-y border-panel/30 bg-app-deep/40 py-20">
-        <div className="aurora left-[10%] top-[10%] h-80 w-80 bg-accent/40" />
+        <div className="aurora left-[10%] top-[5%] h-80 w-80 bg-accent/40" />
+        <div className="aurora right-[5%] bottom-[10%] h-72 w-72 bg-blue-600/40 [animation-delay:6s]" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <Reveal>
             <h2 className="text-center text-3xl font-bold sm:text-4xl">
-              Một nền tảng — <span className="text-accent">đầy đủ mọi mắt xích</span>
+              Hệ sinh thái nền tảng <span className="text-accent">liên thông realtime</span>
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
-              Bật đúng module bạn cần, mở rộng dần theo quy mô. Tất cả nói chuyện với nhau theo thời
-              gian thực.
+              Mỗi nền tảng mạnh riêng, cùng nói chuyện trên một dòng dữ liệu — bật đúng thứ bạn cần,
+              mở rộng dần theo quy mô.
             </p>
           </Reveal>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Reveal className="sm:col-span-2 lg:row-span-2">
-              <article className="glass glass-hover flex h-full flex-col rounded-2xl border-accent/25 p-7">
+              <article className="glass glass-hover shimmer-card flex h-full flex-col rounded-2xl border-accent/25 p-7 transition-transform hover:-translate-y-1">
                 <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
-                  <CheckCircle2 size={12} aria-hidden /> ĐANG VẬN HÀNH
+                  <span className="blink-dot size-1.5 rounded-full bg-success" /> ĐANG VẬN HÀNH
                 </span>
                 <span className="mt-4 grid size-13 place-items-center rounded-2xl border border-accent/30 bg-accent-soft text-accent">
                   <ScrollText size={26} aria-hidden />
@@ -258,25 +317,70 @@ export default function LandingPage() {
             </Reveal>
 
             {[
-              { icon: Boxes, title: 'Kho & tồn kho', desc: 'Tồn thời gian thực, cảnh báo mức tối thiểu, truy xuất lô.' },
-              { icon: Wrench, title: 'Sản xuất MES', desc: 'Lệnh sản xuất, tiến độ từng công đoạn, dữ liệu máy IoT.' },
-              { icon: CalendarClock, title: 'Kế hoạch MPS/MRP', desc: 'Hoạch định nhu cầu vật tư từ dự báo và đơn hàng thật.' },
-              { icon: ClipboardCheck, title: 'Chất lượng QC', desc: 'Tiêu chuẩn kiểm, phiếu QC, truy vết nguyên nhân lỗi.' },
-              { icon: UsersRound, title: 'Nhân sự & ca kíp', desc: 'Chấm công theo ca, năng suất từng tổ đội.' },
-              { icon: Wallet, title: 'Tài chính', desc: 'Công nợ, dòng tiền, giá thành theo đơn hàng thực tế.' },
-            ].map(({ icon: Icon, title, desc }, i) => (
+              {
+                icon: Wrench,
+                title: 'Quản lý sản xuất (MES)',
+                desc: 'Nhìn xuyên xưởng theo thời gian thực — từng lệnh sản xuất, từng công đoạn, từng máy.',
+                points: ['Tiến độ công đoạn realtime', 'OEE & dữ liệu máy IoT', 'Cảnh báo tắc nghẽn tức thì'],
+              },
+              {
+                icon: Boxes,
+                title: 'Kho & chuỗi cung ứng',
+                desc: 'Tồn kho chính xác đến giây, truy xuất nguồn gốc trọn vẹn từ vật tư đến thành phẩm.',
+                points: ['Tồn realtime đa kho', 'Truy xuất lô / serial', 'Cảnh báo min–max tự động'],
+              },
+              {
+                icon: CalendarClock,
+                title: 'Kế hoạch MPS/MRP',
+                desc: 'Biến dự báo và đơn hàng thật thành kế hoạch sản xuất và nhu cầu vật tư tối ưu.',
+                points: ['Cân đối năng lực máy & người', 'Tính nhu cầu vật tư từ BOM', 'Lịch sản xuất kéo–thả'],
+              },
+              {
+                icon: ClipboardCheck,
+                title: 'Chất lượng + AI',
+                desc: 'QC theo tiêu chuẩn từng công đoạn; AI phân tích dữ liệu lỗi để nâng chất lượng liên tục.',
+                points: ['Phiếu kiểm theo tiêu chuẩn', 'AI truy nguyên nhân lỗi', 'Cảnh báo xu hướng bất thường'],
+              },
+              {
+                icon: UsersRound,
+                title: 'Nhân sự & ca kíp',
+                desc: 'Quản trị con người gắn thẳng với sản lượng — ca kíp, năng suất, lương thưởng minh bạch.',
+                points: ['Chấm công theo ca', 'Năng suất từng tổ đội', 'Lương theo sản phẩm'],
+              },
+              {
+                icon: Building2,
+                title: 'Hành chính số',
+                desc: 'Phê duyệt, văn bản, tài sản, xe cộ, phòng họp — mọi thủ tục nội bộ chạy số hóa.',
+                points: ['Luồng phê duyệt tùy biến', 'Quản lý văn bản & tài sản', 'Đặt lịch họp, xe, phòng'],
+              },
+              {
+                icon: BadgeDollarSign,
+                title: 'Tài chính & tối ưu chi phí',
+                desc: 'Giá thành thực tế theo từng đơn hàng — bóc tách chi phí và chỉ ra đúng điểm rò rỉ.',
+                points: ['Giá thành theo đơn thực tế', 'Công nợ & dòng tiền realtime', 'Phát hiện điểm rò rỉ chi phí'],
+              },
+              {
+                icon: BarChart3,
+                title: 'Phân tích AI đa chiều',
+                desc: 'Dashboard lợi nhuận theo khu vực, sản phẩm, khách hàng — kèm khuyến nghị hành động.',
+                points: ['Lợi nhuận đa chiều', 'Dự báo xu hướng ML', 'Khuyến nghị hành động tự động'],
+              },
+            ].map(({ icon: Icon, title, desc, points }, i) => (
               <Reveal key={title} delay={(i % 3) * 90}>
-                <article className="glass glass-hover h-full rounded-2xl p-6">
-                  <div className="flex items-start justify-between">
-                    <span className="grid size-12 place-items-center rounded-xl border border-panel/60 bg-glass text-accent">
-                      <Icon size={22} aria-hidden />
-                    </span>
-                    <span className="rounded-full bg-glass px-2.5 py-1 text-[11px] font-medium text-ink-muted">
-                      Sắp ra mắt
-                    </span>
-                  </div>
+                <article className="glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1">
+                  <span className="grid size-12 place-items-center rounded-xl border border-panel/60 bg-glass text-accent">
+                    <Icon size={22} aria-hidden />
+                  </span>
                   <h3 className="mt-4 font-semibold">{title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-muted">{desc}</p>
+                  <ul className="mt-3 space-y-1.5 text-xs text-ink-muted">
+                    {points.map((p) => (
+                      <li key={p} className="inline-flex w-full items-center gap-1.5">
+                        <CheckCircle2 size={13} className="shrink-0 text-accent/80" aria-hidden />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
                 </article>
               </Reveal>
             ))}
@@ -284,9 +388,74 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== AI ===== */}
-      <section id="ai" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
+      {/* ===== Cá nhân hóa ===== */}
+      <section id="ca-nhan-hoa" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2">
+          <Reveal className="order-2 lg:order-1">
+            <PersonalizeOrbit />
+          </Reveal>
+
+          <div className="order-1 lg:order-2">
+            <Reveal>
+              <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3.5 py-1.5 text-xs font-medium text-accent">
+                <Puzzle size={14} aria-hidden />
+                Cá nhân hóa doanh nghiệp & quy trình
+              </p>
+              <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
+                Không ép doanh nghiệp theo phần mềm —{' '}
+                <span className="bg-gradient-to-r from-accent to-blue-500 bg-clip-text text-transparent">
+                  phần mềm tự uốn theo bạn
+                </span>
+              </h2>
+              <p className="mt-4 text-ink-muted">
+                Nhờ kiến trúc linh hoạt và AI, Optimake thích ứng với mọi mô hình — sản xuất theo
+                đơn (MTO), theo kho (MTS), thiết kế theo yêu cầu (ETO) hay gia công OEM.
+              </p>
+            </Reveal>
+            <div className="mt-8 space-y-5">
+              {[
+                {
+                  icon: Layers,
+                  title: 'Kiến trúc linh hoạt, không cần code',
+                  desc: 'Thêm trường dữ liệu, biểu mẫu, báo cáo riêng của doanh nghiệp bạn — cấu hình là chạy, không chờ lập trình.',
+                },
+                {
+                  icon: Workflow,
+                  title: 'Quy trình tùy biến theo mô hình',
+                  desc: 'Luồng duyệt, bước sản xuất, quy tắc giá — vẽ lại theo đúng cách xưởng của bạn đang vận hành.',
+                },
+                {
+                  icon: Brain,
+                  title: 'AI học cách bạn vận hành',
+                  desc: 'Hệ thống quan sát dữ liệu thật, tự đề xuất tinh chỉnh quy trình và tự động hóa những việc lặp lại.',
+                },
+                {
+                  icon: ToggleRight,
+                  title: 'Bật module theo giai đoạn',
+                  desc: 'Khởi đầu gọn với thứ cần nhất, mở thêm nền tảng khi doanh nghiệp lớn lên — không trả tiền cho thứ thừa.',
+                },
+              ].map(({ icon: Icon, title, desc }, i) => (
+                <Reveal key={title} delay={i * 100}>
+                  <div className="flex gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-accent/25 bg-accent-soft text-accent">
+                      <Icon size={22} aria-hidden />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold">{title}</h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{desc}</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== AI ===== */}
+      <section id="ai" className="relative scroll-mt-24 border-y border-panel/30 bg-app-deep/40 py-20">
+        <div className="aurora right-[10%] top-[10%] h-80 w-80 bg-violet-600/40" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
           <div>
             <Reveal>
               <p className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/10 px-3.5 py-1.5 text-xs font-medium text-violet-300">
@@ -340,57 +509,62 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Quy trình A→Z ===== */}
-      <section id="quy-trinh" className="relative scroll-mt-24 border-y border-panel/30 bg-app-deep/40 py-20">
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <Reveal>
+      <section id="quy-trinh" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
+        <Reveal>
+          <div className="flex items-center justify-center gap-3">
             <h2 className="text-center text-3xl font-bold sm:text-4xl">
               Trọn quy trình <span className="text-accent">Order to Cash</span> không đứt gãy
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
-              Mỗi bước bàn giao dữ liệu cho bước kế tiếp — không nhập lại, không thất lạc.
-            </p>
-          </Reveal>
-
-          <div className="relative mt-14">
-            {/* Dòng chảy nối các bước (desktop) */}
-            <svg
-              aria-hidden
-              className="absolute left-0 right-0 top-7 hidden h-2 w-full lg:block"
-              preserveAspectRatio="none"
-              viewBox="0 0 1000 8"
-            >
-              <line x1="60" y1="4" x2="940" y2="4" stroke="rgba(0,238,255,0.35)" strokeWidth="2" className="dash-flow" />
-            </svg>
-
-            <ol className="grid gap-8 sm:grid-cols-3 lg:grid-cols-6">
-              {[
-                { icon: FileText, label: 'Báo giá', desc: 'Nhiều cấp duyệt' },
-                { icon: ScrollText, label: 'Đơn hàng', desc: 'Tự check tín dụng' },
-                { icon: PackageSearch, label: 'ATP/CTP', desc: 'Hứa ngày giao chuẩn' },
-                { icon: Workflow, label: 'Sản xuất', desc: 'Theo dõi tiến độ' },
-                { icon: Truck, label: 'Giao hàng', desc: 'Trừ kho nguyên tử' },
-                { icon: BadgeDollarSign, label: 'Thu tiền', desc: 'Công nợ realtime' },
-              ].map(({ icon: Icon, label, desc }, i) => (
-                <Reveal key={label} delay={i * 90}>
-                  <li className="relative flex flex-col items-center text-center">
-                    <span className="relative grid size-14 place-items-center rounded-2xl border border-accent/30 bg-app-deep text-accent shadow-[0_0_20px_rgba(0,238,255,0.15)]">
-                      <Icon size={24} aria-hidden />
-                      <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-accent text-[10px] font-bold text-app">
-                        {i + 1}
-                      </span>
-                    </span>
-                    <span className="mt-3 font-semibold">{label}</span>
-                    <span className="mt-1 text-xs text-ink-muted">{desc}</span>
-                  </li>
-                </Reveal>
-              ))}
-            </ol>
           </div>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
+            Mỗi bước bàn giao dữ liệu cho bước kế tiếp và phát tín hiệu trạng thái realtime — không
+            nhập lại, không thất lạc, không chờ báo cáo.
+          </p>
+        </Reveal>
+
+        <div className="relative mt-14">
+          <svg
+            aria-hidden
+            className="absolute left-0 right-0 top-7 hidden h-2 w-full lg:block"
+            preserveAspectRatio="none"
+            viewBox="0 0 1000 8"
+          >
+            <line x1="60" y1="4" x2="940" y2="4" stroke="rgba(0,238,255,0.35)" strokeWidth="2" className="dash-flow" />
+          </svg>
+
+          <ol className="grid gap-8 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { icon: FileText, label: 'Báo giá', desc: 'Nhiều cấp duyệt' },
+              { icon: ScrollText, label: 'Đơn hàng', desc: 'Tự check tín dụng' },
+              { icon: PackageSearch, label: 'ATP/CTP', desc: 'Hứa ngày giao chuẩn' },
+              { icon: Workflow, label: 'Sản xuất', desc: 'Theo dõi tiến độ' },
+              { icon: Truck, label: 'Giao hàng', desc: 'Trừ kho nguyên tử' },
+              { icon: BadgeDollarSign, label: 'Thu tiền', desc: 'Công nợ realtime' },
+            ].map(({ icon: Icon, label, desc }, i) => (
+              <Reveal key={label} delay={i * 90}>
+                <li className="relative flex flex-col items-center text-center">
+                  <span className="relative grid size-14 place-items-center rounded-2xl border border-accent/30 bg-app-deep text-accent shadow-[0_0_20px_rgba(0,238,255,0.15)]">
+                    <span
+                      aria-hidden
+                      className="pulse-ring absolute inset-0 rounded-2xl border border-accent/40"
+                      style={{ animationDelay: `${i * 0.45}s` }}
+                    />
+                    <Icon size={24} aria-hidden />
+                    <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-accent text-[10px] font-bold text-app">
+                      {i + 1}
+                    </span>
+                  </span>
+                  <span className="mt-3 font-semibold">{label}</span>
+                  <span className="mt-1 text-xs text-ink-muted">{desc}</span>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
         </div>
       </section>
 
       {/* ===== CTA ===== */}
-      <section className="relative overflow-hidden py-24">
+      <section className="relative overflow-hidden border-t border-panel/30 py-24">
         <div className="aurora left-[20%] top-[0%] h-90 w-90 bg-accent/50" />
         <div className="aurora right-[15%] bottom-[-20%] h-90 w-90 bg-blue-600/40 [animation-delay:5s]" />
         <Reveal className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
@@ -438,15 +612,16 @@ function HeroMock() {
   return (
     <div aria-hidden className="relative mx-auto w-full max-w-lg">
       <div className="glass rounded-3xl border-accent/20 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-        {/* Thanh tiêu đề giả */}
         <div className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-danger/70" />
           <span className="size-2.5 rounded-full bg-warning/70" />
           <span className="size-2.5 rounded-full bg-success/70" />
           <span className="ml-3 h-2 w-28 rounded-full bg-glass-strong" />
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
+            <span className="blink-dot size-1.5 rounded-full bg-success" /> LIVE
+          </span>
         </div>
 
-        {/* Stat chips */}
         <div className="mt-5 grid grid-cols-3 gap-3">
           {[
             { label: 'Đơn hàng', value: '128', trend: '+12%' },
@@ -461,7 +636,6 @@ function HeroMock() {
           ))}
         </div>
 
-        {/* Bar chart */}
         <div className="mt-5 flex h-32 items-end gap-2.5 rounded-xl bg-glass p-3">
           {bars.map((h, i) => (
             <span
@@ -473,7 +647,6 @@ function HeroMock() {
         </div>
       </div>
 
-      {/* Card nổi: ATP */}
       <div className="float-slow glass absolute -left-4 top-16 hidden rounded-2xl border-success/30 px-4 py-3 sm:block">
         <p className="flex items-center gap-2 text-xs font-semibold text-success">
           <CheckCircle2 size={15} aria-hidden />
@@ -481,13 +654,85 @@ function HeroMock() {
         </p>
       </div>
 
-      {/* Card nổi: AI forecast */}
       <div className="float-slower glass absolute -right-3 bottom-10 hidden rounded-2xl border-violet-400/30 px-4 py-3 sm:block">
         <p className="flex items-center gap-2 text-xs font-semibold text-violet-300">
           <TrendingUp size={15} aria-hidden />
           AI dự báo: +18% đơn quý tới
         </p>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------
+   Quỹ đạo cá nhân hóa: lõi AI ở giữa, 8 nền tảng xoay quanh
+   (icon luôn thẳng đứng nhờ counter-rotate), chip mô hình DN
+   sáng lên lần lượt bên dưới.
+   ------------------------------------------------------------ */
+const ORBIT_ITEMS = [
+  ScrollText,
+  Wrench,
+  Boxes,
+  CalendarClock,
+  ClipboardCheck,
+  UsersRound,
+  Building2,
+  BadgeDollarSign,
+] as const;
+
+function PersonalizeOrbit() {
+  return (
+    <div aria-hidden className="mx-auto w-full max-w-md">
+      <div className="relative mx-auto aspect-square w-full max-w-90 [--orbit-r:8.2rem] sm:[--orbit-r:10.4rem]">
+        {/* Vòng quỹ đạo */}
+        <div className="absolute inset-[8%] rounded-full border border-panel/50" />
+        <div className="absolute inset-[26%] rounded-full border border-panel/35" />
+        <div className="glow-pulse absolute inset-[38%] rounded-full bg-accent/10 blur-2xl" />
+
+        {/* Lõi AI */}
+        <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+          <div className="glass grid size-24 place-items-center rounded-3xl border-accent/30 shadow-[0_0_36px_rgba(0,238,255,0.25)]">
+            <LogoMark size={52} />
+          </div>
+          <p className="mt-2 text-center text-[11px] font-semibold text-accent">Lõi AI</p>
+        </div>
+
+        {/* Các nền tảng xoay quanh */}
+        <div className="orbit absolute inset-0">
+          {ORBIT_ITEMS.map((Icon, i) => {
+            const angle = (i / ORBIT_ITEMS.length) * 360;
+            return (
+              <div
+                key={i}
+                className="absolute left-1/2 top-1/2"
+                style={{ transform: `rotate(${angle}deg) translateX(var(--orbit-r))` }}
+              >
+                <div style={{ transform: `rotate(${-angle}deg)` }}>
+                  <div className="orbit-reverse -ml-5 -mt-5 grid size-10 place-items-center rounded-xl border border-accent/25 bg-app-deep/90 text-accent shadow-[0_0_14px_rgba(0,238,255,0.18)]">
+                    <Icon size={18} aria-hidden />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Chip mô hình doanh nghiệp */}
+      <div className="mt-6 grid grid-cols-5 gap-2">
+        {['MTO', 'MTS', 'ETO', 'OEM', 'B2B'].map((m, i) => (
+          <span
+            key={m}
+            className="step-live rounded-xl border border-panel/40 py-2 text-center text-xs font-bold text-ink-muted"
+            style={{ animationDelay: `${i * 1.44}s` }}
+          >
+            {m}
+          </span>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-xs text-ink-muted">
+        Một nền tảng — tự thích ứng với mọi mô hình sản xuất kinh doanh
+      </p>
     </div>
   );
 }
@@ -505,7 +750,7 @@ function CopilotMock() {
         <div>
           <p className="text-sm font-semibold">ERP Copilot</p>
           <p className="flex items-center gap-1.5 text-[11px] text-success">
-            <span className="size-1.5 rounded-full bg-success" /> Trực tuyến
+            <span className="blink-dot size-1.5 rounded-full bg-success" /> Trực tuyến
           </p>
         </div>
       </div>

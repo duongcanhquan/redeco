@@ -140,6 +140,7 @@ Trang chủ marketing giới thiệu Optimake (trước đó `/` chỉ redirect 
 - **Robot easter egg** (`components/landing/robot-easter-egg.tsx`): hotspot góc trái dưới, rê chuột vào robot ló lên vẫy chào (spring), tooltip "Bíp bíp… khu quản trị", bấm → `/login` (superadmin); Tab tới cũng hiện (focus-within) — vẫn a11y.
 - Component `components/landing/reveal.tsx` (IO reveal + stagger delay). Proxy giữ nguyên: đã đăng nhập vào `/` sẽ auto về `/platform` hoặc `/app`.
 - **Đã verify**: typecheck/lint/build sạch, `/` là route static; HTTP 200 + đủ nội dung khi chạy thử.
+- **Redesign v2** (theo góp ý): BỎ nhãn "Sắp ra mắt" — 8 nền tảng được giới thiệu đầy đủ (MES, Kho, Kế hoạch, Chất lượng+AI, Nhân sự, Hành chính số, Tài chính & tối ưu chi phí, Phân tích AI) mỗi card có mô tả + 3 bullet + hiệu ứng shimmer sweep + hover lift. Nỗi đau xoáy vào **kiểm soát quy trình chậm** và **các bước không đồng bộ realtime** (2 card "ĐAU NHẤT" + dải pipeline LIVE các chip bước sáng lên lần lượt — keyframe `step-live`). Section MỚI `#ca-nhan-hoa`: "phần mềm tự uốn theo bạn" — visual quỹ đạo 8 nền tảng xoay quanh Lõi AI (`orbit`/`orbit-reverse`, icon luôn thẳng nhờ counter-rotate, bán kính responsive qua CSS var `--orbit-r`) + chip mô hình MTO/MTS/ETO/OEM/B2B; 4 điểm: cấu hình không cần code, quy trình tùy biến, AI học vận hành, bật module theo giai đoạn. Motion mới: `pulse-ring` (vòng lan tỏa các bước O2C), `blink-dot` (LIVE), `shimmer-card` — tất cả có reduced-motion.
 
 ### ✅ Monorepo Scaffold (2026-08-01)
 

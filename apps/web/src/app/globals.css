@@ -360,6 +360,96 @@ body {
   animation: robot-wave 1.6s ease-in-out infinite;
 }
 
+/* Quỹ đạo module xoay quanh lõi AI (section Cá nhân hóa) */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.orbit {
+  animation: spin-slow 28s linear infinite;
+}
+
+.orbit-reverse {
+  animation: spin-slow 28s linear infinite reverse;
+}
+
+/* Vòng sóng lan tỏa quanh node realtime */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2.6s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+
+/* Chấm LIVE nhấp nháy */
+@keyframes blink-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.blink-dot {
+  animation: blink-dot 1.4s ease-in-out infinite;
+}
+
+/* Vệt sáng quét qua card khi hover */
+.shimmer-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgba(0, 238, 255, 0.09) 50%,
+    transparent 58%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+.shimmer-card:hover::after {
+  transform: translateX(130%);
+}
+
+/* Chip bước quy trình "sáng lên" lần lượt — mô phỏng đồng bộ realtime */
+@keyframes step-live {
+  0%,
+  24%,
+  100% {
+    background: var(--color-glass);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  8% {
+    background: rgba(0, 238, 255, 0.16);
+    border-color: rgba(0, 238, 255, 0.45);
+  }
+}
+
+.step-live {
+  animation: step-live 7.2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float-slow,
@@ -368,6 +458,11 @@ body {
   .typing-dot,
   .dash-flow,
   .glow-pulse,
+  .orbit,
+  .orbit-reverse,
+  .pulse-ring,
+  .blink-dot,
+  .step-live,
   .robot-hotspot:hover .robot-peek svg,
   .robot-hotspot:focus-within .robot-peek svg {
     animation: none;
@@ -377,6 +472,10 @@ body {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .shimmer-card::after {
+    display: none;
   }
 
   .robot-hotspot .robot-peek {
