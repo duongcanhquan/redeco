@@ -131,6 +131,16 @@ Người dùng phản ánh bấm/phản hồi chậm, truy xuất dữ liệu ch
 
 - **Đã verify**: typecheck/lint/build sạch; smoke test `test-sales-flow.cjs` (9 bước) + `test-members-flow.cjs` (5 bước) PASS — RLS giữ nguyên hành vi sau InitPlan wrap.
 
+### ✅ Landing page motion tại `/` (2026-08-01)
+
+Trang chủ marketing giới thiệu Optimake (trước đó `/` chỉ redirect về login). Theo skill ui-ux-pro-max + design system optimake (dark navy + cyan neon, glass, Be Vietnam Pro).
+
+- **Trang TĨNH** (prerendered ○) — tải tức thì; motion thuần CSS transform/opacity + IntersectionObserver, TẤT CẢ tôn trọng `prefers-reduced-motion` (keyframes trong `globals.css`: aurora-drift, float-y, bar-grow, typing-dot, dash-flow, glow-pulse, robot-wave, `.reveal`).
+- **Cấu trúc**: navbar glass sticky → hero (aurora + lưới kỹ thuật, headline gradient, mock dashboard có bar chart mọc lên + 2 card nổi ATP/AI forecast) → stats strip → 4 card "nỗi đau" (Excel phân mảnh, không dám hứa ngày giao, công nợ, báo cáo trễ) → bento module (Kinh doanh ĐANG VẬN HÀNH + 6 module sắp ra mắt) → khu AI (ERP Copilot chat mock có chấm đang gõ, dự báo ML, churn/NBA) → quy trình Order-to-Cash 6 bước có dòng chảy animated → CTA → footer.
+- **Robot easter egg** (`components/landing/robot-easter-egg.tsx`): hotspot góc trái dưới, rê chuột vào robot ló lên vẫy chào (spring), tooltip "Bíp bíp… khu quản trị", bấm → `/login` (superadmin); Tab tới cũng hiện (focus-within) — vẫn a11y.
+- Component `components/landing/reveal.tsx` (IO reveal + stagger delay). Proxy giữ nguyên: đã đăng nhập vào `/` sẽ auto về `/platform` hoặc `/app`.
+- **Đã verify**: typecheck/lint/build sạch, `/` là route static; HTTP 200 + đủ nội dung khi chạy thử.
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
