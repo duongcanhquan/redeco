@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-export function SignOutButton() {
+export function SignOutButton({ redirectTo = '/login' }: { redirectTo?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleSignOut = async (): Promise<void> => {
     setLoading(true);
     await createClient().auth.signOut();
-    router.replace('/login');
+    // Quay về đúng trang login của khu vực (vd /{slug}/login của công ty)
+    router.replace(redirectTo);
   };
 
   return (

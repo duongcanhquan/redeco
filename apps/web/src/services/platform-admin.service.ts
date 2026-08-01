@@ -55,7 +55,7 @@ export async function createCompanyWithAdmin(
 
   if (!name) return { ok: false, error: 'Tên công ty không được để trống.' };
   if (!SLUG_PATTERN.test(slug)) {
-    return { ok: false, error: 'Subdomain chỉ gồm chữ thường, số và dấu gạch ngang (vd: cong-ty-a).' };
+    return { ok: false, error: 'Tên miền chỉ gồm chữ thường, số và dấu gạch ngang (vd: cong-ty-a).' };
   }
   if (!EMAIL_PATTERN.test(adminEmail)) return { ok: false, error: 'Email admin không hợp lệ.' };
   if (input.adminPassword.length < 6) {
@@ -74,18 +74,18 @@ export async function createCompanyWithAdmin(
     return {
       ok: false,
       error: tenantError.code === '23505'
-        ? `Subdomain "${slug}" đã được dùng. Hãy chọn tên khác.`
+        ? `Tên miền "${slug}" đã được dùng. Hãy chọn tên khác.`
         : `Tạo công ty thất bại: ${tenantError.message}`,
     };
   }
   const tenantId = (tenant as { id: string }).id;
 
-  // 2) Tạo auth user cho admin công ty (tenant_id vào app_metadata -> JWT)
+  // 2) Tạo auth user cho admin công ty (tenant_id + tenant_slug vào app_metadata -> JWT)
   const { data: created, error: userError } = await admin.auth.admin.createUser({
     email: adminEmail,
     password: input.adminPassword,
     email_confirm: true,
-    app_metadata: { tenant_id: tenantId },
+    app_metadata: { tenant_id: tenantId, tenant_slug: slug },
     user_metadata: { full_name: adminFullName },
   });
   if (userError || !created.user) {
@@ -126,6 +126,50 @@ export async function createCompanyWithAdmin(
   }
 
   return { ok: true, data: { tenantId, adminEmail, contractCode } };
+}
+
+// ------------------------------------------------------------
+// Đổi tên miền (slug) của công ty — đồng bộ claim tenant_slug
+// cho toàn bộ user để proxy định tuyến /{slug}/... chính xác.
+// ------------------------------------------------------------
+
+export async function updateTenantSlug(
+  tenantId: string,
+  newSlug: string,
+): Promise<ActionResult<{ slug: string }>> {
+  await assertPlatformAdmin();
+
+  const slug = newSlug.trim().toLowerCase();
+  if (!SLUG_PATTERN.test(slug)) {
+    return { ok: false, error: 'Tên miền chỉ gồm chữ thường, số và dấu gạch ngang (vd: cong-ty-a).' };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from('tenants').update({ slug }).eq('id', tenantId);
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === '23505'
+          ? `Tên miền "${slug}" đã được công ty khác dùng.`
+          : `Đổi tên miền thất bại: ${error.message}`,
+    };
+  }
+
+  // Đồng bộ claim cho mọi user của công ty (JWT mới sẽ mang slug mới)
+  const { data: profiles } = await admin
+    .from('user_profiles')
+    .select('id')
+    .eq('tenant_id', tenantId);
+  for (const p of (profiles ?? []) as { id: string }[]) {
+    const { data: u } = await admin.auth.admin.getUserById(p.id);
+    if (!u?.user) continue;
+    await admin.auth.admin.updateUserById(p.id, {
+      app_metadata: { ...u.user.app_metadata, tenant_slug: slug },
+    });
+  }
+
+  return { ok: true, data: { slug } };
 }
 
 // ------------------------------------------------------------

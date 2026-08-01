@@ -1,16 +1,26 @@
 'use client';
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Building2 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
 import { createClient } from '@/lib/supabase/client';
 
 const RING_SEGMENTS = Array.from({ length: 50 }, (_, i) => i);
 const REMEMBER_EMAIL_KEY = 'optimake.remember_email';
 
+/** /{slug}/login -> slug công ty; /login (superadmin/chung) -> null */
+function slugFromPath(pathname: string): string | null {
+  const match = /^\/([a-z0-9]+(?:-[a-z0-9]+)*)\/login$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
 function LoginForm() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const companySlug = slugFromPath(pathname);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -29,6 +39,20 @@ function LoginForm() {
     });
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  // Trang login riêng của công ty: hiển thị tên công ty theo slug trên URL
+  useEffect(() => {
+    if (!companySlug) return;
+    let cancelled = false;
+    void createClient()
+      .rpc('tenant_public_name', { p_slug: companySlug })
+      .then(({ data }) => {
+        if (!cancelled && typeof data === 'string' && data) setCompanyName(data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companySlug]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -59,11 +83,15 @@ function LoginForm() {
 
     const isPlatformAdmin = data.user.app_metadata['is_platform_admin'] === true;
     const tenantId = data.user.app_metadata['tenant_id'];
+    const slugClaim = data.user.app_metadata['tenant_slug'];
+    const tenantSlug = typeof slugClaim === 'string' && slugClaim ? slugClaim : null;
     const next = searchParams.get('next');
     if (isPlatformAdmin) {
       router.replace(next?.startsWith('/platform') ? next : '/platform');
     } else if (typeof tenantId === 'string' && tenantId) {
-      router.replace(next?.startsWith('/app') ? next : '/app');
+      // Luôn về workspace dưới tên miền của công ty mình
+      const home = tenantSlug ? `/${tenantSlug}` : '/app';
+      router.replace(next?.startsWith(`${home}/`) || next === home ? next : home);
     } else {
       setLoading(false);
       setError('Tài khoản chưa được gán vào công ty nào. Liên hệ quản trị hệ thống.');
@@ -81,6 +109,12 @@ function LoginForm() {
           <div className="flex justify-center mb-2">
             <Logo markSize={34} textClassName="text-2xl" />
           </div>
+          {companySlug && (
+            <p className="flex items-center justify-center gap-1.5 text-accent text-sm font-semibold mb-1">
+              <Building2 size={15} aria-hidden />
+              {companyName ?? companySlug}
+            </p>
+          )}
           <h1 className="login-title">Đăng nhập</h1>
           <form onSubmit={(e) => void handleSubmit(e)} noValidate>
             <div className="input-box">

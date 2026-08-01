@@ -12,6 +12,7 @@ export default function WorkspaceAccountPage() {
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+  const [signOutTarget, setSignOutTarget] = useState('/login');
 
   useEffect(() => {
     void createClient()
@@ -20,6 +21,9 @@ export default function WorkspaceAccountPage() {
         setEmail(data.user?.email ?? '');
         const name = data.user?.user_metadata['full_name'];
         setFullName(typeof name === 'string' ? name : '');
+        // Đăng xuất quay về trang login riêng của công ty
+        const slug = data.user?.app_metadata['tenant_slug'];
+        if (typeof slug === 'string' && slug) setSignOutTarget(`/${slug}/login`);
       });
   }, []);
 
@@ -129,7 +133,7 @@ export default function WorkspaceAccountPage() {
       </section>
 
       <section className="glass rounded-2xl p-5 lg:hidden">
-        <SignOutButton />
+        <SignOutButton redirectTo={signOutTarget} />
       </section>
     </div>
   );

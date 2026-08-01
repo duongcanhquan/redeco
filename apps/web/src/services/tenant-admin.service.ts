@@ -143,11 +143,19 @@ export async function createMember(
 
   const admin = createAdminClient();
 
+  // tenant_slug vào JWT để proxy định tuyến /{slug}/... không cần query DB
+  const { data: tenantRow } = await ctx.supabase
+    .from('tenants')
+    .select('slug')
+    .eq('id', ctx.tenantId)
+    .single();
+  const tenantSlug = (tenantRow as { slug?: string } | null)?.slug ?? null;
+
   const { data: created, error: userError } = await admin.auth.admin.createUser({
     email,
     password: input.password,
     email_confirm: true,
-    app_metadata: { tenant_id: ctx.tenantId },
+    app_metadata: { tenant_id: ctx.tenantId, tenant_slug: tenantSlug },
     user_metadata: { full_name: fullName },
   });
   if (userError || !created.user) {

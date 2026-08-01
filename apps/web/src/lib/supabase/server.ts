@@ -35,6 +35,8 @@ export interface SessionClaims {
   userId: string;
   email: string | null;
   tenantId: string | null;
+  /** Tên miền (slug) của công ty — dùng cho URL /{slug}/... */
+  tenantSlug: string | null;
   isPlatformAdmin: boolean;
 }
 
@@ -59,10 +61,12 @@ export const getSessionClaims = cache(async (): Promise<SessionClaims | null> =>
   if (!payload || typeof payload['sub'] !== 'string') return null;
   const meta = (payload['app_metadata'] ?? {}) as Record<string, unknown>;
   const tenantId = meta['tenant_id'];
+  const tenantSlug = meta['tenant_slug'];
   return {
     userId: payload['sub'],
     email: typeof payload['email'] === 'string' ? payload['email'] : null,
     tenantId: typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : null,
+    tenantSlug: typeof tenantSlug === 'string' && tenantSlug.length > 0 ? tenantSlug : null,
     isPlatformAdmin: meta['is_platform_admin'] === true,
   };
 });

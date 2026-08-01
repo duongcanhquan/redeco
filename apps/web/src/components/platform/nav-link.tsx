@@ -8,15 +8,19 @@ export function NavLink({
   href,
   icon,
   label,
+  exact = false,
 }: {
   href: string;
   icon: ReactNode;
   label: string;
+  /** Route gốc của khu vực (vd /{slug}, /platform) chỉ active khi khớp chính xác */
+  exact?: boolean;
 }) {
   const pathname = usePathname();
-  // Route gốc của khu vực (console/workspace) chỉ active khi khớp chính xác
   const active =
-    href === '/platform' || href === '/app' ? pathname === href : pathname.startsWith(href);
+    exact || href === '/platform' || href === '/app'
+      ? pathname === href
+      : pathname.startsWith(href);
 
   return (
     <Link

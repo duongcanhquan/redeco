@@ -6,6 +6,7 @@ import {
   resetCompanyAdminPassword,
   setTenantModules,
   setTenantStatus,
+  updateTenantSlug,
   type ActionResult,
   type CreateCompanyInput,
   type CreateCompanyOutput,
@@ -47,6 +48,19 @@ export async function setTenantModulesAction(
 ): Promise<ActionResult<{ contractCode: string | null }>> {
   try {
     const result = await setTenantModules(tenantId, moduleIds);
+    if (result.ok) revalidateCompanyViews();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lỗi không xác định.' };
+  }
+}
+
+export async function updateTenantSlugAction(
+  tenantId: string,
+  newSlug: string,
+): Promise<ActionResult<{ slug: string }>> {
+  try {
+    const result = await updateTenantSlug(tenantId, newSlug);
     if (result.ok) revalidateCompanyViews();
     return result;
   } catch (e) {

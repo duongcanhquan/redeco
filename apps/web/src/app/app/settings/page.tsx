@@ -35,7 +35,7 @@ export default async function TenantSettingsPage() {
           <div className="min-w-0">
             <p className="text-sm text-ink-muted">Công ty</p>
             <p className="font-bold truncate">{info?.name ?? '—'}</p>
-            <p className="font-mono text-xs text-ink-muted truncate">{info?.slug}.optimake.com</p>
+            <p className="font-mono text-xs text-ink-muted truncate">optimake.com/{info?.slug}</p>
           </div>
         </section>
 

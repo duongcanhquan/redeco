@@ -1,6 +1,16 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+/**
+ * Định tuyến đa tenant theo TÊN MIỀN CÔNG TY (path prefix):
+ *   optimake.com/{slug}         -> workspace của công ty {slug} (rewrite nội bộ về /app)
+ *   optimake.com/{slug}/login   -> trang đăng nhập riêng của công ty
+ * Người dùng công ty LUÔN bị ép về đúng prefix của công ty mình
+ * (kể cả gõ /app trực tiếp hay prefix của công ty khác).
+ */
+const RESERVED_SEGMENTS = new Set(['', 'login', 'platform', 'app', 'api']);
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -38,54 +48,82 @@ export default async function proxy(request: NextRequest) {
   const isPlatformAdminUser = user?.app_metadata['is_platform_admin'] === true;
   const tenantId = user?.app_metadata['tenant_id'];
   const isTenantUser = typeof tenantId === 'string' && tenantId.length > 0;
+  const slugClaim = user?.app_metadata['tenant_slug'];
+  const tenantSlug = typeof slugClaim === 'string' && slugClaim.length > 0 ? slugClaim : null;
 
-  // Đã đăng nhập (session lưu trong cookie) -> vào thẳng khu làm việc, khỏi login lại
-  if (path === '/login' || path === '/') {
-    if (isPlatformAdminUser) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/platform';
-      url.search = '';
-      return NextResponse.redirect(url);
+  const redirectTo = (pathname: string, search = ''): NextResponse => {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    url.search = search;
+    return NextResponse.redirect(url);
+  };
+
+  // Rewrite giữ nguyên URL trên trình duyệt, đổi route xử lý nội bộ.
+  // Copy cookie từ response gốc để không mất phiên vừa refresh.
+  const rewriteTo = (pathname: string): NextResponse => {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    const res = NextResponse.rewrite(url, { request });
+    for (const cookie of response.cookies.getAll()) {
+      res.cookies.set(cookie);
     }
-    if (isTenantUser) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/app';
-      url.search = '';
-      return NextResponse.redirect(url);
+    return res;
+  };
+
+  const firstSegment = path.split('/')[1] ?? '';
+  const isTenantPath = !RESERVED_SEGMENTS.has(firstSegment) && SLUG_PATTERN.test(firstSegment);
+
+  // ---------- URL theo tên miền công ty: /{slug}/... ----------
+  if (isTenantPath) {
+    const rest = path.slice(firstSegment.length + 1); // '' | '/login' | '/sales/...'
+
+    if (rest === '/login') {
+      if (isTenantUser) return redirectTo(`/${tenantSlug ?? firstSegment}`);
+      if (isPlatformAdminUser) return redirectTo('/platform');
+      return rewriteTo('/login'); // URL vẫn là /{slug}/login — trang login nhận diện công ty
     }
+
+    if (!user) return redirectTo(`/${firstSegment}/login`);
+    if (!isTenantUser) {
+      return isPlatformAdminUser
+        ? redirectTo('/platform')
+        : redirectTo('/login', 'error=forbidden');
+    }
+    // Ép về đúng tên miền của công ty mình — không xem được prefix công ty khác
+    if (tenantSlug && tenantSlug !== firstSegment) {
+      return redirectTo(`/${tenantSlug}${rest}`, request.nextUrl.search.replace(/^\?/, ''));
+    }
+    if (!tenantSlug) return redirectTo(`/app${rest}`); // user cũ chưa có claim slug
+
+    return rewriteTo(`/app${rest}`);
   }
 
-  // Bảo vệ workspace công ty
-  if (path.startsWith('/app')) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('next', path);
-      return NextResponse.redirect(url);
-    }
+  // Đã đăng nhập -> vào thẳng khu làm việc, khỏi login lại
+  if (path === '/login' || path === '/') {
+    if (isPlatformAdminUser) return redirectTo('/platform');
+    if (isTenantUser) return redirectTo(tenantSlug ? `/${tenantSlug}` : '/app');
+  }
+
+  // /app là route nội bộ: user có tên miền LUÔN bị ép về /{slug}/...
+  if (path === '/app' || path.startsWith('/app/')) {
+    if (!user) return redirectTo('/login', `next=${encodeURIComponent(path)}`);
     if (!isTenantUser) {
-      const url = request.nextUrl.clone();
-      url.pathname = isPlatformAdminUser ? '/platform' : '/login';
-      url.search = '';
-      if (!isPlatformAdminUser) url.searchParams.set('error', 'forbidden');
-      return NextResponse.redirect(url);
+      return isPlatformAdminUser
+        ? redirectTo('/platform')
+        : redirectTo('/login', 'error=forbidden');
+    }
+    if (tenantSlug) {
+      return redirectTo(
+        `/${tenantSlug}${path.slice('/app'.length)}`,
+        request.nextUrl.search.replace(/^\?/, ''),
+      );
     }
   }
 
   // Bảo vệ khu quản trị nền tảng
   if (path.startsWith('/platform')) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('next', path);
-      return NextResponse.redirect(url);
-    }
-    if (!isPlatformAdminUser) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('error', 'forbidden');
-      return NextResponse.redirect(url);
-    }
+    if (!user) return redirectTo('/login', `next=${encodeURIComponent(path)}`);
+    if (!isPlatformAdminUser) return redirectTo('/login', 'error=forbidden');
   }
 
   return response;

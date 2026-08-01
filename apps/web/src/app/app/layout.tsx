@@ -19,12 +19,12 @@ import { getMyRootModules } from '@/services/sales.service';
 
 // Route UI đã có cho từng module key (các module khác hiện "sắp ra mắt")
 const SALES_LINKS = [
-  { href: '/app/sales/customers', label: 'Khách hàng', icon: Users },
-  { href: '/app/sales/products', label: 'Sản phẩm & kho', icon: Package },
-  { href: '/app/sales/quotations', label: 'Báo giá', icon: FileText },
-  { href: '/app/sales/orders', label: 'Đơn hàng', icon: ScrollText },
-  { href: '/app/sales/deliveries', label: 'Giao hàng', icon: Truck },
-  { href: '/app/sales/invoices', label: 'Hóa đơn', icon: FileText },
+  { path: '/sales/customers', label: 'Khách hàng', icon: Users },
+  { path: '/sales/products', label: 'Sản phẩm & kho', icon: Package },
+  { path: '/sales/quotations', label: 'Báo giá', icon: FileText },
+  { path: '/sales/orders', label: 'Đơn hàng', icon: ScrollText },
+  { path: '/sales/deliveries', label: 'Giao hàng', icon: Truck },
+  { path: '/sales/invoices', label: 'Hóa đơn', icon: FileText },
 ] as const;
 
 export default async function WorkspaceLayout({
@@ -36,7 +36,7 @@ export default async function WorkspaceLayout({
   }
 
   const [{ data: tenant }, { data: profile }, modules] = await Promise.all([
-    supabase.from('tenants').select('name').eq('id', claims.tenantId).single(),
+    supabase.from('tenants').select('name, slug').eq('id', claims.tenantId).single(),
     supabase.from('user_profiles').select('role').eq('id', claims.userId).single(),
     getMyRootModules(supabase),
   ]);
@@ -44,6 +44,10 @@ export default async function WorkspaceLayout({
   const isManager = role === 'owner' || role === 'admin';
   const hasSales = modules.some((m) => m.key === 'kinh-doanh');
   const otherModules = modules.filter((m) => m.key !== 'kinh-doanh');
+
+  // Mọi URL workspace nằm dưới tên miền công ty: /{slug}/...
+  const slug = claims.tenantSlug ?? (tenant as { slug?: string } | null)?.slug ?? null;
+  const base = slug ? `/${slug}` : '/app';
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row bg-app">
@@ -64,15 +68,20 @@ export default async function WorkspaceLayout({
           aria-label="Điều hướng workspace"
           className="flex lg:flex-col gap-1.5 px-4 pb-4 overflow-x-auto lg:overflow-visible lg:flex-1"
         >
-          <NavLink href="/app" label="Tổng quan" icon={<LayoutDashboard size={18} aria-hidden />} />
+          <NavLink href={base} exact label="Tổng quan" icon={<LayoutDashboard size={18} aria-hidden />} />
 
           {hasSales && (
             <>
               <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 Kinh doanh
               </p>
-              {SALES_LINKS.map(({ href, label, icon: Icon }) => (
-                <NavLink key={href} href={href} label={label} icon={<Icon size={18} aria-hidden />} />
+              {SALES_LINKS.map(({ path, label, icon: Icon }) => (
+                <NavLink
+                  key={path}
+                  href={`${base}${path}`}
+                  label={label}
+                  icon={<Icon size={18} aria-hidden />}
+                />
               ))}
             </>
           )}
@@ -99,13 +108,14 @@ export default async function WorkspaceLayout({
             Công ty
           </p>
           {isManager && (
-            <NavLink href="/app/members" label="Thành viên" icon={<UserCog size={18} aria-hidden />} />
+            <NavLink href={`${base}/members`} label="Thành viên" icon={<UserCog size={18} aria-hidden />} />
           )}
-          <NavLink href="/app/settings" label="Cài đặt" icon={<Settings size={18} aria-hidden />} />
-          <NavLink href="/app/account" label="Tài khoản" icon={<UserRound size={18} aria-hidden />} />
+          <NavLink href={`${base}/settings`} label="Cài đặt" icon={<Settings size={18} aria-hidden />} />
+          <NavLink href={`${base}/account`} label="Tài khoản" icon={<UserRound size={18} aria-hidden />} />
 
           <div className="hidden lg:block lg:mt-auto lg:pt-4 lg:border-t lg:border-panel/40">
-            <SignOutButton />
+            {/* Đăng xuất LUÔN quay về trang login của chính công ty */}
+            <SignOutButton redirectTo={slug ? `/${slug}/login` : '/login'} />
           </div>
         </nav>
       </aside>

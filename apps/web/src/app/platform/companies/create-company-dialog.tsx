@@ -96,7 +96,7 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
   const copyCredentials = async (): Promise<void> => {
     if (!created) return;
     await navigator.clipboard.writeText(
-      `Công ty: ${created.companyName}\nSubdomain: ${created.slug}\nEmail: ${created.email}\nMật khẩu: ${created.password}`,
+      `Công ty: ${created.companyName}\nĐịa chỉ đăng nhập: ${location.origin}/${created.slug}/login\nEmail: ${created.email}\nMật khẩu: ${created.password}`,
     );
     setCopied(true);
   };
@@ -128,7 +128,7 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
             <dl className="rounded-2xl bg-app/70 border border-panel/40 divide-y divide-panel/30 text-sm">
               {[
                 ['Công ty', created.companyName],
-                ['Subdomain', created.slug],
+                ['Địa chỉ đăng nhập', `/${created.slug}/login`],
                 ['Email đăng nhập', created.email],
                 ['Mật khẩu', created.password],
               ].map(([k, v]) => (
@@ -176,9 +176,9 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
             </Field>
             <Field
               id="company-slug"
-              label="Subdomain"
+              label="Tên miền công ty"
               required
-              hint={slug ? `Địa chỉ truy cập: ${slug}.optimake.com` : 'Chữ thường, số, dấu gạch ngang.'}
+              hint={slug ? `Địa chỉ truy cập: optimake.com/${slug}` : 'Chữ thường, số, dấu gạch ngang.'}
             >
               <input
                 id="company-slug"

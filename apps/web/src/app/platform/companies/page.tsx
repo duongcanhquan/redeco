@@ -15,6 +15,7 @@ import { ContractStatusActions } from '../contracts/contract-status-actions';
 import { CreateContractDialog } from '../contracts/create-contract-dialog';
 import { ModuleCatalogView } from '../modules/module-catalog-view';
 import { CompanyActions } from './company-actions';
+import { CompanyDomainDialog } from './company-domain-dialog';
 import { CompanyModulesDialog } from './company-modules-dialog';
 import { CreateCompanyDialog } from './create-company-dialog';
 
@@ -151,7 +152,7 @@ function CompaniesSection({
               <tr key={t.id} className="hover:bg-glass transition-colors align-top">
                 <td className="px-5 py-3.5">
                   <p className="font-medium">{t.name}</p>
-                  <p className="font-mono text-xs text-ink-muted">{t.slug}.optimake.com</p>
+                  <p className="font-mono text-xs text-ink-muted">optimake.com/{t.slug}</p>
                 </td>
                 <td className="px-5 py-3.5 text-ink-muted break-all">
                   {t.attributes.admin_email ?? '—'}
@@ -194,6 +195,11 @@ function CompaniesSection({
                       tenantName={t.name}
                       moduleTree={moduleTree}
                       currentModuleIds={[...entitledIds]}
+                    />
+                    <CompanyDomainDialog
+                      tenantId={t.id}
+                      tenantName={t.name}
+                      currentSlug={t.slug}
                     />
                     <CompanyActions tenant={t} />
                   </div>
