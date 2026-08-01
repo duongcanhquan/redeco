@@ -34,8 +34,10 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Logo, LogoMark } from '@/components/brand/logo';
+import { CountUp } from '@/components/landing/count-up';
 import { Reveal } from '@/components/landing/reveal';
 import { RobotEasterEgg } from '@/components/landing/robot-easter-egg';
+import { ScrollProgress } from '@/components/landing/scroll-progress';
 
 export const metadata: Metadata = {
   title: 'Optimake — Nền tảng ERP/MES tích hợp AI cho doanh nghiệp sản xuất',
@@ -54,6 +56,7 @@ const NAV_LINKS = [
 export default function LandingPage() {
   return (
     <div className="relative min-h-dvh overflow-x-clip bg-app text-ink">
+      <ScrollProgress />
       {/* ===== Navbar ===== */}
       <header className="fixed inset-x-0 top-0 z-40">
         <div className="glass mx-3 mt-3 flex h-14 max-w-6xl items-center justify-between rounded-2xl px-4 sm:mx-auto sm:px-6">
@@ -86,6 +89,7 @@ export default function LandingPage() {
         <div className="aurora left-[-10%] top-[-10%] h-105 w-105 bg-accent/60" />
         <div className="aurora right-[-12%] top-[20%] h-120 w-120 bg-blue-600/50 [animation-delay:4s]" />
         <div className="aurora bottom-[-30%] left-[30%] h-100 w-100 bg-violet-600/40 [animation-delay:8s]" />
+        <Particles />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
           <div>
@@ -98,7 +102,7 @@ export default function LandingPage() {
             <Reveal delay={90}>
               <h1 className="mt-5 text-4xl font-bold leading-[1.15] sm:text-5xl lg:text-[3.4rem]">
                 Vận hành nhà máy{' '}
-                <span className="bg-gradient-to-r from-accent to-blue-500 bg-clip-text text-transparent">
+                <span className="text-shimmer bg-gradient-to-r from-accent via-blue-400 to-accent bg-clip-text text-transparent">
                   từ A đến Z
                 </span>{' '}
                 trên một nền tảng duy nhất
@@ -148,21 +152,47 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Stats strip ===== */}
-      <section aria-label="Con số nổi bật" className="relative border-y border-panel/30 bg-app-deep/50">
+      {/* ===== Marquee ===== */}
+      <div aria-hidden className="relative overflow-hidden border-y border-panel/30 bg-app-deep/70 py-3.5">
+        <div className="marquee-track items-center">
+          {Array.from({ length: 2 }, (_, dup) =>
+            [
+              'ERP + MES hợp nhất',
+              'Đồng bộ realtime mọi bước',
+              'AI Copilot 24/7',
+              'ATP/CTP tức thì',
+              'Truy xuất lô / serial',
+              'Giá thành theo từng đơn',
+              'Quy trình tự cá nhân hóa',
+              'Cách ly dữ liệu RLS',
+            ].map((t) => (
+              <span
+                key={`${dup}-${t}`}
+                className="inline-flex items-center gap-3 whitespace-nowrap pr-3 text-sm font-medium text-ink-muted"
+              >
+                <Sparkles size={13} className="shrink-0 text-accent" aria-hidden />
+                {t}
+              </span>
+            )),
+          )}
+        </div>
+      </div>
+
+      {/* ===== Stats strip — con số nhảy ===== */}
+      <section aria-label="Con số nổi bật" className="relative border-b border-panel/30 bg-app-deep/50">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px px-4 py-8 sm:px-6 lg:grid-cols-4">
           {[
-            { icon: Layers, value: '9+', label: 'Nền tảng nghiệp vụ liên thông' },
-            { icon: ShieldCheck, value: '100%', label: 'Cách ly dữ liệu từng công ty' },
-            { icon: Zap, value: 'Realtime', label: 'Mọi bước đồng bộ tức thì' },
-            { icon: Brain, value: '24/7', label: 'AI Copilot đồng hành' },
-          ].map(({ icon: Icon, value, label }, i) => (
+            { icon: Layers, to: 9, suffix: '+', label: 'Nền tảng nghiệp vụ liên thông' },
+            { icon: ShieldCheck, to: 100, suffix: '%', label: 'Cách ly dữ liệu từng công ty' },
+            { icon: Zap, to: 6, suffix: ' bước O2C', label: 'Đồng bộ realtime không đứt gãy' },
+            { icon: Brain, to: 24, suffix: '/7', label: 'AI Copilot đồng hành' },
+          ].map(({ icon: Icon, to, suffix, label }, i) => (
             <Reveal key={label} delay={i * 80} className="flex items-center gap-4 px-4 py-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-accent/25 bg-accent-soft text-accent">
                 <Icon size={20} aria-hidden />
               </span>
               <span>
-                <span className="block text-2xl font-bold">{value}</span>
+                <CountUp to={to} suffix={suffix} className="block text-2xl font-bold" />
                 <span className="block text-xs text-ink-muted">{label}</span>
               </span>
             </Reveal>
@@ -218,12 +248,12 @@ export default function LandingPage() {
           ].map(({ icon: Icon, title, desc, hot }, i) => (
             <Reveal key={title} delay={i * 80}>
               <article
-                className={`glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1 ${
+                className={`group glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1 ${
                   hot ? 'border-danger/30' : ''
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <span className="grid size-12 place-items-center rounded-xl border border-danger/30 bg-danger/10 text-danger">
+                  <span className="icon-bounce grid size-12 place-items-center rounded-xl border border-danger/30 bg-danger/10 text-danger">
                     <Icon size={22} aria-hidden />
                   </span>
                   {hot && (
@@ -269,6 +299,8 @@ export default function LandingPage() {
           </div>
         </Reveal>
       </section>
+
+      <Beam />
 
       {/* ===== Các nền tảng ===== */}
       <section id="modules" className="relative scroll-mt-24 border-y border-panel/30 bg-app-deep/40 py-20">
@@ -367,8 +399,8 @@ export default function LandingPage() {
               },
             ].map(({ icon: Icon, title, desc, points }, i) => (
               <Reveal key={title} delay={(i % 3) * 90}>
-                <article className="glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1">
-                  <span className="grid size-12 place-items-center rounded-xl border border-panel/60 bg-glass text-accent">
+                <article className="group glass glass-hover shimmer-card h-full rounded-2xl p-6 transition-transform hover:-translate-y-1">
+                  <span className="icon-bounce grid size-12 place-items-center rounded-xl border border-panel/60 bg-glass text-accent">
                     <Icon size={22} aria-hidden />
                   </span>
                   <h3 className="mt-4 font-semibold">{title}</h3>
@@ -388,6 +420,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <Beam />
+
       {/* ===== Cá nhân hóa ===== */}
       <section id="ca-nhan-hoa" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -403,7 +437,7 @@ export default function LandingPage() {
               </p>
               <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
                 Không ép doanh nghiệp theo phần mềm —{' '}
-                <span className="bg-gradient-to-r from-accent to-blue-500 bg-clip-text text-transparent">
+                <span className="text-shimmer bg-gradient-to-r from-accent via-blue-400 to-accent bg-clip-text text-transparent">
                   phần mềm tự uốn theo bạn
                 </span>
               </h2>
@@ -452,6 +486,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <Beam />
+
       {/* ===== AI ===== */}
       <section id="ai" className="relative scroll-mt-24 border-y border-panel/30 bg-app-deep/40 py-20">
         <div className="aurora right-[10%] top-[10%] h-80 w-80 bg-violet-600/40" />
@@ -464,7 +500,7 @@ export default function LandingPage() {
               </p>
               <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
                 AI không phải tính năng phụ —{' '}
-                <span className="bg-gradient-to-r from-violet-400 to-accent bg-clip-text text-transparent">
+                <span className="text-shimmer bg-gradient-to-r from-violet-400 via-accent to-violet-400 bg-clip-text text-transparent">
                   là bộ não vận hành
                 </span>
               </h2>
@@ -507,6 +543,8 @@ export default function LandingPage() {
           </Reveal>
         </div>
       </section>
+
+      <Beam />
 
       {/* ===== Quy trình A→Z ===== */}
       <section id="quy-trinh" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
@@ -604,14 +642,73 @@ export default function LandingPage() {
 }
 
 /* ------------------------------------------------------------
+   Hạt sáng bay lên trong hero — vị trí cố định (deterministic)
+   để SSR/CSR khớp nhau, mỗi hạt một nhịp riêng.
+   ------------------------------------------------------------ */
+const PARTICLES = [
+  { left: '4%', size: 3, dur: '11s', delay: '0s', drift: '26px' },
+  { left: '12%', size: 2, dur: '14s', delay: '2.2s', drift: '-18px' },
+  { left: '22%', size: 4, dur: '10s', delay: '4.5s', drift: '14px' },
+  { left: '31%', size: 2, dur: '13s', delay: '1.1s', drift: '-24px' },
+  { left: '42%', size: 3, dur: '12s', delay: '5.8s', drift: '20px' },
+  { left: '53%', size: 2, dur: '15s', delay: '0.6s', drift: '-12px' },
+  { left: '61%', size: 4, dur: '11s', delay: '3.4s', drift: '28px' },
+  { left: '70%', size: 2, dur: '13s', delay: '6.7s', drift: '-20px' },
+  { left: '79%', size: 3, dur: '10s', delay: '2.9s', drift: '16px' },
+  { left: '87%', size: 2, dur: '14s', delay: '5.1s', drift: '-26px' },
+  { left: '94%', size: 3, dur: '12s', delay: '1.8s', drift: '12px' },
+] as const;
+
+function Particles() {
+  return (
+    <div aria-hidden className="absolute inset-0 overflow-hidden">
+      {PARTICLES.map((p, i) => (
+        <span
+          key={i}
+          className="particle"
+          style={
+            {
+              left: p.left,
+              width: p.size,
+              height: p.size,
+              opacity: 0,
+              boxShadow: '0 0 8px rgba(0,238,255,0.8)',
+              '--dur': p.dur,
+              '--delay': p.delay,
+              '--drift': p.drift,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------
+   Tia sáng nối liền các section: đường dọc + giọt sáng chảy
+   xuống liên tục — dẫn mắt người xem đi tiếp.
+   ------------------------------------------------------------ */
+function Beam() {
+  return (
+    <div aria-hidden className="relative mx-auto h-18 w-px bg-gradient-to-b from-transparent via-accent/35 to-transparent">
+      <span className="absolute left-1/2 top-0 -translate-x-1/2">
+        <span className="beam-drop block size-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(0,238,255,0.9)]" />
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------
    Mock dashboard trong hero — thuần CSS, cột chart mọc lên,
    2 card nổi trôi lơ lửng hai bên.
    ------------------------------------------------------------ */
 function HeroMock() {
   const bars = [42, 66, 50, 82, 58, 92, 74];
   return (
-    <div aria-hidden className="relative mx-auto w-full max-w-lg">
-      <div className="glass rounded-3xl border-accent/20 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="relative mx-auto w-full max-w-lg">
+      {/* Vòng conic quay chậm phía sau */}
+      <div aria-hidden className="hero-ring absolute -inset-10 -z-10 rounded-full opacity-70 blur-2xl" />
+      <div aria-hidden className="glass rounded-3xl border-accent/20 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
         <div className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-danger/70" />
           <span className="size-2.5 rounded-full bg-warning/70" />
@@ -624,13 +721,18 @@ function HeroMock() {
 
         <div className="mt-5 grid grid-cols-3 gap-3">
           {[
-            { label: 'Đơn hàng', value: '128', trend: '+12%' },
-            { label: 'Tồn kho', value: '4.2k', trend: 'ổn định' },
-            { label: 'Công nợ', value: '1.8 tỷ', trend: '-8%' },
+            { label: 'Đơn hàng', to: 128, suffix: '', decimals: 0, trend: '+12%' },
+            { label: 'Tồn kho', to: 4.2, suffix: 'k', decimals: 1, trend: 'ổn định' },
+            { label: 'Công nợ', to: 1.8, suffix: ' tỷ', decimals: 1, trend: '-8%' },
           ].map((s) => (
             <div key={s.label} className="rounded-xl bg-glass px-3 py-2.5">
               <p className="text-[10px] text-ink-muted">{s.label}</p>
-              <p className="text-sm font-bold">{s.value}</p>
+              <CountUp
+                to={s.to}
+                suffix={s.suffix}
+                decimals={s.decimals}
+                className="text-sm font-bold"
+              />
               <p className="text-[10px] text-accent">{s.trend}</p>
             </div>
           ))}
@@ -640,21 +742,21 @@ function HeroMock() {
           {bars.map((h, i) => (
             <span
               key={i}
-              className="bar-grow flex-1 rounded-t-md bg-gradient-to-t from-accent/30 to-accent"
-              style={{ height: `${h}%`, animationDelay: `${300 + i * 110}ms` }}
+              className="bar-breathe flex-1 rounded-t-md bg-gradient-to-t from-accent/30 to-accent"
+              style={{ height: `${h}%`, animationDelay: `${300 + i * 110}ms, ${1500 + i * 220}ms` }}
             />
           ))}
         </div>
       </div>
 
-      <div className="float-slow glass absolute -left-4 top-16 hidden rounded-2xl border-success/30 px-4 py-3 sm:block">
+      <div aria-hidden className="float-slow glass absolute -left-4 top-16 hidden rounded-2xl border-success/30 px-4 py-3 sm:block">
         <p className="flex items-center gap-2 text-xs font-semibold text-success">
           <CheckCircle2 size={15} aria-hidden />
           ATP: Đủ hàng, giao 12/08
         </p>
       </div>
 
-      <div className="float-slower glass absolute -right-3 bottom-10 hidden rounded-2xl border-violet-400/30 px-4 py-3 sm:block">
+      <div aria-hidden className="float-slower glass absolute -right-3 bottom-10 hidden rounded-2xl border-violet-400/30 px-4 py-3 sm:block">
         <p className="flex items-center gap-2 text-xs font-semibold text-violet-300">
           <TrendingUp size={15} aria-hidden />
           AI dự báo: +18% đơn quý tới
