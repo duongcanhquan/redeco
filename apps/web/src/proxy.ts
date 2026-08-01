@@ -31,6 +31,15 @@ export default async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+  const isPlatformAdminUser = user?.app_metadata['is_platform_admin'] === true;
+
+  // Đã đăng nhập (session lưu trong cookie) -> vào thẳng console, khỏi login lại
+  if (isPlatformAdminUser && (path === '/login' || path === '/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/platform';
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
 
   // Bảo vệ khu quản trị nền tảng
   if (path.startsWith('/platform')) {
@@ -40,8 +49,7 @@ export default async function proxy(request: NextRequest) {
       url.searchParams.set('next', path);
       return NextResponse.redirect(url);
     }
-    const isPlatformAdmin = user.app_metadata['is_platform_admin'] === true;
-    if (!isPlatformAdmin) {
+    if (!isPlatformAdminUser) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('error', 'forbidden');

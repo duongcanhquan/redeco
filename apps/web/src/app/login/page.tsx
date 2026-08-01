@@ -1,17 +1,19 @@
 'use client';
 
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Logo } from '@/components/brand/logo';
 import { createClient } from '@/lib/supabase/client';
 
 const RING_SEGMENTS = Array.from({ length: 50 }, (_, i) => i);
+const REMEMBER_EMAIL_KEY = 'optimake.remember_email';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'forbidden'
       ? 'Tài khoản của bạn không có quyền truy cập khu vực này.'
@@ -19,10 +21,22 @@ function LoginForm() {
   );
   const [loading, setLoading] = useState(false);
 
+  // Tự điền email đã ghi nhớ từ lần đăng nhập trước
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    if (saved) setEmail(saved);
+  }, []);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setError(null);
     setLoading(true);
+
+    if (remember) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    }
 
     const supabase = createClient();
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -93,7 +107,16 @@ function LoginForm() {
               </p>
             )}
 
-            <div className="text-center -mt-1 mb-3">
+            <div className="flex items-center justify-between -mt-1 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="size-4 rounded accent-accent cursor-pointer"
+                />
+                <span className="text-ink-muted text-sm">Ghi nhớ đăng nhập</span>
+              </label>
               <a
                 href="mailto:superadmin@gmail.com?subject=Quên mật khẩu Optimake"
                 className="text-ink-muted text-sm hover:underline"
