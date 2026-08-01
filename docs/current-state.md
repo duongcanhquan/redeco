@@ -72,6 +72,15 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - **Env mới cho web**: `SUPABASE_SERVICE_ROLE_KEY` trong `apps/web/.env.local` — **Vercel cũng phải thêm biến này** (server-only).
 - **Đã verify**: build/lint/typecheck sạch; smoke test DB end-to-end (`scripts/test-platform-flow.cjs`, tự dọn dữ liệu): tạo tenant → user → profile → contract → entitlement kinh-doanh cho đúng 8 node subtree, tạm dừng HĐ → quyền về 0. PASS toàn bộ.
 
+### ✅ Superadmin Console hoàn thiện (2026-08-01)
+
+- **Công ty**: bảng thêm cột email admin (lưu trong `tenants.attributes.admin_email` khi tạo) + số thành viên (nested count); actions từng dòng: Tạm dừng/Kích hoạt công ty, **Reset mật khẩu admin** (sinh ngẫu nhiên, hiện 1 lần + copy, tìm owner qua `user_profiles.role='owner'`).
+- **Hợp đồng**: cột Module hiển thị badge các node đã bán (nested `contract_entitlements(modules(name))`); nút **Gia hạn** (đổi ends_on + seats, modal).
+- **Danh mục module**: trang chuyển thành trình quản lý tương tác (`modules-manager.tsx`) — thêm module gốc, thêm node con (key tự sinh dotted-path từ key cha + slug tên), sửa tên/mô tả, bật/tắt node (confirm khi tắt; node tắt hiện badge "đã tắt" + mờ). Icon actions hiện khi hover (group-hover + focus-within).
+- **Tham số**: `setting-editor.tsx` — sửa giá trị JSON inline có validate JSON.parse trước khi gửi.
+- Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
+- Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
@@ -132,3 +141,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Rebrand REDECO → **Optimake**: logo mark SVG mới (lục giác + mũi tên, gradient cyan, `components/brand/logo.tsx`), favicon `app/icon.svg`, đổi scope packages @optimake/*, cập nhật toàn bộ docs/rules |
 | 2026-08-01 | Ghi nhớ đăng nhập: proxy auto-redirect admin đã đăng nhập từ `/`+`/login` vào thẳng `/platform`; checkbox "Ghi nhớ đăng nhập" lưu email vào localStorage (`optimake.remember_email`) |
 | 2026-08-01 | Superadmin mutations (ADR-009): migration 0003 (platform đọc tenants/user_profiles); Server Actions tạo công ty + admin, lập hợp đồng + gán module subtree, đổi trạng thái HĐ; smoke test DB pass |
+| 2026-08-01 | Hoàn thiện console: tạm dừng/kích hoạt công ty, reset mật khẩu admin, gia hạn HĐ, badge module đã bán, quản lý danh mục module (thêm/sửa/bật-tắt), sửa tham số hệ thống |

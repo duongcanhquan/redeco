@@ -59,10 +59,10 @@ export async function createCompanyWithAdmin(
 
   const admin = createAdminClient();
 
-  // 1) Tạo tenant
+  // 1) Tạo tenant (lưu email admin vào attributes để console hiển thị)
   const { data: tenant, error: tenantError } = await admin
     .from('tenants')
-    .insert({ name, slug })
+    .insert({ name, slug, attributes: { admin_email: adminEmail } })
     .select('id')
     .single();
   if (tenantError) {
@@ -194,5 +194,201 @@ export async function setContractStatus(
   const admin = createAdminClient();
   const { error } = await admin.from('contracts').update({ status }).eq('id', contractId);
   if (error) return { ok: false, error: `Đổi trạng thái thất bại: ${error.message}` };
+  return { ok: true, data: undefined };
+}
+
+/** Gia hạn hợp đồng: đổi ngày kết thúc và/hoặc số seats. */
+export async function extendContract(
+  contractId: string,
+  endsOn: string,
+  seats: number,
+): Promise<ActionResult> {
+  await assertPlatformAdmin();
+
+  if (!endsOn) return { ok: false, error: 'Hãy chọn ngày kết thúc mới.' };
+  if (!Number.isInteger(seats) || seats <= 0) {
+    return { ok: false, error: 'Số seats phải là số nguyên dương.' };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('contracts')
+    .update({ ends_on: endsOn, seats })
+    .eq('id', contractId);
+  if (error) {
+    return {
+      ok: false,
+      error: error.message.includes('check')
+        ? 'Ngày kết thúc phải sau ngày bắt đầu hợp đồng.'
+        : `Gia hạn thất bại: ${error.message}`,
+    };
+  }
+  return { ok: true, data: undefined };
+}
+
+// ------------------------------------------------------------
+// Quản trị công ty: tạm dừng / kích hoạt, đặt lại mật khẩu admin
+// ------------------------------------------------------------
+
+export async function setTenantStatus(
+  tenantId: string,
+  status: 'active' | 'suspended',
+): Promise<ActionResult> {
+  await assertPlatformAdmin();
+
+  const admin = createAdminClient();
+  const { error } = await admin.from('tenants').update({ status }).eq('id', tenantId);
+  if (error) return { ok: false, error: `Đổi trạng thái công ty thất bại: ${error.message}` };
+  return { ok: true, data: undefined };
+}
+
+/** Đặt lại mật khẩu cho admin (owner) của công ty. */
+export async function resetCompanyAdminPassword(
+  tenantId: string,
+  newPassword: string,
+): Promise<ActionResult<{ adminEmail: string }>> {
+  await assertPlatformAdmin();
+
+  if (newPassword.length < 6) {
+    return { ok: false, error: 'Mật khẩu mới phải có ít nhất 6 ký tự.' };
+  }
+
+  const admin = createAdminClient();
+  const { data: owner, error: ownerError } = await admin
+    .from('user_profiles')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('role', 'owner')
+    .limit(1)
+    .maybeSingle();
+  if (ownerError || !owner) {
+    return { ok: false, error: 'Không tìm thấy tài khoản admin (owner) của công ty này.' };
+  }
+
+  const ownerId = (owner as { id: string }).id;
+  const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(ownerId, {
+    password: newPassword,
+  });
+  if (updateError) {
+    return { ok: false, error: `Đặt lại mật khẩu thất bại: ${updateError.message}` };
+  }
+  return { ok: true, data: { adminEmail: updated.user.email ?? '' } };
+}
+
+// ------------------------------------------------------------
+// Quản trị danh mục module (thêm/sửa/bật-tắt không cần deploy)
+// ------------------------------------------------------------
+
+const KEY_SEGMENT_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+export interface CreateModuleNodeInput {
+  parentId: string | null;
+  keySegment: string;
+  name: string;
+  description: string;
+  kind: 'module' | 'feature';
+}
+
+export async function createModuleNode(
+  input: CreateModuleNodeInput,
+): Promise<ActionResult<{ moduleId: string }>> {
+  await assertPlatformAdmin();
+
+  const name = input.name.trim();
+  const keySegment = input.keySegment.trim().toLowerCase();
+  if (!name) return { ok: false, error: 'Tên module không được để trống.' };
+  if (!KEY_SEGMENT_PATTERN.test(keySegment)) {
+    return { ok: false, error: 'Khóa chỉ gồm chữ thường, số, dấu gạch ngang (vd: bao-cao).' };
+  }
+
+  const admin = createAdminClient();
+
+  // Key đầy đủ = key cha + "." + segment (dotted-path, ADR-008)
+  let fullKey = keySegment;
+  if (input.parentId) {
+    const { data: parent, error: parentError } = await admin
+      .from('modules')
+      .select('key')
+      .eq('id', input.parentId)
+      .single();
+    if (parentError || !parent) return { ok: false, error: 'Không tìm thấy module cha.' };
+    fullKey = `${(parent as { key: string }).key}.${keySegment}`;
+  }
+
+  const { data: node, error } = await admin
+    .from('modules')
+    .insert({
+      parent_id: input.parentId,
+      key: fullKey,
+      name,
+      description: input.description.trim() || null,
+      kind: input.kind,
+    })
+    .select('id')
+    .single();
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === '23505'
+        ? `Khóa "${fullKey}" đã tồn tại trong danh mục.`
+        : `Thêm module thất bại: ${error.message}`,
+    };
+  }
+  return { ok: true, data: { moduleId: (node as { id: string }).id } };
+}
+
+export async function updateModuleNode(
+  moduleId: string,
+  patch: { name: string; description: string },
+): Promise<ActionResult> {
+  await assertPlatformAdmin();
+
+  const name = patch.name.trim();
+  if (!name) return { ok: false, error: 'Tên module không được để trống.' };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('modules')
+    .update({ name, description: patch.description.trim() || null })
+    .eq('id', moduleId);
+  if (error) return { ok: false, error: `Sửa module thất bại: ${error.message}` };
+  return { ok: true, data: undefined };
+}
+
+export async function setModuleActive(
+  moduleId: string,
+  isActive: boolean,
+): Promise<ActionResult> {
+  await assertPlatformAdmin();
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('modules')
+    .update({ is_active: isActive })
+    .eq('id', moduleId);
+  if (error) return { ok: false, error: `Đổi trạng thái module thất bại: ${error.message}` };
+  return { ok: true, data: undefined };
+}
+
+// ------------------------------------------------------------
+// Tham số hệ thống
+// ------------------------------------------------------------
+
+export async function updatePlatformSetting(
+  key: string,
+  rawJson: string,
+): Promise<ActionResult> {
+  await assertPlatformAdmin();
+
+  let value: unknown;
+  try {
+    value = JSON.parse(rawJson);
+  } catch {
+    return { ok: false, error: 'Giá trị không phải JSON hợp lệ.' };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from('platform_settings').update({ value }).eq('key', key);
+  if (error) return { ok: false, error: `Lưu tham số thất bại: ${error.message}` };
   return { ok: true, data: undefined };
 }

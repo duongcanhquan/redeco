@@ -59,11 +59,12 @@ export default async function ContractsPage() {
         </div>
       ) : (
         <div className="glass rounded-2xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm min-w-190">
+          <table className="w-full text-sm min-w-220">
             <thead>
               <tr className="border-b border-panel/40 text-left text-ink-muted">
                 <th className="px-5 py-3.5 font-medium">Mã HĐ</th>
                 <th className="px-5 py-3.5 font-medium">Công ty</th>
+                <th className="px-5 py-3.5 font-medium">Module</th>
                 <th className="px-5 py-3.5 font-medium">Thời hạn</th>
                 <th className="px-5 py-3.5 font-medium">Seats</th>
                 <th className="px-5 py-3.5 font-medium">Trạng thái</th>
@@ -79,6 +80,20 @@ export default async function ContractsPage() {
                   <tr key={c.id} className="hover:bg-glass transition-colors">
                     <td className="px-5 py-3.5 font-medium">{c.code}</td>
                     <td className="px-5 py-3.5">{c.tenants?.name ?? '—'}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1 max-w-52">
+                        {(c.contract_entitlements ?? []).map((e, i) =>
+                          e.modules ? (
+                            <span
+                              key={i}
+                              className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent whitespace-nowrap"
+                            >
+                              {e.modules.name}
+                            </span>
+                          ) : null,
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5 text-ink-muted">
                       <span className="whitespace-nowrap">
                         {c.starts_on} → {c.ends_on}

@@ -6,7 +6,9 @@ export interface TenantRow {
   name: string;
   slug: string;
   status: 'active' | 'suspended';
+  attributes: { admin_email?: string };
   created_at: string;
+  user_profiles?: { count: number }[];
 }
 
 export interface ContractRow {
@@ -19,6 +21,7 @@ export interface ContractRow {
   seats: number;
   notes: string | null;
   tenants?: { name: string } | null;
+  contract_entitlements?: { modules: { name: string } | null }[];
 }
 
 export interface ModuleRow {
@@ -103,16 +106,18 @@ export async function listModules(supabase: SupabaseClient): Promise<ModuleRow[]
 export async function listTenants(supabase: SupabaseClient): Promise<TenantRow[]> {
   const { data, error } = await supabase
     .from('tenants')
-    .select('id, name, slug, status, created_at')
+    .select('id, name, slug, status, attributes, created_at, user_profiles(count)')
     .order('created_at', { ascending: false });
   if (error) throw new Error(`Không tải được danh sách công ty: ${error.message}`);
-  return (data ?? []) as TenantRow[];
+  return (data ?? []) as unknown as TenantRow[];
 }
 
 export async function listContracts(supabase: SupabaseClient): Promise<ContractRow[]> {
   const { data, error } = await supabase
     .from('contracts')
-    .select('id, tenant_id, code, status, starts_on, ends_on, seats, notes, tenants(name)')
+    .select(
+      'id, tenant_id, code, status, starts_on, ends_on, seats, notes, tenants(name), contract_entitlements(modules(name))',
+    )
     .order('ends_on');
   if (error) throw new Error(`Không tải được danh sách hợp đồng: ${error.message}`);
   return (data ?? []) as unknown as ContractRow[];

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   createContract,
+  extendContract,
   setContractStatus,
   type ActionResult,
   type ContractStatusAction,
@@ -32,6 +33,20 @@ export async function setContractStatusAction(
 ): Promise<ActionResult> {
   try {
     const result = await setContractStatus(contractId, status);
+    if (result.ok) revalidateContractViews();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lỗi không xác định.' };
+  }
+}
+
+export async function extendContractAction(
+  contractId: string,
+  endsOn: string,
+  seats: number,
+): Promise<ActionResult> {
+  try {
+    const result = await extendContract(contractId, endsOn, seats);
     if (result.ok) revalidateContractViews();
     return result;
   } catch (e) {

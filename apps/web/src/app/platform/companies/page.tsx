@@ -1,6 +1,7 @@
 import { Building2 } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { listTenants } from '@/services/platform.service';
+import { CompanyActions } from './company-actions';
 import { CreateCompanyDialog } from './create-company-dialog';
 
 export const dynamic = 'force-dynamic';
@@ -34,13 +35,16 @@ export default async function CompaniesPage() {
         </div>
       ) : (
         <div className="glass rounded-2xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm min-w-130">
+          <table className="w-full text-sm min-w-190">
             <thead>
               <tr className="border-b border-panel/40 text-left text-ink-muted">
                 <th className="px-5 py-3.5 font-medium">Tên công ty</th>
                 <th className="px-5 py-3.5 font-medium">Subdomain</th>
+                <th className="px-5 py-3.5 font-medium">Admin</th>
+                <th className="px-5 py-3.5 font-medium">Thành viên</th>
                 <th className="px-5 py-3.5 font-medium">Trạng thái</th>
                 <th className="px-5 py-3.5 font-medium">Ngày tạo</th>
+                <th className="px-5 py-3.5 font-medium">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-panel/30">
@@ -48,6 +52,10 @@ export default async function CompaniesPage() {
                 <tr key={t.id} className="hover:bg-glass transition-colors">
                   <td className="px-5 py-3.5 font-medium">{t.name}</td>
                   <td className="px-5 py-3.5 font-mono text-ink-muted">{t.slug}</td>
+                  <td className="px-5 py-3.5 text-ink-muted break-all">
+                    {t.attributes.admin_email ?? '—'}
+                  </td>
+                  <td className="px-5 py-3.5">{t.user_profiles?.[0]?.count ?? 0}</td>
                   <td className="px-5 py-3.5">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -61,6 +69,9 @@ export default async function CompaniesPage() {
                   </td>
                   <td className="px-5 py-3.5 text-ink-muted">
                     {new Date(t.created_at).toLocaleDateString('vi-VN')}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <CompanyActions tenant={t} />
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,7 @@
 import { Settings2 } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { listSettings } from '@/services/platform.service';
+import { SettingEditor } from './setting-editor';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,12 +26,7 @@ export default async function SettingsPage() {
           <section key={s.key} className="glass rounded-2xl p-5">
             <p className="font-mono text-sm text-accent">{s.key}</p>
             {s.description && <p className="mt-1 text-sm text-ink-muted">{s.description}</p>}
-            <pre className="mt-3 rounded-xl bg-app-deep/70 border border-panel/30 p-3 text-sm overflow-x-auto">
-              {JSON.stringify(s.value, null, 2)}
-            </pre>
-            <p className="mt-2 text-xs text-ink-muted">
-              Cập nhật: {new Date(s.updated_at).toLocaleString('vi-VN')}
-            </p>
+            <SettingEditor setting={s} />
           </section>
         ))}
       </div>
