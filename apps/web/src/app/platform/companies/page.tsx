@@ -1,6 +1,7 @@
-import { Building2, Plus } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { listTenants } from '@/services/platform.service';
+import { CreateCompanyDialog } from './create-company-dialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,15 +21,7 @@ export default async function CompaniesPage() {
             Các doanh nghiệp đang vận hành trên nền tảng.
           </p>
         </div>
-        <button
-          type="button"
-          disabled
-          title="Sắp ra mắt — cần Platform API (bước tiếp theo)"
-          className="inline-flex items-center gap-2 rounded-xl bg-accent-soft border border-accent/30 px-4 py-2.5 text-sm font-semibold text-accent opacity-50 cursor-not-allowed"
-        >
-          <Plus size={16} aria-hidden />
-          Tạo công ty
-        </button>
+        <CreateCompanyDialog />
       </header>
 
       {tenants.length === 0 ? (
@@ -36,7 +29,7 @@ export default async function CompaniesPage() {
           <Building2 className="mx-auto text-ink-muted" size={32} aria-hidden />
           <p className="mt-4 font-medium">Chưa có công ty nào</p>
           <p className="mt-1 text-sm text-ink-muted">
-            Chức năng tạo công ty (kèm tài khoản admin) sẽ mở khi Platform API hoàn thành.
+            Bấm &quot;Tạo công ty&quot; để tạo khách hàng đầu tiên kèm tài khoản admin.
           </p>
         </div>
       ) : (

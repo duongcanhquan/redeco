@@ -21,10 +21,13 @@ function LoginForm() {
   );
   const [loading, setLoading] = useState(false);
 
-  // Tự điền email đã ghi nhớ từ lần đăng nhập trước
+  // Tự điền email đã ghi nhớ (sau frame đầu để không lệch với HTML prerender)
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
-    if (saved) setEmail(saved);
+    const frame = requestAnimationFrame(() => {
+      const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (saved) setEmail(saved);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {

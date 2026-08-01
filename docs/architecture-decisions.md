@@ -95,3 +95,14 @@ Quy tắc: ADR đã ghi không bị sửa/xóa. Nếu quyết định thay đổ
   - ✅ Bán lẻ chính xác đến từng tính năng nhỏ (entitle node lá) hoặc trọn gói (entitle node gốc).
   - ✅ Một bộ hàm SQL (`tenant_entitled_module_ids`, `my_module_ids`) dùng chung cho RLS, API guard và UI menu — một nguồn sự thật.
   - ⚠️ Đánh đổi: truy vấn quyền dùng recursive CTE (chi phí nhỏ, cây module ít node); ngữ nghĩa subtree phải được tôn trọng nhất quán ở mọi guard — đã đóng gói trong hàm SQL để tránh mỗi nơi tự suy diễn.
+
+## ADR-009
+
+- **Ngày**: 2026-08-01
+- **Quyết định**: Các mutation của superadmin console (tạo công ty + admin user, lập hợp đồng, gán entitlements, đổi trạng thái HĐ) thực hiện qua **Next.js Server Actions** với **service role key** (server-only), thay vì chờ NestJS Platform API.
+- **Ngữ cảnh**: Tạo công ty đòi hỏi Auth Admin API (tạo user, gán `app_metadata.tenant_id`) và ghi bảng `tenants` (RLS chỉ cho service role ghi) — bắt buộc dùng service role. NestJS API (ADR-007) chưa có hạ tầng deploy, trong khi web đã chạy trên Vercel; nếu đợi API thì console không dùng được ở production. Server Actions chạy 100% server-side trên Vercel, key không bao giờ xuống trình duyệt.
+- **Hậu quả/Kết quả**:
+  - ✅ Console hoạt động đầy đủ ngay trên Vercel; chỉ cần thêm env `SUPABASE_SERVICE_ROLE_KEY` (server-only, không có prefix NEXT_PUBLIC).
+  - ✅ Vẫn giữ phân lớp: Server Action (controller) → `services/platform-admin.service.ts` (business logic + validation + rollback) → Supabase client (data access). Mọi action gọi `assertPlatformAdmin()` kiểm tra JWT server-side trước khi chạy.
+  - ✅ Package `server-only` chặn import nhầm admin client vào client bundle ngay lúc build.
+  - ⚠️ Đánh đổi: logic platform tạm nằm ở apps/web thay vì apps/api; khi NestJS API sẵn sàng (JWKS guard, cron nhắc hạn), các nghiệp vụ phức tạp/cron sẽ chuyển dần sang API — service đã tách riêng nên di chuyển ít tốn kém.

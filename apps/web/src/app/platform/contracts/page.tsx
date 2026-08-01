@@ -1,6 +1,14 @@
-import { AlarmClock, Plus, ScrollText } from 'lucide-react';
+import { AlarmClock, ScrollText } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { listContracts, type ContractRow } from '@/services/platform.service';
+import {
+  buildModuleTree,
+  listContracts,
+  listModules,
+  listTenants,
+  type ContractRow,
+} from '@/services/platform.service';
+import { ContractStatusActions } from './contract-status-actions';
+import { CreateContractDialog } from './create-contract-dialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +27,12 @@ function daysLeft(endsOn: string): number {
 
 export default async function ContractsPage() {
   const supabase = await createServerSupabase();
-  const contracts = await listContracts(supabase);
+  const [contracts, tenants, modules] = await Promise.all([
+    listContracts(supabase),
+    listTenants(supabase),
+    listModules(supabase),
+  ]);
+  const moduleTree = buildModuleTree(modules);
 
   return (
     <div className="space-y-6">
@@ -33,15 +46,7 @@ export default async function ContractsPage() {
             Theo dõi thời hạn, seats và module đã bán cho từng công ty.
           </p>
         </div>
-        <button
-          type="button"
-          disabled
-          title="Sắp ra mắt — cần Platform API (bước tiếp theo)"
-          className="inline-flex items-center gap-2 rounded-xl bg-accent-soft border border-accent/30 px-4 py-2.5 text-sm font-semibold text-accent opacity-50 cursor-not-allowed"
-        >
-          <Plus size={16} aria-hidden />
-          Lập hợp đồng
-        </button>
+        <CreateContractDialog tenants={tenants} moduleTree={moduleTree} />
       </header>
 
       {contracts.length === 0 ? (
@@ -49,12 +54,12 @@ export default async function ContractsPage() {
           <ScrollText className="mx-auto text-ink-muted" size={32} aria-hidden />
           <p className="mt-4 font-medium">Chưa có hợp đồng nào</p>
           <p className="mt-1 text-sm text-ink-muted">
-            Sau khi có công ty, superadmin lập hợp đồng và phân bổ module tại đây.
+            Bấm &quot;Lập hợp đồng&quot; để phân bổ module và thời hạn cho công ty.
           </p>
         </div>
       ) : (
         <div className="glass rounded-2xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm min-w-160">
+          <table className="w-full text-sm min-w-190">
             <thead>
               <tr className="border-b border-panel/40 text-left text-ink-muted">
                 <th className="px-5 py-3.5 font-medium">Mã HĐ</th>
@@ -62,6 +67,7 @@ export default async function ContractsPage() {
                 <th className="px-5 py-3.5 font-medium">Thời hạn</th>
                 <th className="px-5 py-3.5 font-medium">Seats</th>
                 <th className="px-5 py-3.5 font-medium">Trạng thái</th>
+                <th className="px-5 py-3.5 font-medium">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-panel/30">
@@ -91,6 +97,9 @@ export default async function ContractsPage() {
                       >
                         {STATUS[c.status].label}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <ContractStatusActions contract={c} />
                     </td>
                   </tr>
                 );

@@ -61,6 +61,17 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
   - Data đọc trực tiếp qua RLS (JWT có `is_platform_admin`) — mọi query nằm ở `src/services/platform.service.ts`, KHÔNG trong component.
 - **Đã verify**: typecheck ✓ lint ✓ build ✓; smoke test: `/login` 200, `/platform` 307→login khi chưa đăng nhập, login API superadmin trả claim đúng.
 
+### ✅ Superadmin Mutations — Tạo công ty / Hợp đồng (2026-08-01) — ADR-009
+
+- **Migration 0003** (`20260801150000_platform_admin_tenant_access.sql`, ĐÃ apply): policy `tenants_platform_all` + `user_profiles_platform_all` — sửa lỗ hổng superadmin không đọc được danh sách công ty (migration 0001 chỉ cho user xem tenant mình).
+- **Server Actions + service role** (ADR-009): `lib/supabase/admin.ts` (client service role, import `server-only`), `services/platform-admin.service.ts`:
+  - `createCompanyWithAdmin()`: tạo tenant → tạo auth user admin (app_metadata.tenant_id, email confirmed) → user_profiles role `owner`; rollback ngược nếu bước sau fail; bắt lỗi trùng slug/email thân thiện.
+  - `createContract()`: hợp đồng + entitlements (chọn node cây = subtree), option kích hoạt ngay/nháp; `setContractStatus()` (active/suspended/terminated).
+  - Mọi hàm gọi `assertPlatformAdmin()` kiểm tra JWT server-side trước.
+- **UI console**: modal glass dùng chung (`components/platform/modal.tsx`); dialog Tạo công ty (auto-slug từ tên có bỏ dấu, sinh mật khẩu ngẫu nhiên, panel hiển thị credentials 1 lần + copy); dialog Lập hợp đồng (chọn công ty, thời hạn mặc định 1 năm, seats, cây module checkbox — chọn cha tự cover con); nút đổi trạng thái HĐ ngay trên bảng (kích hoạt/tạm dừng/chấm dứt + confirm).
+- **Env mới cho web**: `SUPABASE_SERVICE_ROLE_KEY` trong `apps/web/.env.local` — **Vercel cũng phải thêm biến này** (server-only).
+- **Đã verify**: build/lint/typecheck sạch; smoke test DB end-to-end (`scripts/test-platform-flow.cjs`, tự dọn dữ liệu): tạo tenant → user → profile → contract → entitlement kinh-doanh cho đúng 8 node subtree, tạm dừng HĐ → quyền về 0. PASS toàn bộ.
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
@@ -120,3 +131,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Design System persist (design-system/optimake); tạo superadmin; trang /login theo mẫu animated; console /platform (bento + glass, 6 trang); proxy bảo vệ route; smoke test pass |
 | 2026-08-01 | Rebrand REDECO → **Optimake**: logo mark SVG mới (lục giác + mũi tên, gradient cyan, `components/brand/logo.tsx`), favicon `app/icon.svg`, đổi scope packages @optimake/*, cập nhật toàn bộ docs/rules |
 | 2026-08-01 | Ghi nhớ đăng nhập: proxy auto-redirect admin đã đăng nhập từ `/`+`/login` vào thẳng `/platform`; checkbox "Ghi nhớ đăng nhập" lưu email vào localStorage (`optimake.remember_email`) |
+| 2026-08-01 | Superadmin mutations (ADR-009): migration 0003 (platform đọc tenants/user_profiles); Server Actions tạo công ty + admin, lập hợp đồng + gán module subtree, đổi trạng thái HĐ; smoke test DB pass |
