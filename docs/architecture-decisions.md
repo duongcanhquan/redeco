@@ -84,3 +84,14 @@ Quy tắc: ADR đã ghi không bị sửa/xóa. Nếu quyết định thay đổ
   - ✅ Pipes + class-validator/zod xử lý validation ở Controller layer đúng quy tắc `general.mdc`.
   - ✅ Monorepo pnpm cho phép `packages/domain` chia sẻ Entity/types giữa web và api — một nguồn sự thật cho domain model.
   - ⚠️ Đánh đổi: NestJS có learning curve (decorators, DI) và nhiều boilerplate hơn Express; chấp nhận vì tính kỷ luật kiến trúc quan trọng hơn tốc độ khởi đầu.
+
+## ADR-008
+
+- **Ngày**: 2026-08-01
+- **Quyết định**: Danh mục module là **bảng dữ liệu dạng cây tự tham chiếu** (`modules.parent_id`, key dotted-path duy nhất toàn cục); quyền sử dụng cấp theo **ngữ nghĩa subtree** (cấp node = được cả nhánh con) ở cả hợp đồng (`contract_entitlements`) lẫn phân công nhân sự (`user_module_assignments`).
+- **Ngữ cảnh**: Yêu cầu người dùng: hệ thống bán theo module, "module có thể mở rộng nhiều module, mỗi module có nhiều module hoặc phần, tính năng nhỏ", công ty mua hết hoặc mua một phần; superadmin thêm bớt module không cần deploy. Các phương án: (A) catalog trong DB dạng cây; (B) hardcode trong code + config JSONB; (C) RBAC engine đầy đủ. Người dùng duyệt phương án A.
+- **Hậu quả/Kết quả**:
+  - ✅ Thêm module/tính năng mới = INSERT dữ liệu, không deploy; độ sâu cây không giới hạn.
+  - ✅ Bán lẻ chính xác đến từng tính năng nhỏ (entitle node lá) hoặc trọn gói (entitle node gốc).
+  - ✅ Một bộ hàm SQL (`tenant_entitled_module_ids`, `my_module_ids`) dùng chung cho RLS, API guard và UI menu — một nguồn sự thật.
+  - ⚠️ Đánh đổi: truy vấn quyền dùng recursive CTE (chi phí nhỏ, cây module ít node); ngữ nghĩa subtree phải được tôn trọng nhất quán ở mọi guard — đã đóng gói trong hàm SQL để tránh mỗi nơi tự suy diễn.

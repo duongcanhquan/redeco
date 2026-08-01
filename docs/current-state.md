@@ -23,6 +23,17 @@
 - `.cursor/rules/`: `general.mdc` (Clean Architecture/SOLID/DDD, phân lớp, strict TS), `database.mdc` (RLS + JSONB, cấm EAV), `frontend-metadata.mdc` (Metadata-Driven UI từ R2), `ddd-blueprint.mdc` (Blueprint bắt buộc trước module mới), `context-tracking.mdc`, `skills-workflow.mdc` (Superpowers), `ui-design.mdc` (ui-ux-pro-max + responsive 3 thiết bị).
 - `docs/`: `architecture-decisions.md` (ADR-001..007), `current-state.md`.
 
+### ✅ Platform Core — DB & Domain (2026-08-01) — ĐÃ APPLY
+
+Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008). Các quyết định người dùng chốt: subdomain ngay từ đầu; superadmin console cùng app tại `/platform`; 1 email = 1 công ty; nhắc hạn dashboard + email 30/14/7; module nghiệp vụ đầu tiên = Kinh doanh; **danh mục module dạng CÂY** (module → module con → tính năng, cấp node = được cả subtree).
+
+- Migration `20260801140000_platform_core.sql` (đã apply, history đồng bộ):
+  - `platform_admins`, `modules` (cây tự tham chiếu, key dotted-path unique), `contracts` (thời hạn/seats/status), `contract_entitlements` (subtree), `user_module_assignments` (access_level view/edit/manage), `platform_settings` (đã seed `contract_reminder_days = [30,14,7]`).
+  - Functions: `is_platform_admin()`, `tenant_entitled_module_ids(tenant)`, `my_module_ids()` — một nguồn sự thật cho RLS + API + UI menu.
+  - RLS đầy đủ 8/8 bảng, 15 policies (đã verify bằng `scripts/inspect-db.cjs`).
+- Seed catalog: `scripts/seed-modules.cjs` (idempotent) — 13 node: 6 module gốc (kinh-doanh, san-xuat, ke-toan, nhan-su, hanh-chinh, thiet-bi) + cây Kinh doanh 3 tầng (khach-hang, bao-gia, don-hang + 4 features).
+- `@redeco/domain` mới: `ModuleNode`, `ModuleId`, `AccessLevel`, `Contract`, `ContractStatus`, `contractHealth()` (active/expiring_soon/expired), `TenantRole`, `isTenantAdmin()`.
+
 ### ✅ Supabase Migration Tooling + Migration 0001 (2026-08-01) — ĐÃ APPLY
 
 - Supabase CLI 2.111.0 cài làm devDep root (`pnpm exec supabase ...`); `supabase/` đã init (`config.toml`, `migrations/`).
@@ -76,7 +87,7 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **Tenant context ở api**: NestJS Guard verify JWT Supabase (JWKS URL đã có trong .env), extract `tenant_id` từ `app_metadata`, injection cho Repository layer; seed tenant đầu tiên + user test.
+1. **NestJS Platform API**: JWT guard (verify qua JWKS, URL đã có trong .env), `PlatformAdminGuard`, `TenantContext`, `ModuleAccessGuard` (dựa `my_module_ids()`); endpoints superadmin: CRUD công ty (tạo kèm admin user + gán app_metadata), CRUD hợp đồng + entitlements; tạo superadmin đầu tiên (script gán `is_platform_admin` vào app_metadata + insert `platform_admins`).
 3. **Sinh Design System** cho REDECO bằng script ui-ux-pro-max (`--design-system --persist -p "REDECO"`) → tạo `design-system/MASTER.md`.
 4. **Xây Metadata Engine phía frontend**: zod schema cho UI metadata, Component Registry, FormRenderer/GridRenderer (tuân `ui-design.mdc` — responsive 3 thiết bị).
 5. **Cấu hình R2**: bucket + service backend đọc/ghi metadata JSON theo key convention `tenants/{tenant_id}/metadata/...`.
@@ -94,3 +105,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Commit đầu tiên + push lên GitHub duongcanhquan/redeco (merge với README khởi tạo trên remote) |
 | 2026-08-01 | Supabase CLI + supabase init; viết migration 0001 (tenants, user_profiles, RLS, current_tenant_id); tạo .env.example + apps/api/.env — chờ password để apply |
 | 2026-08-01 | Điền đủ credentials (.env); xác minh schema remote khớp migration (user đã chạy SQL thủ công); migration repair → history đồng bộ; thêm scripts/inspect-db.cjs |
+| 2026-08-01 | Brainstorm + duyệt spec Platform Core (5 quyết định, ADR-008); migration 0002 apply (6 bảng mới + 3 functions quyền); seed 13 node catalog; types platform vào @redeco/domain |
