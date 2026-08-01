@@ -1,7 +1,7 @@
 {
-  "name": "@redeco/api",
+  "name": "@optimake/api",
   "version": "0.1.0",
-  "description": "REDECO ERP/MES backend (NestJS)",
+  "description": "Optimake ERP/MES backend (NestJS)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -22,7 +22,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@redeco/domain": "workspace:*",
+    "@optimake/domain": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",

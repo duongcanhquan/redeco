@@ -10,8 +10,8 @@ const poppins = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: 'REDECO — Nền tảng ERP/MES',
-  description: 'Hệ thống quản trị doanh nghiệp đa công ty',
+  title: 'Optimake — Nền tảng ERP/MES',
+  description: 'Optimake — Hệ thống quản trị doanh nghiệp đa công ty',
 };
 
 export default function RootLayout({

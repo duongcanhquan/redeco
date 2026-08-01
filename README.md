@@ -1,4 +1,4 @@
-# REDECO — Multi-tenant SaaS ERP/MES
+# Optimake — Multi-tenant SaaS ERP/MES
 
 Hệ thống ERP/MES đa tenant, xây dựng theo Clean Architecture + Domain-Driven Design.
 
@@ -19,7 +19,7 @@ apps/
   web/        # Next.js App Router (Rendering Engine)
   api/        # NestJS backend
 packages/
-  domain/     # Shared domain entities, types, events (@redeco/domain)
+  domain/     # Shared domain entities, types, events (@optimake/domain)
 docs/
   architecture-decisions.md   # ADR — lý do các quyết định kiến trúc
   current-state.md            # Trạng thái & tiến độ dự án (đọc đầu tiên!)

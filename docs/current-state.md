@@ -1,8 +1,8 @@
-# Current State — Bộ nhớ cốt lõi của dự án
+﻿# Current State — Bộ nhớ cốt lõi của dự án
 
 > **Quy tắc cho AI Agent**: Đọc tệp này ĐẦU TIÊN ở mỗi phiên làm việc mới. Sau khi hoàn thành mỗi tính năng/module, PHẢI tự động cập nhật tệp này (xem `.cursor/rules/context-tracking.mdc`).
 
-**Dự án**: Multi-tenant SaaS ERP/MES
+**Dự án**: Optimake — Multi-tenant SaaS ERP/MES (rebrand từ REDECO, 2026-08-01)
 **Tech stack**: TypeScript · Next.js 16 (App Router, Turbopack) · NestJS 11 · Supabase (PostgreSQL + RLS) · Cloudflare R2 · pnpm monorepo
 **Cập nhật lần cuối**: 2026-08-01
 
@@ -32,7 +32,7 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
   - Functions: `is_platform_admin()`, `tenant_entitled_module_ids(tenant)`, `my_module_ids()` — một nguồn sự thật cho RLS + API + UI menu.
   - RLS đầy đủ 8/8 bảng, 15 policies (đã verify bằng `scripts/inspect-db.cjs`).
 - Seed catalog: `scripts/seed-modules.cjs` (idempotent) — 13 node: 6 module gốc (kinh-doanh, san-xuat, ke-toan, nhan-su, hanh-chinh, thiet-bi) + cây Kinh doanh 3 tầng (khach-hang, bao-gia, don-hang + 4 features).
-- `@redeco/domain` mới: `ModuleNode`, `ModuleId`, `AccessLevel`, `Contract`, `ContractStatus`, `contractHealth()` (active/expiring_soon/expired), `TenantRole`, `isTenantAdmin()`.
+- `@optimake/domain` mới: `ModuleNode`, `ModuleId`, `AccessLevel`, `Contract`, `ContractStatus`, `contractHealth()` (active/expiring_soon/expired), `TenantRole`, `isTenantAdmin()`.
 
 ### ✅ Supabase Migration Tooling + Migration 0001 (2026-08-01) — ĐÃ APPLY
 
@@ -50,7 +50,7 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 
 ### ✅ Auth + Login + Superadmin Console UI (2026-08-01)
 
-- **Design System đã sinh & persist**: `design-system/redeco/MASTER.md` (ui-ux-pro-max). Palette chốt: nền navy `#1f293a` (`--color-app`), accent cyan `#00eeff` (`--color-accent`), kính mờ (`.glass`) + bento grid. Font: **Be Vietnam Pro** (Poppins không có glyph tiếng Việt). Tokens semantic khai báo trong `apps/web/src/app/globals.css` qua `@theme` — cấm hex thô trong component.
+- **Design System đã sinh & persist**: `design-system/optimake/MASTER.md` (ui-ux-pro-max). Palette chốt: nền navy `#1f293a` (`--color-app`), accent cyan `#00eeff` (`--color-accent`), kính mờ (`.glass`) + bento grid. Font: **Be Vietnam Pro** (Poppins không có glyph tiếng Việt). Tokens semantic khai báo trong `apps/web/src/app/globals.css` qua `@theme` — cấm hex thô trong component.
 - **Superadmin**: `scripts/create-superadmin.cjs` (idempotent) — đã tạo `superadmin@gmail.com` / `123456` (user id `a43744b6-...`), `app_metadata.is_platform_admin=true` + row trong `platform_admins`.
 - **Supabase phía web**: `@supabase/supabase-js` + `@supabase/ssr`; helpers `src/lib/supabase/client.ts` (browser) & `server.ts` (RSC); `apps/web/.env.local` (gitignored) chứa URL + anon key.
 - **Route protection**: `src/proxy.ts` (Next 16 đổi tên middleware→proxy) — refresh session + chặn `/platform`: chưa login → `/login?next=...`, login nhưng không phải platform admin → `/login?error=forbidden`.
@@ -71,17 +71,17 @@ pnpm-workspace.yaml        # apps/* + packages/*
 tsconfig.base.json         # strict: true, noUncheckedIndexedAccess, noImplicitOverride...
 .prettierrc / .gitignore / README.md
 apps/
-  web/                     # @redeco/web — Next.js 16.2.12 App Router + Tailwind v4 + Turbopack, src-dir, alias @/*
-  api/                     # @redeco/api — NestJS 11, strict TS, global prefix /api, port 3001
+  web/                     # @optimake/web — Next.js 16.2.12 App Router + Tailwind v4 + Turbopack, src-dir, alias @/*
+  api/                     # @optimake/api — NestJS 11, strict TS, global prefix /api, port 3001
 packages/
-  domain/                  # @redeco/domain — build ra dist (CJS + d.ts) qua hook prepare
+  domain/                  # @optimake/domain — build ra dist (CJS + d.ts) qua hook prepare
     src/shared/branded-types.ts   # Brand<T>, TenantId, UserId + asTenantId/asUserId
     src/shared/base-entity.ts     # BaseEntityProps (id, tenantId, attributes JSONB, timestamps)
     src/shared/domain-event.ts    # DomainEvent<TPayload>
 ```
 
 Ghi chú kỹ thuật quan trọng:
-- `@redeco/domain` được cả web và api dùng qua `workspace:*`; consume từ `dist/` (không import TS source) để tương thích cả Nest (tsc) lẫn Next (bundler). Hook `prepare` tự build khi `pnpm install`.
+- `@optimake/domain` được cả web và api dùng qua `workspace:*`; consume từ `dist/` (không import TS source) để tương thích cả Nest (tsc) lẫn Next (bundler). Hook `prepare` tự build khi `pnpm install`.
 - Ports: web = 3000, api = 3001 (prefix `/api`).
 - Môi trường máy dev: Node v24, pnpm 10.18.3, Python 3.12 (cần cho script ui-ux-pro-max).
 - pnpm cảnh báo "Ignored build scripts: sharp, unrs-resolver" — nếu cần dùng sharp (image optimization) sau này, chạy `pnpm approve-builds`.
@@ -112,9 +112,10 @@ Ghi chú kỹ thuật quan trọng:
 |---|---|
 | 2026-08-01 | Khởi tạo 5 Cursor Rules + hệ thống Context Tracking (ADR, current-state) |
 | 2026-08-01 | Bổ sung `skills-workflow.mdc` (Superpowers) + `ui-design.mdc` (ui-ux-pro-max, responsive 3 thiết bị); ghi ADR-005, ADR-006 |
-| 2026-08-01 | Chốt NestJS (ADR-007); scaffold pnpm monorepo: @redeco/web (Next 16), @redeco/api (Nest 11), @redeco/domain; typecheck/build/lint đều pass |
+| 2026-08-01 | Chốt NestJS (ADR-007); scaffold pnpm monorepo: @optimake/web (Next 16), @optimake/api (Nest 11), @optimake/domain; typecheck/build/lint đều pass |
 | 2026-08-01 | Commit đầu tiên + push lên GitHub duongcanhquan/redeco (merge với README khởi tạo trên remote) |
 | 2026-08-01 | Supabase CLI + supabase init; viết migration 0001 (tenants, user_profiles, RLS, current_tenant_id); tạo .env.example + apps/api/.env — chờ password để apply |
 | 2026-08-01 | Điền đủ credentials (.env); xác minh schema remote khớp migration (user đã chạy SQL thủ công); migration repair → history đồng bộ; thêm scripts/inspect-db.cjs |
-| 2026-08-01 | Brainstorm + duyệt spec Platform Core (5 quyết định, ADR-008); migration 0002 apply (6 bảng mới + 3 functions quyền); seed 13 node catalog; types platform vào @redeco/domain |
-| 2026-08-01 | Design System persist (design-system/redeco); tạo superadmin; trang /login theo mẫu animated; console /platform (bento + glass, 6 trang); proxy bảo vệ route; smoke test pass |
+| 2026-08-01 | Brainstorm + duyệt spec Platform Core (5 quyết định, ADR-008); migration 0002 apply (6 bảng mới + 3 functions quyền); seed 13 node catalog; types platform vào @optimake/domain |
+| 2026-08-01 | Design System persist (design-system/optimake); tạo superadmin; trang /login theo mẫu animated; console /platform (bento + glass, 6 trang); proxy bảo vệ route; smoke test pass |
+| 2026-08-01 | Rebrand REDECO → **Optimake**: logo mark SVG mới (lục giác + mũi tên, gradient cyan, `components/brand/logo.tsx`), favicon `app/icon.svg`, đổi scope packages @optimake/*, cập nhật toàn bộ docs/rules |

@@ -1,4 +1,4 @@
-# Spec: Platform Core — Multi-tenant SaaS ERP/MES
+﻿# Spec: Platform Core — Multi-tenant SaaS ERP/MES
 
 **Ngày**: 2026-08-01 · **Trạng thái**: Đã duyệt (người dùng xác nhận "bắt đầu đi")
 
@@ -103,7 +103,7 @@ API ký URL theo `tenant_id` từ JWT.
 ## 9. Thứ tự triển khai
 
 1. Migration 0002 + seed danh mục (6 module gốc + cây con Kinh doanh) ✅ phase này
-2. Types `@redeco/domain` ✅ phase này
+2. Types `@optimake/domain` ✅ phase này
 3. NestJS: JWT guard (JWKS), TenantContext, PlatformAdminGuard, ModuleAccessGuard + API platform (CRUD công ty/hợp đồng)
 4. UI `/platform` (superadmin console) — invoke ui-ux-pro-max trước
 5. Subdomain middleware + UI admin công ty

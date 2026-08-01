@@ -1,8 +1,8 @@
 {
-  "name": "@redeco/domain",
+  "name": "@optimake/domain",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared domain entities, value objects, and domain events for REDECO ERP/MES",
+  "description": "Shared domain entities, value objects, and domain events for Optimake ERP/MES",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

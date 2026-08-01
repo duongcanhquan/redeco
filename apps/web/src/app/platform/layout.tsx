@@ -4,10 +4,10 @@ import {
   LayoutDashboard,
   ScrollText,
   Settings2,
-  ShieldCheck,
   UserRound,
 } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { LogoMark } from '@/components/brand/logo';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NavLink } from '@/components/platform/nav-link';
 import { SignOutButton } from '@/components/platform/sign-out-button';
@@ -38,11 +38,11 @@ export default async function PlatformLayout({
       {/* Sidebar desktop / header mobile */}
       <aside className="glass lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:flex lg:flex-col shrink-0 border-b lg:border-b-0 lg:border-r border-panel/40 bg-app-deep/60">
         <div className="flex items-center gap-3 px-5 py-5">
-          <span className="grid size-10 place-items-center rounded-2xl bg-accent-soft border border-accent/30">
-            <ShieldCheck className="text-accent" size={22} aria-hidden />
-          </span>
+          <LogoMark size={40} />
           <div>
-            <p className="font-bold leading-tight tracking-wide">REDECO</p>
+            <p className="font-bold leading-tight tracking-wide">
+              <span className="text-accent">O</span>ptimake
+            </p>
             <p className="text-xs text-ink-muted">Quản trị nền tảng</p>
           </div>
         </div>

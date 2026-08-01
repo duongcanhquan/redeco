@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** REDECO
+**Project:** Optimake
 **Generated:** 2026-08-01 21:18:53
 **Category:** Smart Home/IoT Dashboard
 

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Logo } from '@/components/brand/logo';
 import { createClient } from '@/lib/supabase/client';
 
 const RING_SEGMENTS = Array.from({ length: 50 }, (_, i) => i);
@@ -58,6 +59,9 @@ function LoginForm() {
         ))}
 
         <div className="login-box">
+          <div className="flex justify-center mb-2">
+            <Logo markSize={34} textClassName="text-2xl" />
+          </div>
           <h1 className="login-title">Đăng nhập</h1>
           <form onSubmit={(e) => void handleSubmit(e)} noValidate>
             <div className="input-box">
@@ -91,7 +95,7 @@ function LoginForm() {
 
             <div className="text-center -mt-1 mb-3">
               <a
-                href="mailto:superadmin@gmail.com?subject=Quên mật khẩu REDECO"
+                href="mailto:superadmin@gmail.com?subject=Quên mật khẩu Optimake"
                 className="text-ink-muted text-sm hover:underline"
               >
                 Quên mật khẩu?

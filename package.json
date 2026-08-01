@@ -1,12 +1,12 @@
 {
-  "name": "redeco",
+  "name": "optimake",
   "version": "0.1.0",
   "private": true,
-  "description": "Multi-tenant SaaS ERP/MES - TypeScript, Next.js, NestJS, Supabase (PostgreSQL + RLS), Cloudflare R2",
+  "description": "Optimake - Multi-tenant SaaS ERP/MES - TypeScript, Next.js, NestJS, Supabase (PostgreSQL + RLS), Cloudflare R2",
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
-    "dev:web": "pnpm --filter @redeco/web dev",
-    "dev:api": "pnpm --filter @redeco/api start:dev",
+    "dev:web": "pnpm --filter @optimake/web dev",
+    "dev:api": "pnpm --filter @optimake/api start:dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

@@ -21,7 +21,7 @@ Quy trình theo skill:
 2. Sinh Design System bằng script (đường dẫn tuyệt đối trên máy này):
 
 ```powershell
-python "C:\Users\PC\.claude\plugins\cache\ui-ux-pro-max-skill\ui-ux-pro-max\2.5.0\src\ui-ux-pro-max\scripts\search.py" "<query>" --design-system --persist -p "REDECO"
+python "C:\Users\PC\.claude\plugins\cache\ui-ux-pro-max-skill\ui-ux-pro-max\2.5.0\src\ui-ux-pro-max\scripts\search.py" "<query>" --design-system --persist -p "Optimake"
 ```
 
 3. Persist kết quả vào `design-system/MASTER.md` (+ `design-system/pages/<page>.md` cho override theo trang). Khi build một trang: đọc `MASTER.md` trước, nếu có file page override thì ưu tiên file đó.
