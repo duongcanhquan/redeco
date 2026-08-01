@@ -17,16 +17,17 @@ alwaysApply: true
   2. Bật RLS: `ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;`
   3. Có policy cách ly tenant cho đủ 4 thao tác (SELECT / INSERT / UPDATE / DELETE).
 
-- Policy chuẩn (dựa trên JWT claim của Supabase Auth):
+- Policy chuẩn: dùng helper `public.current_tenant_id()` (đã tạo ở migration 0001, đọc `app_metadata.tenant_id` từ JWT — client KHÔNG thể tự sửa app_metadata):
 
 ```sql
 CREATE POLICY tenant_isolation ON work_orders
   FOR ALL
-  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid)
-  WITH CHECK (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+  TO authenticated
+  USING (tenant_id = public.current_tenant_id())
+  WITH CHECK (tenant_id = public.current_tenant_id());
 ```
 
-- `tenant_id` LUÔN được lấy từ JWT claims / server-side context. **CẤM** nhận `tenant_id` từ request body/query của client.
+- `tenant_id` của user được gán vào `auth.users.raw_app_meta_data` khi onboarding (bởi service role) → tự xuất hiện trong JWT `app_metadata`. **CẤM** nhận `tenant_id` từ request body/query của client.
 - **CẤM** dùng `service_role` key để bypass RLS trong luồng nghiệp vụ thông thường. Chỉ dùng cho admin jobs/migrations, và phải filter `tenant_id` thủ công + ghi chú rõ lý do.
 - Mọi migration tạo bảng mới mà thiếu RLS policy sẽ bị coi là lỗi — không được merge.
 - Index bắt buộc: mọi bảng multi-tenant phải có index bắt đầu bằng `tenant_id` (ví dụ: `(tenant_id, created_at)`, `(tenant_id, status)`).

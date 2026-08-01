@@ -14,10 +14,15 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\""
   },
   "devDependencies": {
-    "prettier": "^3.4.2"
+    "pg": "^8.22.0",
+    "prettier": "^3.4.2",
+    "supabase": "^2.111.0"
   },
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@10.18.3"
+  "packageManager": "pnpm@10.18.3",
+  "dependencies": {
+    "@supabase/server": "^1.4.1"
+  }
 }
