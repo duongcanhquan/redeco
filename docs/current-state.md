@@ -107,6 +107,19 @@ Chỉnh theo góp ý người dùng: gán module làm ở trang Công ty (không
 - **Migration 0005** (`20260801190000_module_access_descendants.sql`, ĐÃ apply): `has_module_access(p_key)` giờ nhận cả node CON trong nhánh (dotted-path `like p_key || '.%'`) — member chỉ được giao `kinh-doanh.bao-gia` vẫn vào được dữ liệu sales + thấy menu (getMyRootModules đổi theo: hiện root khi có bất kỳ node nào trong nhánh).
 - **Đã verify**: typecheck/lint/build sạch; smoke test `scripts/test-members-flow.cjs` (5 bước, JWT thật, tự dọn): owner đủ 8 node; member giao node con đọc được sales; member chưa phân công bị RLS chặn; member không tự phân công được (RLS uma) — PASS.
 
+### ✅ Superadmin gọn còn 3 mục — gộp bằng tab (2026-08-01)
+
+Theo góp ý: superadmin chỉ quản lý khách hàng + hợp đồng + theo dõi tổng kết; gộp phần trùng nhau; dùng tab tối đa cho desktop/iPad/phone.
+
+- **Sidebar còn 3 mục**: Tổng quan / Khách hàng / Tài khoản.
+- **Trang Khách hàng (`/platform/companies?tab=…`) gộp 3 tab** (component `components/platform/tab-bar.tsx` — tab bar glass, cuộn ngang trên phone, badge số đếm, deep-link qua query param):
+  - `Khách hàng` (mặc định): bảng công ty + Gán module + Tạo công ty (kèm module/seats).
+  - `Hợp đồng`: bảng hợp đồng + Lập hợp đồng + đổi trạng thái/gia hạn (nút header đổi theo tab).
+  - `Danh mục module`: catalog CHỈ ĐỌC (accordion), ghi chú rõ việc cấp module làm ở tab Khách hàng.
+- **Route cũ redirect**: `/platform/contracts` → `?tab=contracts`, `/platform/modules` → `?tab=modules`; các link dashboard đã trỏ theo tab.
+- **Bỏ trang Tham số superadmin** (xóa settings page/editor/actions + `updatePlatformSetting`/`listSettings`): cài đặt, tham số vận hành thuộc phần cài đặt của khách hàng (`/app/settings`); `platform_settings` trong DB giữ nguyên cho cron nhắc hạn.
+- **Đã verify**: typecheck/lint/build sạch (10 route, contracts/modules giờ là redirect).
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):

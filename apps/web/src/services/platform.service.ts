@@ -56,13 +56,6 @@ export interface ModuleRow {
   is_active: boolean;
 }
 
-export interface SettingRow {
-  key: string;
-  value: unknown;
-  description: string | null;
-  updated_at: string;
-}
-
 export interface PlatformOverview {
   tenantCount: number;
   activeContractCount: number;
@@ -144,15 +137,6 @@ export async function listContracts(supabase: SupabaseClient): Promise<ContractR
     .order('ends_on');
   if (error) throw new Error(`Không tải được danh sách hợp đồng: ${error.message}`);
   return (data ?? []) as unknown as ContractRow[];
-}
-
-export async function listSettings(supabase: SupabaseClient): Promise<SettingRow[]> {
-  const { data, error } = await supabase
-    .from('platform_settings')
-    .select('key, value, description, updated_at')
-    .order('key');
-  if (error) throw new Error(`Không tải được tham số hệ thống: ${error.message}`);
-  return (data ?? []) as SettingRow[];
 }
 
 /** Node cây module đã dựng từ danh sách phẳng. */

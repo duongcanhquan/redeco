@@ -11,7 +11,7 @@ import {
 } from '@/services/platform-admin.service';
 
 function revalidateContractViews(): void {
-  revalidatePath('/platform/contracts');
+  revalidatePath('/platform/companies');
   revalidatePath('/platform');
 }
 

@@ -393,27 +393,5 @@ export async function resetCompanyAdminPassword(
 // ------------------------------------------------------------
 // Danh mục module: CHỈ ĐỌC trong superadmin (yêu cầu người dùng
 // 2026-08-01). Thay đổi catalog đi qua migration/seed script.
+// Tham số/cài đặt vận hành nằm ở phần cài đặt của từng khách hàng.
 // ------------------------------------------------------------
-
-// ------------------------------------------------------------
-// Tham số hệ thống
-// ------------------------------------------------------------
-
-export async function updatePlatformSetting(
-  key: string,
-  rawJson: string,
-): Promise<ActionResult> {
-  await assertPlatformAdmin();
-
-  let value: unknown;
-  try {
-    value = JSON.parse(rawJson);
-  } catch {
-    return { ok: false, error: 'Giá trị không phải JSON hợp lệ.' };
-  }
-
-  const admin = createAdminClient();
-  const { error } = await admin.from('platform_settings').update({ value }).eq('key', key);
-  if (error) return { ok: false, error: `Lưu tham số thất bại: ${error.message}` };
-  return { ok: true, data: undefined };
-}

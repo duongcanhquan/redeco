@@ -1,11 +1,4 @@
-import {
-  Boxes,
-  Building2,
-  LayoutDashboard,
-  ScrollText,
-  Settings2,
-  UserRound,
-} from 'lucide-react';
+import { Building2, LayoutDashboard, UserRound } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
 import { createServerSupabase } from '@/lib/supabase/server';
@@ -14,10 +7,7 @@ import { SignOutButton } from '@/components/platform/sign-out-button';
 
 const NAV_ITEMS = [
   { href: '/platform', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/platform/companies', label: 'Công ty', icon: Building2 },
-  { href: '/platform/contracts', label: 'Hợp đồng', icon: ScrollText },
-  { href: '/platform/modules', label: 'Module', icon: Boxes },
-  { href: '/platform/settings', label: 'Tham số', icon: Settings2 },
+  { href: '/platform/companies', label: 'Khách hàng', icon: Building2 },
   { href: '/platform/account', label: 'Tài khoản', icon: UserRound },
 ] as const;
 

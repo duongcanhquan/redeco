@@ -47,10 +47,7 @@ export async function setTenantModulesAction(
 ): Promise<ActionResult<{ contractCode: string | null }>> {
   try {
     const result = await setTenantModules(tenantId, moduleIds);
-    if (result.ok) {
-      revalidateCompanyViews();
-      revalidatePath('/platform/contracts');
-    }
+    if (result.ok) revalidateCompanyViews();
     return result;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lỗi không xác định.' };

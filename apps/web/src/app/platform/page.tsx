@@ -34,10 +34,10 @@ export default async function PlatformDashboard() {
   const tree = buildModuleTree(modules);
 
   const stats = [
-    { label: 'Công ty', value: overview.tenantCount, icon: Building2, href: '/platform/companies' },
-    { label: 'Hợp đồng hiệu lực', value: overview.activeContractCount, icon: ScrollText, href: '/platform/contracts' },
-    { label: 'Sắp hết hạn (30 ngày)', value: overview.expiringSoonCount, icon: AlarmClock, href: '/platform/contracts', warn: overview.expiringSoonCount > 0 },
-    { label: 'Tổng seats đang bán', value: overview.totalSeats, icon: Users, href: '/platform/contracts' },
+    { label: 'Khách hàng', value: overview.tenantCount, icon: Building2, href: '/platform/companies' },
+    { label: 'Hợp đồng hiệu lực', value: overview.activeContractCount, icon: ScrollText, href: '/platform/companies?tab=contracts' },
+    { label: 'Sắp hết hạn (30 ngày)', value: overview.expiringSoonCount, icon: AlarmClock, href: '/platform/companies?tab=contracts', warn: overview.expiringSoonCount > 0 },
+    { label: 'Tổng seats đang bán', value: overview.totalSeats, icon: Users, href: '/platform/companies?tab=contracts' },
   ];
 
   return (
@@ -82,7 +82,10 @@ export default async function PlatformDashboard() {
               <ScrollText size={18} className="text-accent" aria-hidden />
               Hợp đồng gần đây
             </h2>
-            <Link href="/platform/contracts" className="text-sm text-accent hover:underline">
+            <Link
+              href="/platform/companies?tab=contracts"
+              className="text-sm text-accent hover:underline"
+            >
               Xem tất cả
             </Link>
           </div>
@@ -122,7 +125,10 @@ export default async function PlatformDashboard() {
               <Boxes size={18} className="text-accent" aria-hidden />
               Danh mục module
             </h2>
-            <Link href="/platform/modules" className="text-sm text-accent hover:underline">
+            <Link
+              href="/platform/companies?tab=modules"
+              className="text-sm text-accent hover:underline"
+            >
               Chi tiết
             </Link>
           </div>
