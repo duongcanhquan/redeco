@@ -4,7 +4,9 @@ import {
   LayoutDashboard,
   Package,
   ScrollText,
+  Settings,
   Truck,
+  UserCog,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -37,10 +39,13 @@ export default async function WorkspaceLayout({
     redirect('/login?error=forbidden');
   }
 
-  const [{ data: tenant }, modules] = await Promise.all([
+  const [{ data: tenant }, { data: profile }, modules] = await Promise.all([
     supabase.from('tenants').select('name').eq('id', tenantId).single(),
+    supabase.from('user_profiles').select('role').eq('id', user.id).single(),
     getMyRootModules(supabase),
   ]);
+  const role = (profile as { role?: string } | null)?.role ?? 'member';
+  const isManager = role === 'owner' || role === 'admin';
   const hasSales = modules.some((m) => m.key === 'kinh-doanh');
   const otherModules = modules.filter((m) => m.key !== 'kinh-doanh');
 
@@ -94,6 +99,13 @@ export default async function WorkspaceLayout({
             </>
           )}
 
+          <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+            Công ty
+          </p>
+          {isManager && (
+            <NavLink href="/app/members" label="Thành viên" icon={<UserCog size={18} aria-hidden />} />
+          )}
+          <NavLink href="/app/settings" label="Cài đặt" icon={<Settings size={18} aria-hidden />} />
           <NavLink href="/app/account" label="Tài khoản" icon={<UserRound size={18} aria-hidden />} />
 
           <div className="hidden lg:block lg:mt-auto lg:pt-4 lg:border-t lg:border-panel/40">

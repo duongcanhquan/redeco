@@ -1,6 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Row types khớp schema public (migration 0001 + 0002). */
+export interface TenantContractRow {
+  id: string;
+  status: 'draft' | 'active' | 'suspended' | 'terminated';
+  starts_on: string;
+  ends_on: string;
+  seats: number;
+  contract_entitlements: { module_id: string }[];
+}
+
 export interface TenantRow {
   id: string;
   name: string;
@@ -9,6 +18,18 @@ export interface TenantRow {
   attributes: { admin_email?: string };
   created_at: string;
   user_profiles?: { count: number }[];
+  contracts?: TenantContractRow[];
+}
+
+/** Node module tối thiểu đang cấp cho công ty (từ hợp đồng hiệu lực hôm nay). */
+export function entitledModuleIdsOf(tenant: TenantRow): Set<string> {
+  const today = new Date().toISOString().slice(0, 10);
+  const ids = new Set<string>();
+  for (const c of tenant.contracts ?? []) {
+    if (c.status !== 'active' || c.starts_on > today || c.ends_on < today) continue;
+    for (const e of c.contract_entitlements) ids.add(e.module_id);
+  }
+  return ids;
 }
 
 export interface ContractRow {
@@ -106,7 +127,9 @@ export async function listModules(supabase: SupabaseClient): Promise<ModuleRow[]
 export async function listTenants(supabase: SupabaseClient): Promise<TenantRow[]> {
   const { data, error } = await supabase
     .from('tenants')
-    .select('id, name, slug, status, attributes, created_at, user_profiles(count)')
+    .select(
+      'id, name, slug, status, attributes, created_at, user_profiles(count), contracts(id, status, starts_on, ends_on, seats, contract_entitlements(module_id))',
+    )
     .order('created_at', { ascending: false });
   if (error) throw new Error(`Không tải được danh sách công ty: ${error.message}`);
   return (data ?? []) as unknown as TenantRow[];

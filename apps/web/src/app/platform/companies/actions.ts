@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import {
   createCompanyWithAdmin,
   resetCompanyAdminPassword,
+  setTenantModules,
   setTenantStatus,
   type ActionResult,
   type CreateCompanyInput,
@@ -34,6 +35,22 @@ export async function setTenantStatusAction(
   try {
     const result = await setTenantStatus(tenantId, status);
     if (result.ok) revalidateCompanyViews();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lỗi không xác định.' };
+  }
+}
+
+export async function setTenantModulesAction(
+  tenantId: string,
+  moduleIds: string[],
+): Promise<ActionResult<{ contractCode: string | null }>> {
+  try {
+    const result = await setTenantModules(tenantId, moduleIds);
+    if (result.ok) {
+      revalidateCompanyViews();
+      revalidatePath('/platform/contracts');
+    }
     return result;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lỗi không xác định.' };

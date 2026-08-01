@@ -94,6 +94,19 @@ Blueprint: `docs/blueprints/2026-08-01-sales-module-blueprint.md` (aggregates + 
 - **Demo**: `scripts/seed-demo-company.cjs` — công ty "demo", login `demo@optimake.com` / `Demo@123`, 3 khách hàng + 4 sản phẩm có tồn.
 - **Roadmap nhóm 2–5** (trong blueprint): CPQ+BOM động, Dynamic Pricing, AI Forecasting, B2B Portal+EDI (nhóm 2 — cần module Kho/Kỹ thuật/Sản xuất); Churn/NBA/Copilot (nhóm 3 — cần dữ liệu lịch sử, schema đã chuẩn bị timestamps + attributes); n8n webhook theo domain events (nhóm 4); chuyên biệt từng DN (nhóm 5 — sau).
 
+### ✅ Gán module theo công ty + Quản lý thành viên tenant (2026-08-01)
+
+Chỉnh theo góp ý người dùng: gán module làm ở trang Công ty (không phải sửa catalog); khách hàng tự tạo user theo chức năng.
+
+- **Danh mục module superadmin = CHỈ ĐỌC** (`module-catalog-view.tsx`, accordion nhóm có nút sổ); đã xóa modules-manager + các hàm mutation catalog khỏi service. Thay đổi catalog đi qua migration/seed.
+- **Gán module tại trang Công ty**: component dùng chung `components/platform/module-tree-picker.tsx` — mỗi module gốc là 1 NHÓM có nút sổ xuống, tick module gốc = cấp cả nhánh (subtree ADR-008), tick lẻ từng phần con được; có chế độ readOnly. Trang Công ty thêm cột "Module được cấp" (badge theo nhóm) + nút **Gán module** (modal, ghi vào hợp đồng đang hiệu lực; chưa có thì tự sinh hợp đồng active 1 năm — `setTenantModules`). **Tạo công ty** giờ chọn được module + seats ngay trong dialog (tự sinh hợp đồng kèm entitlements, rollback trọn gói nếu lỗi).
+- **Workspace khách hàng**:
+  - `/app/members` (chỉ owner/admin): tự tạo user theo chức năng — email/mật khẩu (sinh ngẫu nhiên, hiện 1 lần + copy), vai trò Quản trị/Thành viên, phân công module bằng cây CHỈ GỒM module công ty được cấp (`getEntitledModuleTree`); sửa vai trò/phân công, reset mật khẩu, xóa thành viên (chặn owner + chính mình); **seat limit** theo hợp đồng (chặn tạo khi đầy). Service: `tenant-admin.service.ts` — mutations dùng service role NHƯNG sau `assertTenantAdmin()` và chỉ trong tenant của người gọi; email member lưu `user_profiles.attributes.email`.
+  - `/app/settings`: 3 card (công ty, hợp đồng + hạn, seats đã dùng) + **cây module đã cài đặt** (readOnly picker).
+  - Menu thêm nhóm "Công ty": Thành viên (admin) + Cài đặt.
+- **Migration 0005** (`20260801190000_module_access_descendants.sql`, ĐÃ apply): `has_module_access(p_key)` giờ nhận cả node CON trong nhánh (dotted-path `like p_key || '.%'`) — member chỉ được giao `kinh-doanh.bao-gia` vẫn vào được dữ liệu sales + thấy menu (getMyRootModules đổi theo: hiện root khi có bất kỳ node nào trong nhánh).
+- **Đã verify**: typecheck/lint/build sạch; smoke test `scripts/test-members-flow.cjs` (5 bước, JWT thật, tự dọn): owner đủ 8 node; member giao node con đọc được sales; member chưa phân công bị RLS chặn; member không tự phân công được (RLS uma) — PASS.
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
@@ -156,3 +169,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Superadmin mutations (ADR-009): migration 0003 (platform đọc tenants/user_profiles); Server Actions tạo công ty + admin, lập hợp đồng + gán module subtree, đổi trạng thái HĐ; smoke test DB pass |
 | 2026-08-01 | Hoàn thiện console: tạm dừng/kích hoạt công ty, reset mật khẩu admin, gia hạn HĐ, badge module đã bán, quản lý danh mục module (thêm/sửa/bật-tắt), sửa tham số hệ thống |
 | 2026-08-01 | **Module Kinh doanh Phase 1 (O2C)**: blueprint DDD; migration 0004 (9 bảng + RLS module-aware + decrement_stock); workspace `/app` menu động; 6 trang sales (CRM, sản phẩm/kho, báo giá duyệt, đơn hàng credit+ATP, giao hàng trừ tồn, hóa đơn công nợ); smoke test 9 bước pass; seed công ty demo |
+| 2026-08-01 | **Gán module theo công ty + thành viên tenant**: catalog module chỉ đọc; picker cây module nhóm-nút-sổ dùng chung; gán module tại trang Công ty (+ chọn module khi tạo công ty); `/app/members` (tạo user theo chức năng, phân công module, seat limit) + `/app/settings` (cây module đã cài); migration 0005 has_module_access nhận node con; test 5 bước pass |

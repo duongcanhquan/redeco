@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Field, Modal, inputClass } from '@/components/platform/modal';
+import { ModuleTreePicker } from '@/components/platform/module-tree-picker';
+import type { ModuleTreeNode } from '@/services/platform.service';
 import { createCompanyAction } from './actions';
 
 function slugify(value: string): string {
@@ -36,7 +38,7 @@ interface CreatedInfo {
   password: string;
 }
 
-export function CreateCompanyDialog() {
+export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode[] }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -44,6 +46,8 @@ export function CreateCompanyDialog() {
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [seats, setSeats] = useState(10);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedInfo | null>(null);
@@ -56,6 +60,8 @@ export function CreateCompanyDialog() {
     setAdminName('');
     setAdminEmail('');
     setPassword('');
+    setSeats(10);
+    setSelectedModules(new Set());
     setError(null);
     setCreated(null);
     setCopied(false);
@@ -76,6 +82,8 @@ export function CreateCompanyDialog() {
       adminFullName: adminName,
       adminEmail,
       adminPassword: password,
+      moduleIds: [...selectedModules],
+      seats,
     });
     setSubmitting(false);
     if (!result.ok) {
@@ -109,6 +117,7 @@ export function CreateCompanyDialog() {
         icon={<Building2 size={18} className="text-accent" aria-hidden />}
         open={open}
         onClose={close}
+        wide={!created}
       >
         {created ? (
           <div className="space-y-4">
@@ -227,6 +236,34 @@ export function CreateCompanyDialog() {
                 </button>
               </div>
             </Field>
+
+            <Field
+              id="company-modules"
+              label="Cấp module cho công ty"
+              hint="Bấm mũi tên để sổ từng nhóm; tick module gốc = cấp cả nhánh con. Tự sinh hợp đồng active 1 năm. Bỏ trống = cấp sau ở nút “Gán module”."
+            >
+              <div className="max-h-64 overflow-y-auto rounded-xl bg-app/40 p-1">
+                <ModuleTreePicker
+                  tree={moduleTree}
+                  selected={selectedModules}
+                  onChange={setSelectedModules}
+                />
+              </div>
+            </Field>
+
+            {selectedModules.size > 0 && (
+              <Field id="company-seats" label="Số người dùng tối đa (seats)" required>
+                <input
+                  id="company-seats"
+                  type="number"
+                  min={1}
+                  className={inputClass}
+                  required
+                  value={seats}
+                  onChange={(e) => setSeats(Number(e.target.value))}
+                />
+              </Field>
+            )}
 
             {error && (
               <p role="alert" className="text-danger text-sm">

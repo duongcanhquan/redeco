@@ -31,11 +31,16 @@ export interface CreateCompanyInput {
   adminFullName: string;
   adminEmail: string;
   adminPassword: string;
+  /** Node module cấp cho công ty ngay khi tạo (subtree). Rỗng = chưa cấp. */
+  moduleIds: string[];
+  /** Số người dùng tối đa của hợp đồng tự sinh (khi có moduleIds). */
+  seats: number;
 }
 
 export interface CreateCompanyOutput {
   tenantId: string;
   adminEmail: string;
+  contractCode: string | null;
 }
 
 export async function createCompanyWithAdmin(
@@ -107,7 +112,117 @@ export async function createCompanyWithAdmin(
     return { ok: false, error: `Tạo hồ sơ admin thất bại: ${profileError.message}` };
   }
 
-  return { ok: true, data: { tenantId, adminEmail } };
+  // 4) Cấp module ngay khi tạo: tự sinh hợp đồng active 1 năm + entitlements
+  let contractCode: string | null = null;
+  if (input.moduleIds.length > 0) {
+    const granted = await grantModulesViaContract(admin, tenantId, input.moduleIds, input.seats);
+    if (!granted.ok) {
+      await admin.from('user_profiles').delete().eq('id', created.user.id);
+      await admin.auth.admin.deleteUser(created.user.id);
+      await admin.from('tenants').delete().eq('id', tenantId);
+      return granted;
+    }
+    contractCode = granted.data.contractCode;
+  }
+
+  return { ok: true, data: { tenantId, adminEmail, contractCode } };
+}
+
+// ------------------------------------------------------------
+// Gán module cho công ty (cây module, ngữ nghĩa subtree)
+// Cơ chế: sửa entitlements của hợp đồng đang hiệu lực;
+// chưa có hợp đồng hiệu lực -> tự sinh hợp đồng active 1 năm.
+// ------------------------------------------------------------
+
+function autoContractCode(): string {
+  const now = new Date();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `HD-${now.getFullYear()}-${rand}`;
+}
+
+async function grantModulesViaContract(
+  admin: ReturnType<typeof createAdminClient>,
+  tenantId: string,
+  moduleIds: string[],
+  seats: number,
+): Promise<ActionResult<{ contractCode: string }>> {
+  const startsOn = new Date().toISOString().slice(0, 10);
+  const ends = new Date();
+  ends.setFullYear(ends.getFullYear() + 1);
+
+  const { data: contract, error: contractError } = await admin
+    .from('contracts')
+    .insert({
+      tenant_id: tenantId,
+      code: autoContractCode(),
+      status: 'active',
+      starts_on: startsOn,
+      ends_on: ends.toISOString().slice(0, 10),
+      seats: Number.isInteger(seats) && seats > 0 ? seats : 10,
+      notes: 'Tự sinh khi cấp module từ trang Công ty.',
+    })
+    .select('id, code')
+    .single();
+  if (contractError) {
+    return { ok: false, error: `Tự sinh hợp đồng thất bại: ${contractError.message}` };
+  }
+  const row = contract as { id: string; code: string };
+
+  const { error: entError } = await admin
+    .from('contract_entitlements')
+    .insert(moduleIds.map((moduleId) => ({ contract_id: row.id, module_id: moduleId })));
+  if (entError) {
+    await admin.from('contracts').delete().eq('id', row.id);
+    return { ok: false, error: `Gán module thất bại: ${entError.message}` };
+  }
+  return { ok: true, data: { contractCode: row.code } };
+}
+
+/**
+ * Đặt lại danh sách module của công ty (thay toàn bộ entitlements
+ * của hợp đồng đang hiệu lực; chưa có thì tự sinh hợp đồng mới).
+ */
+export async function setTenantModules(
+  tenantId: string,
+  moduleIds: string[],
+): Promise<ActionResult<{ contractCode: string | null }>> {
+  await assertPlatformAdmin();
+
+  const admin = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: current } = await admin
+    .from('contracts')
+    .select('id, code')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .lte('starts_on', today)
+    .gte('ends_on', today)
+    .order('ends_on', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const contract = current as { id: string; code: string } | null;
+
+  if (!contract) {
+    if (moduleIds.length === 0) return { ok: true, data: { contractCode: null } };
+    const granted = await grantModulesViaContract(admin, tenantId, moduleIds, 10);
+    if (!granted.ok) return granted;
+    return { ok: true, data: { contractCode: granted.data.contractCode } };
+  }
+
+  const { error: delError } = await admin
+    .from('contract_entitlements')
+    .delete()
+    .eq('contract_id', contract.id);
+  if (delError) return { ok: false, error: `Cập nhật module thất bại: ${delError.message}` };
+
+  if (moduleIds.length > 0) {
+    const { error: insError } = await admin
+      .from('contract_entitlements')
+      .insert(moduleIds.map((moduleId) => ({ contract_id: contract.id, module_id: moduleId })));
+    if (insError) return { ok: false, error: `Gán module thất bại: ${insError.message}` };
+  }
+  return { ok: true, data: { contractCode: contract.code } };
 }
 
 // ------------------------------------------------------------
@@ -276,99 +391,9 @@ export async function resetCompanyAdminPassword(
 }
 
 // ------------------------------------------------------------
-// Quản trị danh mục module (thêm/sửa/bật-tắt không cần deploy)
+// Danh mục module: CHỈ ĐỌC trong superadmin (yêu cầu người dùng
+// 2026-08-01). Thay đổi catalog đi qua migration/seed script.
 // ------------------------------------------------------------
-
-const KEY_SEGMENT_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-export interface CreateModuleNodeInput {
-  parentId: string | null;
-  keySegment: string;
-  name: string;
-  description: string;
-  kind: 'module' | 'feature';
-}
-
-export async function createModuleNode(
-  input: CreateModuleNodeInput,
-): Promise<ActionResult<{ moduleId: string }>> {
-  await assertPlatformAdmin();
-
-  const name = input.name.trim();
-  const keySegment = input.keySegment.trim().toLowerCase();
-  if (!name) return { ok: false, error: 'Tên module không được để trống.' };
-  if (!KEY_SEGMENT_PATTERN.test(keySegment)) {
-    return { ok: false, error: 'Khóa chỉ gồm chữ thường, số, dấu gạch ngang (vd: bao-cao).' };
-  }
-
-  const admin = createAdminClient();
-
-  // Key đầy đủ = key cha + "." + segment (dotted-path, ADR-008)
-  let fullKey = keySegment;
-  if (input.parentId) {
-    const { data: parent, error: parentError } = await admin
-      .from('modules')
-      .select('key')
-      .eq('id', input.parentId)
-      .single();
-    if (parentError || !parent) return { ok: false, error: 'Không tìm thấy module cha.' };
-    fullKey = `${(parent as { key: string }).key}.${keySegment}`;
-  }
-
-  const { data: node, error } = await admin
-    .from('modules')
-    .insert({
-      parent_id: input.parentId,
-      key: fullKey,
-      name,
-      description: input.description.trim() || null,
-      kind: input.kind,
-    })
-    .select('id')
-    .single();
-  if (error) {
-    return {
-      ok: false,
-      error: error.code === '23505'
-        ? `Khóa "${fullKey}" đã tồn tại trong danh mục.`
-        : `Thêm module thất bại: ${error.message}`,
-    };
-  }
-  return { ok: true, data: { moduleId: (node as { id: string }).id } };
-}
-
-export async function updateModuleNode(
-  moduleId: string,
-  patch: { name: string; description: string },
-): Promise<ActionResult> {
-  await assertPlatformAdmin();
-
-  const name = patch.name.trim();
-  if (!name) return { ok: false, error: 'Tên module không được để trống.' };
-
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('modules')
-    .update({ name, description: patch.description.trim() || null })
-    .eq('id', moduleId);
-  if (error) return { ok: false, error: `Sửa module thất bại: ${error.message}` };
-  return { ok: true, data: undefined };
-}
-
-export async function setModuleActive(
-  moduleId: string,
-  isActive: boolean,
-): Promise<ActionResult> {
-  await assertPlatformAdmin();
-
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('modules')
-    .update({ is_active: isActive })
-    .eq('id', moduleId);
-  if (error) return { ok: false, error: `Đổi trạng thái module thất bại: ${error.message}` };
-  return { ok: true, data: undefined };
-}
 
 // ------------------------------------------------------------
 // Tham số hệ thống

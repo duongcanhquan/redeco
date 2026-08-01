@@ -1,7 +1,7 @@
 import { Boxes } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { buildModuleTree, listModules } from '@/services/platform.service';
-import { ModulesManager } from './modules-manager';
+import { ModuleCatalogView } from './module-catalog-view';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +17,12 @@ export default async function ModulesPage() {
           Danh mục module
         </h1>
         <p className="text-sm text-ink-muted mt-1">
-          Cấu trúc cây: module → phần → tính năng. Hợp đồng cấp node nào, công ty được cả nhánh
-          con của node đó. Di chuột lên node để thêm/sửa/tắt.
+          Danh mục CHỈ ĐỌC — cấu trúc cây: module → phần → tính năng. Việc gán module cho từng
+          công ty thực hiện ở trang <strong>Công ty</strong> (nút “Gán module”).
         </p>
       </header>
 
-      <ModulesManager tree={tree} />
+      <ModuleCatalogView tree={tree} />
     </div>
   );
 }
