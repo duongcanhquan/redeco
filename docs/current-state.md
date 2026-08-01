@@ -119,3 +119,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Brainstorm + duyệt spec Platform Core (5 quyết định, ADR-008); migration 0002 apply (6 bảng mới + 3 functions quyền); seed 13 node catalog; types platform vào @optimake/domain |
 | 2026-08-01 | Design System persist (design-system/optimake); tạo superadmin; trang /login theo mẫu animated; console /platform (bento + glass, 6 trang); proxy bảo vệ route; smoke test pass |
 | 2026-08-01 | Rebrand REDECO → **Optimake**: logo mark SVG mới (lục giác + mũi tên, gradient cyan, `components/brand/logo.tsx`), favicon `app/icon.svg`, đổi scope packages @optimake/*, cập nhật toàn bộ docs/rules |
+| 2026-08-01 | Ghi nhớ đăng nhập: proxy auto-redirect admin đã đăng nhập từ `/`+`/login` vào thẳng `/platform`; checkbox "Ghi nhớ đăng nhập" lưu email vào localStorage (`optimake.remember_email`) |
