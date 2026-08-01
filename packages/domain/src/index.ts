@@ -9,3 +9,21 @@ export type { ContractId, ContractStatus, Contract, ContractHealth } from './pla
 export { asContractId, contractHealth } from './platform/contract';
 export type { TenantRole } from './platform/user-role';
 export { isTenantAdmin } from './platform/user-role';
+
+export type {
+  CustomerKind,
+  CustomerStatus,
+  QuotationStatus,
+  SalesOrderStatus,
+  DeliveryStatus,
+  InvoiceStatus,
+  LineItemInput,
+  CreditCheckResult,
+} from './sales/types';
+export {
+  computeLineTotal,
+  computeDocTotal,
+  checkCredit,
+  QUOTATION_TRANSITIONS,
+  canTransitionQuotation,
+} from './sales/types';

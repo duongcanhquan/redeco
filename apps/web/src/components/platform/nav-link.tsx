@@ -14,7 +14,9 @@ export function NavLink({
   label: string;
 }) {
   const pathname = usePathname();
-  const active = href === '/platform' ? pathname === href : pathname.startsWith(href);
+  // Route gốc của khu vực (console/workspace) chỉ active khi khớp chính xác
+  const active =
+    href === '/platform' || href === '/app' ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link

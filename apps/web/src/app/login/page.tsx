@@ -58,13 +58,15 @@ function LoginForm() {
     }
 
     const isPlatformAdmin = data.user.app_metadata['is_platform_admin'] === true;
+    const tenantId = data.user.app_metadata['tenant_id'];
     const next = searchParams.get('next');
     if (isPlatformAdmin) {
       router.replace(next?.startsWith('/platform') ? next : '/platform');
+    } else if (typeof tenantId === 'string' && tenantId) {
+      router.replace(next?.startsWith('/app') ? next : '/app');
     } else {
-      // Người dùng công ty: workspace theo subdomain sẽ mở ở phase sau
       setLoading(false);
-      setError('Tài khoản hợp lệ nhưng khu làm việc công ty đang được xây dựng.');
+      setError('Tài khoản chưa được gán vào công ty nào. Liên hệ quản trị hệ thống.');
     }
   };
 

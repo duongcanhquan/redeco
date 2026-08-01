@@ -81,6 +81,19 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
 - Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
 
+### ✅ Module Kinh doanh — Phase 1 Order-to-Cash (2026-08-01)
+
+Blueprint: `docs/blueprints/2026-08-01-sales-module-blueprint.md` (aggregates + invariants + roadmap nhóm 2–5).
+
+- **Migration 0004** (`20260801170000_sales_module_core.sql`, ĐÃ apply): `products` + `product_stock` (check `qty_on_hand >= 0`), `customers` (kind b2b/b2c/dai-ly, credit_limit null = không giới hạn), `quotations` + `quotation_items`, `sales_orders` + `sales_order_items` (snapshot `credit_check` jsonb + `atp_qty`), `delivery_notes`, `invoices`. RLS 9/9 bảng = `tenant_id = current_tenant_id()` AND `has_module_access('kinh-doanh')` (helper mới dựa `my_module_ids()` → tự chặn khi hợp đồng hết hiệu lực). Function `decrement_stock(product, qty)` trừ tồn nguyên tử chống âm kho (security invoker).
+- **Domain** (`@optimake/domain/sales`): `computeLineTotal`, `computeDocTotal`, `checkCredit`, `QUOTATION_TRANSITIONS`/`canTransitionQuotation`, các union types trạng thái.
+- **Tenant workspace `/app`**: proxy guard (user có `tenant_id` → `/app`, redirect từ `/`+`/login`); layout sidebar hiện tên công ty + menu theo `my_module_ids()` (module chưa có UI hiện "sắp ra mắt"); dashboard 4 stat (khách hàng, báo giá chờ, đơn đang chạy, công nợ phải thu); `/app/account` đổi mật khẩu + signout.
+- **Service** `src/services/sales.service.ts` — chạy dưới JWT user (KHÔNG service role, RLS cô lập tenant): CRUD khách hàng/sản phẩm; báo giá (items, chiết khấu dòng + tổng, flow draft→sent→approved/rejected→converted, duyệt chỉ owner/admin); đơn hàng (tạo mới/convert từ báo giá; **confirm = credit check bắt buộc** [công nợ unpaid + đơn ≤ hạn mức, chặn nếu vượt] + **ATP snapshot** từng dòng [thiếu vẫn cho xác nhận — giao sau, CTP chờ module Sản xuất]); giao hàng (ship = `decrement_stock` từng dòng, rollback nếu thiếu, SO → completed); hóa đơn (sinh từ đơn đã giao, unpaid = công nợ, nút thu tiền). Mã chứng từ auto: KH-/SP-/BG-/DH-/GH-/HD-XXXX.
+- **UI** 6 trang dưới `/app/sales/` (glass + bento, bảng responsive, badge trạng thái, items editor dùng chung `components/sales/items-editor.tsx` tự điền giá chuẩn): customers, products (kèm tồn kho ATP), quotations, orders (modal kết quả credit + ATP sau xác nhận), deliveries, invoices.
+- **Đã verify**: typecheck/lint/build sạch; smoke test `scripts/test-sales-flow.cjs` (9 bước, chạy dưới JWT user thật, tự dọn): toàn luồng O2C + guard chống âm kho + RLS chặn khi hợp đồng suspended — PASS.
+- **Demo**: `scripts/seed-demo-company.cjs` — công ty "demo", login `demo@optimake.com` / `Demo@123`, 3 khách hàng + 4 sản phẩm có tồn.
+- **Roadmap nhóm 2–5** (trong blueprint): CPQ+BOM động, Dynamic Pricing, AI Forecasting, B2B Portal+EDI (nhóm 2 — cần module Kho/Kỹ thuật/Sản xuất); Churn/NBA/Copilot (nhóm 3 — cần dữ liệu lịch sử, schema đã chuẩn bị timestamps + attributes); n8n webhook theo domain events (nhóm 4); chuyên biệt từng DN (nhóm 5 — sau).
+
 ### ✅ Monorepo Scaffold (2026-08-01)
 
 Cấu trúc đã dựng và xác minh (typecheck ✓, build ✓, lint ✓, runtime link ✓):
@@ -142,3 +155,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Ghi nhớ đăng nhập: proxy auto-redirect admin đã đăng nhập từ `/`+`/login` vào thẳng `/platform`; checkbox "Ghi nhớ đăng nhập" lưu email vào localStorage (`optimake.remember_email`) |
 | 2026-08-01 | Superadmin mutations (ADR-009): migration 0003 (platform đọc tenants/user_profiles); Server Actions tạo công ty + admin, lập hợp đồng + gán module subtree, đổi trạng thái HĐ; smoke test DB pass |
 | 2026-08-01 | Hoàn thiện console: tạm dừng/kích hoạt công ty, reset mật khẩu admin, gia hạn HĐ, badge module đã bán, quản lý danh mục module (thêm/sửa/bật-tắt), sửa tham số hệ thống |
+| 2026-08-01 | **Module Kinh doanh Phase 1 (O2C)**: blueprint DDD; migration 0004 (9 bảng + RLS module-aware + decrement_stock); workspace `/app` menu động; 6 trang sales (CRM, sản phẩm/kho, báo giá duyệt, đơn hàng credit+ATP, giao hàng trừ tồn, hóa đơn công nợ); smoke test 9 bước pass; seed công ty demo |

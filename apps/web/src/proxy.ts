@@ -32,13 +32,40 @@ export default async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPlatformAdminUser = user?.app_metadata['is_platform_admin'] === true;
+  const tenantId = user?.app_metadata['tenant_id'];
+  const isTenantUser = typeof tenantId === 'string' && tenantId.length > 0;
 
-  // Đã đăng nhập (session lưu trong cookie) -> vào thẳng console, khỏi login lại
-  if (isPlatformAdminUser && (path === '/login' || path === '/')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/platform';
-    url.search = '';
-    return NextResponse.redirect(url);
+  // Đã đăng nhập (session lưu trong cookie) -> vào thẳng khu làm việc, khỏi login lại
+  if (path === '/login' || path === '/') {
+    if (isPlatformAdminUser) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/platform';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+    if (isTenantUser) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/app';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Bảo vệ workspace công ty
+  if (path.startsWith('/app')) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('next', path);
+      return NextResponse.redirect(url);
+    }
+    if (!isTenantUser) {
+      const url = request.nextUrl.clone();
+      url.pathname = isPlatformAdminUser ? '/platform' : '/login';
+      url.search = '';
+      if (!isPlatformAdminUser) url.searchParams.set('error', 'forbidden');
+      return NextResponse.redirect(url);
+    }
   }
 
   // Bảo vệ khu quản trị nền tảng

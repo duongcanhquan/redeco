@@ -9,12 +9,15 @@ export function Modal({
   open,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   icon?: ReactNode;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** Modal rộng cho form có bảng dòng hàng (báo giá, đơn hàng). */
+  wide?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -44,7 +47,9 @@ export function Modal({
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-default"
       />
-      <div className="glass relative w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-app-deep/90 p-6 shadow-2xl">
+      <div
+        className={`glass relative w-full ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'} max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-app-deep/90 p-6 shadow-2xl`}
+      >
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-lg flex items-center gap-2">
             {icon}
