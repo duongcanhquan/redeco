@@ -1,0 +1,48 @@
+---
+description: Quy trình làm việc BẮT BUỘC theo Superpowers — kiểm tra và invoke skill TRƯỚC mọi hành động, process skills đi trước implementation skills
+alwaysApply: true
+---
+
+# Skills Workflow — Superpowers (BẮT BUỘC)
+
+Quy trình lập trình của dự án bám chặt theo skill **using-superpowers**:
+`C:\Users\PC\.claude\plugins\cache\claude-plugins-official\superpowers\6.1.1\skills\using-superpowers\SKILL.md`
+
+## 1. Quy tắc cốt lõi
+
+- Nếu có dù chỉ **1% khả năng** một skill áp dụng được cho task hiện tại → **PHẢI invoke skill đó**. Không được tự biện hộ để bỏ qua.
+- **Invoke skill TRƯỚC mọi phản hồi hoặc hành động** — kể cả trước khi đặt câu hỏi làm rõ, khám phá codebase, hay đọc file. Nếu đọc xong thấy skill không phù hợp thì không cần dùng, nhưng phải kiểm tra trước.
+- Sau khi chọn skill: thông báo "Using [skill] to [purpose]" và làm theo skill một cách chính xác. Nếu skill có checklist → tạo một todo cho mỗi mục.
+- Skill phải được **đọc lại ở phiên bản hiện tại** mỗi lần dùng — không dựa vào trí nhớ ("skills evolve").
+
+## 2. Thứ tự ưu tiên skill
+
+Khi nhiều skill cùng áp dụng: **Process skills đi trước** (định hình cách tiếp cận), rồi mới đến **Implementation skills** (thực thi):
+
+- "Xây dựng tính năng X" → `brainstorming` trước → sau đó implementation skills (ui-ux-pro-max, writing-plans...).
+- "Sửa bug này" → `systematic-debugging` trước → sau đó domain skills.
+- Trước khi vào plan mode → nếu chưa brainstorm thì invoke `brainstorming` trước.
+
+## 3. Red Flags — các suy nghĩ tự biện hộ phải DỪNG LẠI
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Đây chỉ là câu hỏi đơn giản" | Câu hỏi cũng là task. Kiểm tra skill. |
+| "Cần thêm ngữ cảnh trước đã" | Kiểm tra skill TRƯỚC câu hỏi làm rõ. |
+| "Để tôi khám phá codebase trước" | Skill chỉ cho bạn CÁCH khám phá. Kiểm tra trước. |
+| "Skill này overkill cho việc này" | Việc đơn giản sẽ thành phức tạp. Dùng skill. |
+| "Tôi nhớ skill này rồi" | Skill có thể đã thay đổi. Đọc phiên bản hiện tại. |
+| "Làm nhanh cái này trước đã" | Kiểm tra skill TRƯỚC KHI làm bất cứ gì. |
+
+## 4. Skill bắt buộc theo loại task trong dự án này
+
+| Loại task | Skill phải invoke |
+|---|---|
+| Mọi task liên quan UI/UX (component, page, style, layout, responsive, review UI) | `ui-ux-pro-max` (xem `ui-design.mdc`) |
+| Tạo module nghiệp vụ mới | Quy trình Blueprint (xem `ddd-blueprint.mdc`) + `brainstorming` nếu yêu cầu còn mơ hồ |
+| Debug lỗi | `systematic-debugging` |
+| Lập kế hoạch lớn | `brainstorming` → `writing-plans` |
+
+## 5. Ưu tiên chỉ dẫn
+
+Chỉ dẫn trực tiếp của người dùng và rules của dự án (`.cursor/rules/`) có độ ưu tiên cao hơn skill; skill có độ ưu tiên cao hơn hành vi mặc định. Chỉ bỏ qua workflow của skill khi người dùng yêu cầu rõ ràng.

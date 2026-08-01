@@ -1,0 +1,71 @@
+---
+description: Quy tắc Supabase (PostgreSQL) — Row Level Security cho Multi-tenant và chiến lược JSONB cho dữ liệu động
+globs:
+  - "**/migrations/**"
+  - "**/*.sql"
+  - "**/repositories/**"
+  - "**/supabase/**"
+alwaysApply: true
+---
+
+# Database Rules — Supabase, RLS & JSONB
+
+## 1. Row Level Security (RLS) — BẮT BUỘC cho mọi bảng
+
+- **MỌI bảng** chứa dữ liệu tenant PHẢI:
+  1. Có cột `tenant_id UUID NOT NULL REFERENCES tenants(id)`.
+  2. Bật RLS: `ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;`
+  3. Có policy cách ly tenant cho đủ 4 thao tác (SELECT / INSERT / UPDATE / DELETE).
+
+- Policy chuẩn (dựa trên JWT claim của Supabase Auth):
+
+```sql
+CREATE POLICY tenant_isolation ON work_orders
+  FOR ALL
+  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid)
+  WITH CHECK (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+```
+
+- `tenant_id` LUÔN được lấy từ JWT claims / server-side context. **CẤM** nhận `tenant_id` từ request body/query của client.
+- **CẤM** dùng `service_role` key để bypass RLS trong luồng nghiệp vụ thông thường. Chỉ dùng cho admin jobs/migrations, và phải filter `tenant_id` thủ công + ghi chú rõ lý do.
+- Mọi migration tạo bảng mới mà thiếu RLS policy sẽ bị coi là lỗi — không được merge.
+- Index bắt buộc: mọi bảng multi-tenant phải có index bắt đầu bằng `tenant_id` (ví dụ: `(tenant_id, created_at)`, `(tenant_id, status)`).
+
+## 2. Dữ liệu động — JSONB, KHÔNG dùng EAV
+
+- **BẮT BUỘC** dùng cột `JSONB` (đặt tên `attributes` hoặc `custom_fields`) cho các trường dữ liệu linh hoạt/tùy biến theo khách hàng.
+- **CẤM** mô hình EAV (Entity-Attribute-Value: bảng `entity_attributes(entity_id, attr_name, attr_value)`) — EAV gây **join explosion**, phá hủy query planner, và mất type safety. Quyết định này được ghi tại `docs/architecture-decisions.md`.
+
+- Cấu trúc bảng chuẩn:
+
+```sql
+CREATE TABLE work_orders (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id),
+  -- Các cột static: trường cốt lõi, dùng chung mọi tenant, cần FK/constraint
+  code        TEXT NOT NULL,
+  status      TEXT NOT NULL,
+  -- Trường động theo tenant
+  attributes  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+- Nguyên tắc phân chia Static vs JSONB:
+  - **Static column**: trường xuất hiện ở mọi tenant, tham gia FK/JOIN/constraint, hoặc là điều kiện lọc chính.
+  - **JSONB**: trường tùy biến theo từng tenant, định nghĩa qua metadata (xem `frontend-metadata.mdc`).
+- Truy vấn JSONB phải dùng operator gốc (`->`, `->>`, `@>`) và tạo **GIN index** khi cần lọc:
+
+```sql
+CREATE INDEX idx_work_orders_attributes ON work_orders USING GIN (attributes jsonb_path_ops);
+```
+
+- Validate schema của `attributes` ở tầng Service (dựa trên metadata definition của tenant) trước khi ghi — DB không tự validate JSONB.
+
+## 3. Quy ước chung
+
+- Mọi thay đổi schema đi qua migration file có version (không sửa schema bằng tay trên dashboard).
+- Đặt tên: bảng `snake_case` số nhiều; cột `snake_case`; timestamp luôn `TIMESTAMPTZ`.
+- Soft delete (nếu dùng): cột `deleted_at TIMESTAMPTZ`, và RLS/query mặc định phải loại bản ghi đã xóa.
+- Repository layer là nơi DUY NHẤT gọi Supabase client — không gọi từ Service/Controller/UI.

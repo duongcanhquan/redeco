@@ -1,0 +1,48 @@
+---
+description: Quy tắc chung về kiến trúc, chất lượng code và TypeScript cho toàn bộ dự án Multi-tenant SaaS ERP/MES
+alwaysApply: true
+---
+
+# General Rules — Clean Architecture, SOLID, DDD
+
+## 1. Kiến trúc tổng thể
+
+- Tuân thủ nghiêm ngặt **Clean Architecture**, **SOLID**, và **Domain-Driven Design (DDD)**.
+- Dependency Rule: các lớp bên trong (Domain/Entity) KHÔNG được phụ thuộc vào lớp bên ngoài (Infrastructure, Framework). Mọi phụ thuộc hướng vào trong.
+- Mỗi Bounded Context (ví dụ: Production, Inventory, Sales) là một module độc lập, giao tiếp qua Domain Events hoặc Application Service interfaces — không import chéo trực tiếp vào tầng Domain của context khác.
+
+## 2. Phân tách lớp (Layered Separation) — BẮT BUỘC
+
+```
+Controller (HTTP/Validation) → Service (Business Logic) → Repository (Data Access) → Entity (Core Domain Models)
+```
+
+| Lớp | Trách nhiệm | CẤM |
+|---|---|---|
+| **Controller** | Nhận request, validate input (DTO + class-validator/zod), gọi Service, trả response | Business logic, truy vấn DB trực tiếp |
+| **Service** | Toàn bộ business logic, orchestration, transaction boundary, phát Domain Events | Xử lý HTTP (req/res), SQL thô |
+| **Repository** | Data access duy nhất (Supabase/PostgreSQL), mapping row ↔ Entity | Business logic, validation nghiệp vụ |
+| **Entity** | Core domain models, enforced invariants, domain behavior | Phụ thuộc framework (NestJS decorators, Supabase client) |
+
+- **TUYỆT ĐỐI KHÔNG** để business logic lọt vào Controller hoặc UI Components (React). UI chỉ render và gọi service layer phía client.
+- Mỗi use case đi qua đủ các lớp; không "đi tắt" từ Controller xuống Repository.
+
+## 3. Strict TypeScript
+
+- `strict: true` trong `tsconfig.json` (bao gồm `strictNullChecks`, `noImplicitAny`, `noUncheckedIndexedAccess`).
+- **CẤM sử dụng `any`** — kể cả `as any`, `any[]`, hoặc implicit any. Nếu type chưa biết, dùng `unknown` và narrow bằng type guard.
+- **CẤM Unsafe Generics**: không dùng generic không ràng buộc khi có thể ràng buộc (`<T extends BaseEntity>` thay vì `<T>`), không ép kiểu generic bằng `as`.
+- Ưu tiên `readonly`, discriminated unions, và exhaustive checks (`never`) cho state machines/enums.
+- Mọi hàm public phải khai báo rõ kiểu tham số và kiểu trả về.
+
+## 4. Format & Chất lượng code
+
+- Code phải pass **ESLint** (typescript-eslint, strict config) và **Prettier** trước khi hoàn thành task.
+- Chạy `tsc --noEmit` (strict type-check) — không được có type error.
+- Tên biến/hàm rõ nghĩa theo Ubiquitous Language của domain (ví dụ: `releaseWorkOrder`, không phải `updateStatus2`).
+- Không commit code có `console.log` debug, dead code, hoặc TODO không có ticket.
+
+## 5. Multi-tenancy (nguyên tắc xuyên suốt)
+
+- Mọi thao tác dữ liệu PHẢI gắn với `tenant_id` từ context xác thực (JWT claims) — không bao giờ nhận `tenant_id` từ client input.
+- Chi tiết quy tắc database & RLS: xem `database.mdc`.

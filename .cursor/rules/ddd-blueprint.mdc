@@ -1,0 +1,61 @@
+---
+description: Quy trình BẮT BUỘC khi tạo module/aggregate mới — phải có Codely Aggregate Design Blueprint được duyệt trước khi viết code
+alwaysApply: true
+---
+
+# DDD Blueprint Rule — Quy trình tạo Module mới
+
+## Quy tắc BẮT BUỘC
+
+Bất cứ khi nào người dùng yêu cầu tạo một **module nghiệp vụ mới** (ví dụ: `WorkOrder`, `Inventory`, `BillOfMaterials`, `QualityInspection`...), AI Agent **PHẢI DỪNG LẠI** và **KHÔNG được viết bất kỳ dòng code nào** cho đến khi:
+
+1. Yêu cầu người dùng cung cấp **"Codely Aggregate Design Blueprint"**, HOẶC
+2. Tự đề xuất một Blueprint hoàn chỉnh và **chờ người dùng xác nhận/chỉnh sửa**.
+
+Chỉ sau khi Blueprint được người dùng duyệt mới được bắt đầu implement (theo phân lớp trong `general.mdc` và quy tắc DB trong `database.mdc`).
+
+## Cấu trúc bắt buộc của Blueprint
+
+```markdown
+# Aggregate Design Blueprint: <Name>
+
+## 1. Name
+Tên Aggregate Root (PascalCase, theo Ubiquitous Language).
+
+## 2. Context
+Thuộc Bounded Context nào (Production, Inventory, Sales...).
+Mô tả ngắn vai trò nghiệp vụ và ranh giới của aggregate.
+
+## 3. Properties
+### Static (cột PostgreSQL — dùng chung mọi tenant, có constraint/FK)
+| Property | Type | Ghi chú |
+|---|---|---|
+| id | UUID | PK |
+| tenant_id | UUID | RLS isolation — bắt buộc |
+| ... | ... | ... |
+
+### Dynamic (JSONB `attributes` — tùy biến theo tenant)
+Mô tả các nhóm trường dự kiến sẽ nằm trong JSONB và cách validate qua metadata.
+
+## 4. Enforced Invariants (Bất biến nghiệp vụ)
+Các quy tắc mà aggregate PHẢI tự bảo vệ tại mọi thời điểm, ví dụ:
+- Một WorkOrder không thể chuyển sang `RELEASED` nếu chưa có BOM hợp lệ.
+- Quantity produced ≤ quantity ordered.
+(Invariant được enforce trong Entity/Domain layer — KHÔNG phải trong Controller hay UI.)
+
+## 5. Corrective Policies
+Chính sách xử lý khi trạng thái không nhất quán xảy ra (eventual consistency giữa các aggregate), ví dụ:
+- Nếu tồn kho bị âm sau reconciliation → tạo InventoryAdjustment + cảnh báo.
+
+## 6. Domain Events
+| Event | Trigger | Consumer dự kiến |
+|---|---|---|
+| WorkOrderReleased | Khi release thành công | Inventory (reserve materials), Notification |
+| ... | ... | ... |
+```
+
+## Sau khi Blueprint được duyệt
+
+1. Lưu Blueprint vào `docs/blueprints/<name>.md` để tra cứu về sau.
+2. Implement theo thứ tự: Entity (invariants) → Repository interface → Service → Migration (kèm RLS) → Controller → UI metadata.
+3. Cập nhật `docs/current-state.md` khi module hoàn thành (xem quy tắc Context Tracking).

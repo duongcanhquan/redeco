@@ -1,0 +1,20 @@
+---
+description: Hệ thống theo dõi ngữ cảnh — bắt buộc đọc current-state.md đầu phiên và cập nhật docs sau mỗi tính năng
+alwaysApply: true
+---
+
+# Context Tracking Rules
+
+## 1. Đầu mỗi phiên làm việc mới
+
+- Việc ĐẦU TIÊN của mỗi phiên làm việc: **đọc `docs/current-state.md`** để nắm bắt bối cảnh (module đã xong, việc đang dở, bước tiếp theo) TRƯỚC KHI thực hiện bất kỳ task nào. Không đọc lại toàn bộ codebase nếu current-state.md đã đủ thông tin.
+
+## 2. Sau khi hoàn thành tính năng/module
+
+- **BẮT BUỘC tự động cập nhật `docs/current-state.md`**: chuyển mục vừa xong vào "Các module đã hoàn thành" (kèm tóm tắt cấu trúc), cập nhật "Ngữ cảnh hiện tại" và "Các bước tiếp theo".
+- Đây là trách nhiệm của AI Agent, không chờ người dùng nhắc.
+
+## 3. Khi ra quyết định kiến trúc
+
+- Mọi quyết định kiến trúc quan trọng (chọn công nghệ, pattern, trade-off) phải được ghi vào `docs/architecture-decisions.md` theo format: `[Ngày] - [Quyết định] - [Ngữ cảnh] - [Hậu quả/Kết quả]`.
+- Không đảo ngược một quyết định đã ghi trong ADR mà không thảo luận với người dùng và ghi ADR mới thay thế (supersede).

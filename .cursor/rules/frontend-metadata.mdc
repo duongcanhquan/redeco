@@ -1,0 +1,76 @@
+---
+description: Quy tắc Frontend Next.js — Metadata-Driven UI Architecture, rendering engine từ JSON config trên Cloudflare R2
+globs:
+  - "**/*.tsx"
+  - "**/app/**"
+  - "**/components/**"
+  - "**/hooks/**"
+alwaysApply: true
+---
+
+# Frontend Rules — Metadata-Driven Architecture
+
+> Tiêu chuẩn thiết kế UI/UX (skill `ui-ux-pro-max`, responsive Desktop/iPad/Phone, accessibility): xem `ui-design.mdc`. Các renderer sinh ra từ metadata cũng phải tuân thủ đầy đủ các tiêu chuẩn đó.
+
+## 1. Nguyên tắc cốt lõi
+
+- UI (Form, Grid, Detail view) KHÔNG được hard-code theo từng nghiệp vụ. Chúng được **định nghĩa bằng các tệp JSON cấu hình (UI Metadata)** lưu trên **Cloudflare R2**.
+- Frontend Next.js (App Router) đóng vai trò **Rendering Engine**:
+  1. Fetch JSON metadata từ R2 (qua API layer, có cache).
+  2. Parse + validate metadata bằng zod schema.
+  3. Sinh UI động từ registry các component đã đăng ký (FormRenderer, GridRenderer, FieldRenderer...).
+- Khi khách hàng cần thêm field/cột mới → chỉ cập nhật JSON metadata + JSONB `attributes` (xem `database.mdc`), **không sửa code frontend**.
+
+## 2. Cấu trúc Metadata (quy ước)
+
+```jsonc
+{
+  "version": 1,
+  "entity": "work_order",
+  "type": "form", // form | grid | detail
+  "fields": [
+    {
+      "key": "code",
+      "label": "Mã lệnh sản xuất",
+      "component": "text-input",   // phải tồn tại trong Component Registry
+      "source": "static",          // static (cột DB) | attributes (JSONB)
+      "validation": { "required": true, "maxLength": 50 },
+      "visibility": { "roles": ["planner", "admin"] }
+    }
+  ],
+  "actions": [{ "key": "release", "label": "Release", "confirm": true }]
+}
+```
+
+- Mọi schema metadata phải có `version` để hỗ trợ migration về sau.
+- Metadata fetch về PHẢI được validate bằng zod trước khi render — metadata lỗi thì hiển thị fallback/error boundary, không crash app.
+- Component Registry là mapping duy nhất `component key → React component`. Thêm loại field mới = đăng ký vào registry, không if/else rải rác.
+
+## 3. Quản lý State — rõ ràng, tách biệt
+
+- **Server state** (dữ liệu từ API/R2): dùng TanStack Query (hoặc SWR) — có cache key theo `tenant_id + entity + version`. KHÔNG lưu server state vào global store.
+- **Client/UI state** (form draft, modal, filter): dùng local state hoặc Zustand cho state chia sẻ. Giữ store nhỏ, chia theo feature.
+- **Form state**: React Hook Form, schema validation sinh động từ metadata (metadata → zod schema → resolver).
+- Server Components mặc định; chỉ dùng `"use client"` khi thực sự cần tương tác.
+
+## 4. API Service Layer — tách biệt hoàn toàn
+
+- **CẤM** gọi `fetch`/Supabase client trực tiếp trong component hoặc hook UI.
+- Mọi API call phải nằm trong các service riêng tại `src/services/` (hoặc `lib/api/`), mỗi domain một file:
+
+```
+src/services/
+  metadata.service.ts    // fetch UI metadata từ R2
+  work-order.service.ts  // CRUD WorkOrder qua backend API
+  inventory.service.ts
+```
+
+- Service trả về dữ liệu đã typed (không trả `Response` thô, không `any`).
+- Component → hook (useQuery/useMutation) → service → API. Không tầng nào được nhảy cóc.
+- Business logic KHÔNG nằm trong component — component chỉ render và điều phối sự kiện người dùng (xem `general.mdc`).
+
+## 5. Cloudflare R2
+
+- R2 chỉ lưu: UI metadata JSON, file upload của tenant, static assets. KHÔNG lưu dữ liệu giao dịch (transactional data) — dữ liệu đó thuộc PostgreSQL.
+- Truy cập R2 qua backend API hoặc signed URL — frontend không giữ R2 credentials.
+- Key convention: `tenants/{tenant_id}/metadata/{entity}/{type}.v{version}.json`.
