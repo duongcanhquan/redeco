@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import {
   buildPromiseCheck,
   canActOnApprovalStep,
@@ -52,26 +53,27 @@ export interface EntitledModule {
   name: string;
 }
 
-export async function getMyRootModules(supabase: SupabaseClient): Promise<EntitledModule[]> {
-  const { data: ids, error } = await supabase.rpc('my_module_ids');
-  if (error) throw new Error(`Không tải được quyền module: ${error.message}`);
-  const idSet = new Set((ids ?? []) as string[]);
-  if (idSet.size === 0) return [];
+/** Dedupe / request — tránh gọi RPC my_module_ids nhiều lần từ các page. */
+export const getMyRootModules = cache(
+  async (supabase: SupabaseClient): Promise<EntitledModule[]> => {
+    const { data: ids, error } = await supabase.rpc('my_module_ids');
+    if (error) throw new Error(`Không tải được quyền module: ${error.message}`);
+    const idSet = new Set((ids ?? []) as string[]);
+    if (idSet.size === 0) return [];
 
-  // Hiện module gốc khi user có CHÍNH nó hoặc bất kỳ node con nào trong nhánh
-  // (member có thể chỉ được phân công một phần con, vd kinh-doanh.bao-gia)
-  const { data: modules } = await supabase
-    .from('modules')
-    .select('id, key, name, parent_id')
-    .order('sort_order');
-  const all = (modules ?? []) as (EntitledModule & { parent_id: string | null })[];
-  const myKeys = all.filter((m) => idSet.has(m.id)).map((m) => m.key);
-  return all.filter(
-    (m) =>
-      m.parent_id === null &&
-      myKeys.some((k) => k === m.key || k.startsWith(`${m.key}.`)),
-  );
-}
+    const { data: modules } = await supabase
+      .from('modules')
+      .select('id, key, name, parent_id')
+      .order('sort_order');
+    const all = (modules ?? []) as (EntitledModule & { parent_id: string | null })[];
+    const myKeys = all.filter((m) => idSet.has(m.id)).map((m) => m.key);
+    return all.filter(
+      (m) =>
+        m.parent_id === null &&
+        myKeys.some((k) => k === m.key || k.startsWith(`${m.key}.`)),
+    );
+  },
+);
 
 // ------------------------------------------------------------
 // Row types

@@ -4,12 +4,13 @@ import {
   BadgeCheck,
   CircleX,
   FileText,
+  Loader2,
   PackageCheck,
   PackageX,
   Truck,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { startTransition, useState } from 'react';
 import type { SalesOrderStatus } from '@optimake/domain';
 import { Modal } from '@/components/platform/modal';
 import { formatMoney } from '@/lib/format';
@@ -29,7 +30,7 @@ const CTP_LABEL: Record<string, string> = {
 };
 
 const btn =
-  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-[colors,transform,opacity] duration-100 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed';
 
 export function OrderRowActions({
   orderId,
@@ -48,31 +49,44 @@ export function OrderRowActions({
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>): Promise<void> => {
     setBusy(true);
     setError(null);
-    const result = await fn();
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Lỗi không xác định.');
-      return;
+    try {
+      const result = await fn();
+      if (!result.ok) {
+        setError(result.error ?? 'Lỗi không xác định.');
+        return;
+      }
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
   };
 
   const confirm = async (): Promise<void> => {
     setBusy(true);
     setError(null);
-    const result = await confirmSalesOrderAction(orderId);
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await confirmSalesOrderAction(orderId);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setAtpResult(result.data);
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setBusy(false);
     }
-    setAtpResult(result.data);
-    router.refresh();
   };
 
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center justify-end gap-1.5 flex-wrap">
+        {busy && (
+          <Loader2 size={16} className="animate-spin text-accent shrink-0" aria-label="Đang xử lý" />
+        )}
         {status === 'draft' && (
           <>
             <button
@@ -82,7 +96,7 @@ export function OrderRowActions({
               className={`${btn} border-success/40 text-success hover:bg-success/10`}
             >
               <BadgeCheck size={13} aria-hidden />
-              Xác nhận (credit + ATP/CTP)
+              Xác nhận đơn
             </button>
             <button
               type="button"

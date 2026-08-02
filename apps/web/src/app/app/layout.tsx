@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
+import { NavProgress } from '@/components/platform/nav-progress';
 import { SidebarNav, type SidebarModuleItem } from '@/components/workspace/sidebar-nav';
-import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getWorkspaceNavContext } from '@/services/module-access.service';
 
 /** Gợi ý phân hệ chưa có màn hình */
@@ -14,21 +14,14 @@ const MODULE_COMING_SOON: Record<string, string> = {
 export default async function WorkspaceLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [claims, nav] = await Promise.all([getSessionClaims(), getWorkspaceNavContext()]);
-  if (!claims?.tenantId || !nav) {
+  const nav = await getWorkspaceNavContext();
+  if (!nav) {
     redirect('/login?error=forbidden');
   }
 
-  const supabase = await createServerSupabase();
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('name, slug')
-    .eq('id', claims.tenantId)
-    .single();
-
-  const slug = claims.tenantSlug ?? (tenant as { slug?: string } | null)?.slug ?? null;
-  const { base, isManager, rootModules, salesTabs, inventoryTabs, productionTabs, accountingTabs } =
+  const { base, companyName, isManager, rootModules, salesTabs, inventoryTabs, productionTabs, accountingTabs } =
     nav;
+  const slug = base.startsWith('/') && base !== '/app' ? base.slice(1) : null;
 
   const modules: SidebarModuleItem[] = [];
   if (salesTabs.length > 0) {
@@ -85,13 +78,12 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row bg-app">
+      <NavProgress />
       <aside className="glass lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:flex lg:flex-col shrink-0 border-b lg:border-b-0 lg:border-r border-panel/40 bg-app-deep/60 no-print">
         <div className="flex items-center gap-3 px-5 py-5">
           <LogoMark size={40} />
           <div className="min-w-0">
-            <p className="font-bold leading-tight tracking-wide truncate">
-              {(tenant as { name: string } | null)?.name ?? 'Công ty'}
-            </p>
+            <p className="font-bold leading-tight tracking-wide truncate">{companyName}</p>
             <p className="text-xs text-ink-muted">
               <span className="text-accent">O</span>ptimake Workspace
             </p>

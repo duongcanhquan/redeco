@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { NavPendingHint } from '@/components/platform/nav-pending';
 
 export interface TabItem {
   key: string;
@@ -13,6 +16,7 @@ export interface TabItem {
 /**
  * Thanh tab responsive: desktop/iPad hiện đủ nhãn + icon,
  * điện thoại cuộn ngang mượt, tab active nổi bật kiểu glass.
+ * Prefetch + pending hint để bấm chuyển tab cảm giác tức thì.
  */
 export function TabBar({ items, activeKey }: { items: TabItem[]; activeKey: string }) {
   return (
@@ -26,8 +30,9 @@ export function TabBar({ items, activeKey }: { items: TabItem[]; activeKey: stri
           <Link
             key={item.key}
             href={item.href}
+            prefetch
             aria-current={active ? 'page' : undefined}
-            className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors ${
+            className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm whitespace-nowrap transition-[colors,transform] duration-100 active:scale-[0.98] ${
               active
                 ? 'bg-accent-soft text-accent font-semibold border border-accent/30'
                 : 'text-ink-muted hover:text-ink hover:bg-glass-strong border border-transparent'
@@ -44,6 +49,7 @@ export function TabBar({ items, activeKey }: { items: TabItem[]; activeKey: stri
                 {item.count}
               </span>
             )}
+            <NavPendingHint />
           </Link>
         );
       })}

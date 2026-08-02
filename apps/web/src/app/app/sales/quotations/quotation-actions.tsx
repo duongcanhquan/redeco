@@ -1,14 +1,14 @@
 'use client';
 
-import { ArrowRightCircle, CheckCircle2, Send, XCircle } from 'lucide-react';
+import { ArrowRightCircle, CheckCircle2, Loader2, Send, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { startTransition, useState, type ReactNode } from 'react';
 import type { QuotationStatus } from '@optimake/domain';
 import type { QuotationApprovalActionRow } from '@/services/sales.service';
 import { convertQuotationAction, setQuotationStatusAction } from './actions';
 
 const btn =
-  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-[colors,transform,opacity] duration-100 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed';
 
 export function QuotationRowActions({
   quotationId,
@@ -45,18 +45,26 @@ export function QuotationRowActions({
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>): Promise<void> => {
     setBusy(true);
     setError(null);
-    const result = await fn();
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Lỗi không xác định.');
-      return;
+    try {
+      const result = await fn();
+      if (!result.ok) {
+        setError(result.error ?? 'Lỗi không xác định.');
+        return;
+      }
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
   };
 
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center justify-end gap-1.5 flex-wrap">
+        {busy && (
+          <Loader2 size={16} className="animate-spin text-accent shrink-0" aria-label="Đang xử lý" />
+        )}
         {status === 'draft' && (
           <>
             {editSlot}

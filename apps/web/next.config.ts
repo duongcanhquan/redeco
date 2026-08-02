@@ -6,8 +6,9 @@ const nextConfig: NextConfig = {
     // bấm qua lại menu gần như tức thì. Server Action + revalidatePath
     // vẫn xóa cache ngay khi dữ liệu đổi nên không lo hiển thị cũ.
     staleTimes: {
-      dynamic: 30,
-      static: 180,
+      // Giữ trang đã xem lâu hơn → bấm qua lại menu gần như tức thì
+      dynamic: 60,
+      static: 300,
     },
   },
 };

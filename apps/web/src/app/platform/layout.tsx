@@ -1,9 +1,10 @@
 import { Building2, LayoutDashboard, UserRound } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
-import { getSessionClaims } from '@/lib/supabase/server';
 import { NavLink } from '@/components/platform/nav-link';
+import { NavProgress } from '@/components/platform/nav-progress';
 import { SignOutButton } from '@/components/platform/sign-out-button';
+import { getSessionClaims } from '@/lib/supabase/server';
 
 const NAV_ITEMS = [
   { href: '/platform', label: 'Tổng quan', icon: LayoutDashboard },
@@ -22,6 +23,7 @@ export default async function PlatformLayout({
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row bg-app">
+      <NavProgress />
       {/* Sidebar desktop / header mobile */}
       <aside className="glass lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:flex lg:flex-col shrink-0 border-b lg:border-b-0 lg:border-r border-panel/40 bg-app-deep/60">
         <div className="flex items-center gap-3 px-5 py-5">
