@@ -259,9 +259,9 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
-2. Worker webhook/email/SMS; Metadata Engine + R2.
-3. (Tuỳ chọn) Profile v2 nhúng snapshot bước duyệt / rule CK.
+1. **Customiz REDECO RFQ Phase 1** — duyệt spec `docs/superpowers/specs/2026-08-02-customiz-redeco-rfq-design.md` + file Excel mẫu → plan → implement.
+2. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
+3. Worker webhook/email/SMS; Metadata Engine + R2.
 
 ---
 
