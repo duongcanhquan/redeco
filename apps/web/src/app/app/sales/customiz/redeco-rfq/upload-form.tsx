@@ -37,7 +37,7 @@ export function RedecoRfqUploadForm({ basePath }: { basePath: string }) {
   return (
     <form
       onSubmit={(ev) => void onSubmit(ev)}
-      className="glass rounded-2xl border border-panel/40 p-4 sm:p-5 space-y-3"
+      className="space-y-3"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">

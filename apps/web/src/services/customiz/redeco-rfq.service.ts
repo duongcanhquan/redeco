@@ -88,6 +88,12 @@ export async function listRedecoRfqRequests(opts?: {
   onlyDuplicates?: boolean;
   classification?: string;
   includeDeleted?: boolean;
+  /** Tìm số BG / khách / SP (lọc sau query). */
+  q?: string;
+  /** ISO date YYYY-MM-DD inclusive start */
+  from?: string;
+  /** ISO date YYYY-MM-DD inclusive end */
+  to?: string;
 }): Promise<RedecoRfqRequest[]> {
   const ctx = await getTenantContext();
   let q = ctx.supabase
@@ -109,10 +115,35 @@ export async function listRedecoRfqRequests(opts?: {
   if (opts?.classification) {
     q = q.contains('tags', [opts.classification]);
   }
+  if (opts?.from) {
+    q = q.gte('created_at', `${opts.from}T00:00:00.000Z`);
+  }
+  if (opts?.to) {
+    q = q.lte('created_at', `${opts.to}T23:59:59.999Z`);
+  }
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => mapRequest(r as Record<string, unknown>));
+  let rows = (data ?? []).map((r) => mapRequest(r as Record<string, unknown>));
+
+  const needle = opts?.q?.trim().toLowerCase();
+  if (needle) {
+    rows = rows.filter((r) => {
+      const blob = [
+        r.external_quote_no,
+        r.attributes.end_customer,
+        r.attributes.product_name,
+        r.attributes.buyer_contact,
+        r.attributes.system_item_code,
+        r.attributes.customer_item_code,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return blob.includes(needle);
+    });
+  }
+
+  return rows;
 }
 
 export async function getRedecoRfqRequest(id: string): Promise<RedecoRfqRequest | null> {

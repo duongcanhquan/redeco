@@ -148,16 +148,13 @@ export function FilterRulesPanel({
   };
 
   return (
-    <section className="glass rounded-2xl border border-panel/40 p-4 sm:p-5 space-y-4">
+    <section className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-base font-bold text-ink sm:text-lg">Bộ lọc phân loại</h2>
-          <p className="text-sm text-ink-muted mt-1 leading-relaxed">
-            Quy tắc theo thứ tự ưu tiên (↑↓). Điều kiện AND/OR → gắn tag Tiềm năng / Cần cân nhắc /
-            Không tiềm năng. Tag «Trùng» vẫn độc lập. Áp dụng khi import và khi «Chạy lại lọc».
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-sm text-ink-muted leading-relaxed max-w-2xl">
+          Quy tắc theo thứ tự ưu tiên (↑↓). Điều kiện AND/OR → gắn tag Tiềm năng / Cần cân nhắc /
+          Không tiềm năng. Tag «Trùng» vẫn độc lập. Áp dụng khi import và khi «Chạy lại lọc».
+        </p>
+        <div className="flex flex-wrap gap-2 shrink-0">
           <button
             type="button"
             disabled={busy}

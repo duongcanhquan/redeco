@@ -3,29 +3,52 @@
 import { Loader2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { ATTR_KEYS, type RedecoRfqAttrKey } from '@/lib/customiz/redeco-rfq-parse';
 import { createManualRfqAction } from './actions';
+
+/** Nhãn khớp cột Excel REDECO (A–R). */
+export const EXCEL_FIELD_LABELS: { key: 'externalQuoteNo' | RedecoRfqAttrKey; label: string }[] =
+  [
+    { key: 'externalQuoteNo', label: 'Số báo giá (A)' },
+    { key: 'status_customer', label: 'Trạng thái KH (B)' },
+    { key: 'buyer_contact', label: 'Người PH mua hàng (C)' },
+    { key: 'end_customer', label: 'Khách hàng (D)' },
+    { key: 'customer_site_abbr', label: 'Cơ sở KH (E)' },
+    { key: 'customer_item_code', label: 'Mã hàng KH (F)' },
+    { key: 'system_item_code', label: 'Mã hàng (G)' },
+    { key: 'request_quote_ref', label: 'BG yêu cầu số (H)' },
+    { key: 'product_name', label: 'Tên sản phẩm (I)' },
+    { key: 'model_or_end_code', label: 'Kiểu mẫu (J)' },
+    { key: 'spec', label: 'Quy cách (K)' },
+    { key: 'manufacturer', label: 'Nhà SX (L)' },
+    { key: 'uom', label: 'Đơn vị (M)' },
+    { key: 'qty_expected', label: 'SL dự kiến (N)' },
+    { key: 'po_qty_last_year', label: 'PO năm trước (O)' },
+    { key: 'request_date', label: 'Ngày yêu cầu (P)' },
+    { key: 'quotation_closing_date', label: 'Closing date (Q)' },
+    { key: 'closing_time', label: 'Giờ đóng (R)' },
+  ];
 
 export function ManualRfqForm({ basePath }: { basePath: string }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setOk(null);
     const fd = new FormData(e.currentTarget);
+    const attributes = {} as Partial<Record<RedecoRfqAttrKey, string>>;
+    for (const k of ATTR_KEYS) {
+      attributes[k] = String(fd.get(k) ?? '');
+    }
     const result = await createManualRfqAction(
       {
         externalQuoteNo: String(fd.get('externalQuoteNo') ?? ''),
-        attributes: {
-          end_customer: String(fd.get('end_customer') ?? ''),
-          product_name: String(fd.get('product_name') ?? ''),
-          qty_expected: String(fd.get('qty_expected') ?? ''),
-          uom: String(fd.get('uom') ?? ''),
-          spec: String(fd.get('spec') ?? ''),
-        },
+        attributes,
       },
       basePath,
     );
@@ -34,116 +57,53 @@ export function ManualRfqForm({ basePath }: { basePath: string }) {
       setError(result.error);
       return;
     }
-    setOpen(false);
+    setOk('Đã lưu đề xuất.');
     e.currentTarget.reset();
     router.refresh();
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-panel/40 px-4 text-sm font-semibold text-ink hover:bg-glass"
-      >
-        <Plus size={18} aria-hidden />
-        Thêm tay
-      </button>
-    );
-  }
-
   return (
     <form
       onSubmit={(ev) => void onSubmit(ev)}
-      className="glass rounded-2xl border border-panel/40 p-4 sm:p-5 space-y-3"
+      className="space-y-4"
     >
-      <p className="text-sm font-semibold text-ink">Thêm đề xuất báo giá</p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="manual-quote-no" className="text-sm font-medium text-ink">
-            Số BG / mã đề xuất
-          </label>
-          <input
-            id="manual-quote-no"
-            name="externalQuoteNo"
-            required
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="manual-customer" className="text-sm font-medium text-ink">
-            Khách hàng
-          </label>
-          <input
-            id="manual-customer"
-            name="end_customer"
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <label htmlFor="manual-product" className="text-sm font-medium text-ink">
-            Tên sản phẩm
-          </label>
-          <input
-            id="manual-product"
-            name="product_name"
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="manual-qty" className="text-sm font-medium text-ink">
-            SL dự kiến
-          </label>
-          <input
-            id="manual-qty"
-            name="qty_expected"
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="manual-uom" className="text-sm font-medium text-ink">
-            Đơn vị
-          </label>
-          <input
-            id="manual-uom"
-            name="uom"
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <label htmlFor="manual-spec" className="text-sm font-medium text-ink">
-            Quy cách
-          </label>
-          <input
-            id="manual-spec"
-            name="spec"
-            className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-          />
-        </div>
+      <p className="text-sm text-ink-muted leading-relaxed">
+        Nhập thủ công — các trường trùng cột file Excel (dòng tiêu đề 5).
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {EXCEL_FIELD_LABELS.map((f) => (
+          <div key={f.key} className="space-y-1.5">
+            <label htmlFor={`manual-${f.key}`} className="block text-sm font-medium text-ink">
+              {f.label}
+              {f.key === 'externalQuoteNo' ? ' *' : ''}
+            </label>
+            <input
+              id={`manual-${f.key}`}
+              name={f.key}
+              required={f.key === 'externalQuoteNo'}
+              className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
+            />
+          </div>
+        ))}
       </div>
       {error && (
         <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-app disabled:opacity-50"
-        >
-          {busy ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <Plus size={18} aria-hidden />}
-          Lưu đề xuất
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setOpen(false)}
-          className="inline-flex min-h-11 items-center rounded-xl border border-panel/40 px-4 text-sm font-medium"
-        >
-          Hủy
-        </button>
-      </div>
+      {ok && (
+        <p className="text-sm text-success" role="status">
+          {ok}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={busy}
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-app disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <Plus size={18} aria-hidden />}
+        Lưu đề xuất
+      </button>
     </form>
   );
 }
