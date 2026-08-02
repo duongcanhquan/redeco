@@ -46,7 +46,7 @@ export function BentoBarChart({
     <div className="w-full" role="img" aria-label={ariaLabel}>
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="w-full h-36 sm:h-40"
+        className="h-44 w-full sm:h-52"
         preserveAspectRatio="none"
       >
         {points.map((p, i) => {
@@ -109,7 +109,7 @@ export function BentoStackBars({
     <div className="space-y-3" role="img" aria-label={ariaLabel}>
       {/* Thanh stacked tổng quan */}
       <div
-        className="flex h-3 w-full overflow-hidden rounded-full bg-app/60 border border-panel/40"
+        className="flex h-4 w-full overflow-hidden rounded-full border border-panel/40 bg-app/60"
         aria-hidden
       >
         {total === 0 ? (
@@ -130,20 +130,20 @@ export function BentoStackBars({
         )}
       </div>
 
-      <ul className="space-y-2.5">
+      <ul className="space-y-3">
         {slices.map((s) => {
           const body = (
             <>
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span
-                  className="size-2.5 rounded-sm shrink-0"
+                  className="size-3 shrink-0 rounded-sm"
                   style={{ background: TONE_VAR[s.tone] }}
                   aria-hidden
                 />
-                <span className="text-sm truncate">{s.label}</span>
+                <span className="truncate text-base">{s.label}</span>
               </div>
-              <span className="text-sm font-semibold tabular-nums">{s.count}</span>
-              <div className="col-span-2 h-1.5 rounded-full bg-app/50 overflow-hidden">
+              <span className="text-lg font-bold tabular-nums">{s.count}</span>
+              <div className="col-span-2 h-2 overflow-hidden rounded-full bg-app/50">
                 <div
                   className="h-full rounded-full transition-[width] duration-300 ease-out"
                   style={{
@@ -160,19 +160,21 @@ export function BentoStackBars({
               {s.href ? (
                 <Link
                   href={s.href}
-                  className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 items-center rounded-lg px-1 py-1 -mx-1 min-h-11 hover:bg-glass-strong transition-colors"
+                  className="-mx-1 grid min-h-12 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 rounded-xl px-2 py-2 transition-colors hover:bg-glass-strong"
                 >
                   {body}
                 </Link>
               ) : (
-                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 items-center">{body}</div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-1">
+                  {body}
+                </div>
               )}
             </li>
           );
         })}
       </ul>
       {total === 0 && (
-        <p className="text-xs text-ink-muted text-center pt-1">Chưa có dữ liệu.</p>
+        <p className="pt-1 text-center text-sm text-ink-muted">Chưa có dữ liệu.</p>
       )}
     </div>
   );

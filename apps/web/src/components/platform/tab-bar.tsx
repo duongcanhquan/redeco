@@ -42,7 +42,7 @@ export function TabBar({ items, activeKey }: { items: TabItem[]; activeKey: stri
             const next = items.find((i) => i.key === e.target.value);
             if (next) router.push(next.href);
           }}
-          className="glass w-full min-h-11 appearance-none rounded-2xl border border-panel/40 bg-app-deep/80 py-2.5 pl-11 pr-10 text-sm font-medium text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="glass w-full min-h-12 appearance-none rounded-2xl border border-panel/40 bg-app-deep/80 py-3 pl-11 pr-10 text-base font-medium text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           {items.map((item) => (
             <option key={item.key} value={item.key}>

@@ -50,33 +50,33 @@ export default async function PlatformDashboard() {
       </header>
 
       {/* Bento grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, href, warn }) => (
           <Link
             key={label}
             href={href}
-            className="glass glass-hover rounded-2xl p-5 flex items-start justify-between"
+            className="glass glass-hover flex min-h-32 items-start justify-between rounded-3xl p-5 sm:min-h-36 sm:p-6"
           >
             <div>
-              <p className="text-sm text-ink-muted">{label}</p>
-              <p className={`mt-2 text-3xl font-bold ${warn ? 'text-warning' : 'text-ink'}`}>
+              <p className="text-base text-ink-muted">{label}</p>
+              <p className={`mt-3 text-4xl font-bold tabular-nums ${warn ? 'text-warning' : 'text-ink'}`}>
                 {value}
               </p>
             </div>
             <span
-              className={`grid size-11 place-items-center rounded-xl border ${
+              className={`grid size-12 place-items-center rounded-2xl border ${
                 warn
                   ? 'bg-warning/10 border-warning/30 text-warning'
                   : 'bg-accent-soft border-accent/25 text-accent'
               }`}
             >
-              <Icon size={20} aria-hidden />
+              <Icon size={22} aria-hidden />
             </span>
           </Link>
         ))}
 
         {/* Hợp đồng gần đây — card lớn */}
-        <section className="glass rounded-2xl p-5 sm:col-span-2 xl:col-span-3 xl:row-span-2">
+        <section className="glass rounded-3xl p-5 sm:col-span-2 sm:p-6 xl:col-span-3 xl:row-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold flex items-center gap-2">
               <ScrollText size={18} className="text-accent" aria-hidden />

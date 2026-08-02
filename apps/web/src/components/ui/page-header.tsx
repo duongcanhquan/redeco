@@ -21,7 +21,7 @@ export function PageHeader({
         <span className="shrink-0 text-accent" aria-hidden>
           {icon}
         </span>
-        <h1 className="truncate text-xl font-bold sm:text-2xl">{title}</h1>
+        <h1 className="truncate text-2xl font-bold sm:text-3xl">{title}</h1>
         {help && helpTitle && <HelpTip title={helpTitle}>{help}</HelpTip>}
       </div>
       {actions && (

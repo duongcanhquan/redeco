@@ -241,6 +241,7 @@ Ghi chú kỹ thuật quan trọng:
 
 - **Menu theo chức danh (N2+R2)**: sidebar 1 dòng/phân hệ; hub + tab; lọc node con + phụ thuộc đọc. Spec: `docs/superpowers/specs/2026-08-02-role-nav-hub-tabs-design.md`.
 - **Mobile UX**: `AppShell` — thanh trên gọn + hamburger drawer (workspace + platform); hub tab phone = dropdown 1 hàng; touch ≥44px; padding nội dung chặt hơn trên phone. Landing có `LandingMobileNav`.
+- **Bento lớn / tối giản**: `KpiTile` · `BentoPanel` · `ActionTile` (`components/ui/bento.tsx`) — số 3xl–4xl, card full-width trên phone, filter status dropdown; DocCard/StatusPill chữ lớn hơn để thao tác nhanh.
 - **A Giữ chỗ (K2)**: RPC `inventory_reserve_for_sales_order` / release / consume; confirm → giữ chỗ; hủy → nhả; xuất giao → tiêu thụ rồi trừ tồn. Cài đặt Kho: «Giữ chỗ khi xác nhận» + «Chỉ xác nhận khi giữ chỗ đủ 100%».
 - Sales + Kho + SX + KT; in chứng từ; CTA tạo LSX.
 - Tiếp: **B** GH/HĐ linh hoạt · **C** bảng giá theo loại khách.
@@ -288,3 +289,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Giữ chỗ tồn khi confirm đơn (RPC + settings); menu + reservation commit |
 | 2026-08-02 | QA fix: R2 tab filter, giữ chỗ cho KD, chỉ kho TP, consume sau validate, redirect layout |
 | 2026-08-02 | Mobile: hamburger drawer (`AppShell`), tab dropdown phone, touch target, landing menu |
+| 2026-08-02 | Bento to rõ: KPI/panel/action tile dùng chung, list card + filter phone tối giản |

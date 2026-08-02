@@ -1,6 +1,4 @@
-import Link from 'next/link';
 import {
-  ArrowRight,
   Package,
   Warehouse,
   ClipboardList,
@@ -8,6 +6,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { BentoBarChart, BentoStackBars } from '@/components/sales/bento-charts';
+import { ActionTile, BentoPanel } from '@/components/ui/bento';
 import { FlowSteps } from '@/components/ui/flow-steps';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatTile } from '@/components/ui/stat-tile';
@@ -36,10 +35,10 @@ export default async function InventoryHubPage() {
 
   if (!hasKho) {
     return (
-      <div className="glass rounded-2xl py-16 text-center max-w-lg mx-auto">
-        <Warehouse className="mx-auto text-warning" size={32} aria-hidden />
-        <p className="mt-4 font-medium">Chưa mở Kho</p>
-        <p className="mt-1 text-sm text-ink-muted px-4">Liên hệ quản trị để bật module Kho.</p>
+      <div className="glass mx-auto max-w-lg rounded-3xl py-16 text-center">
+        <Warehouse className="mx-auto text-warning" size={36} aria-hidden />
+        <p className="mt-4 text-lg font-semibold">Chưa mở Kho</p>
+        <p className="mt-2 px-4 text-base text-ink-muted">Liên hệ quản trị để bật module Kho.</p>
       </div>
     );
   }
@@ -106,25 +105,26 @@ export default async function InventoryHubPage() {
         ]}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatTile icon={<Warehouse size={18} />} label="Số kho" value={warehouses.length} />
-        <StatTile icon={<Package size={18} />} label="Dòng tồn" value={balances.length} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile icon={<Warehouse size={20} />} label="Số kho" value={warehouses.length} />
+        <StatTile icon={<Package size={20} />} label="Dòng tồn" value={balances.length} />
         <StatTile
-          icon={<AlertTriangle size={18} />}
+          icon={<AlertTriangle size={20} />}
           label="Sắp hết"
           value={lowAtp}
           tone={lowAtp > 0 ? 'warning' : 'default'}
         />
-        <StatTile icon={<ClipboardList size={18} />} label="Phiếu nháp" value={draft} />
+        <StatTile icon={<ClipboardList size={20} />} label="Phiếu nháp" value={draft} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <section className="glass rounded-2xl p-4">
-          <h2 className="text-sm font-semibold mb-2">Tồn theo kho</h2>
-          <BentoBarChart points={byWh.length ? byWh : [{ label: '—', amount: 0 }]} ariaLabel="Biểu đồ tồn theo kho" />
-        </section>
-        <section className="glass rounded-2xl p-4">
-          <h2 className="text-sm font-semibold mb-2">Loại phiếu</h2>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <BentoPanel title="Tồn theo kho">
+          <BentoBarChart
+            points={byWh.length ? byWh : [{ label: '—', amount: 0 }]}
+            ariaLabel="Biểu đồ tồn theo kho"
+          />
+        </BentoPanel>
+        <BentoPanel title="Loại phiếu">
           <BentoStackBars
             ariaLabel="Phân loại phiếu kho"
             slices={[
@@ -133,29 +133,25 @@ export default async function InventoryHubPage() {
               { key: 'ok', label: 'Đã ghi sổ', count: posted, tone: 'accent' },
             ]}
           />
-        </section>
+        </BentoPanel>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { href: `${base}/inventory/stock`, label: 'Xem tồn', icon: Package },
-          { href: `${base}/inventory/transactions`, label: 'Phiếu kho', icon: ClipboardList },
-          { href: `${base}/inventory/warehouses`, label: 'Danh mục kho', icon: Warehouse },
-        ].map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="glass glass-hover rounded-2xl p-4 min-h-24 flex items-center gap-3 group"
-          >
-            <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
-              <Icon size={22} aria-hidden />
-            </span>
-            <span className="font-semibold group-hover:text-accent flex items-center gap-1">
-              {label}
-              <ArrowRight size={14} aria-hidden />
-            </span>
-          </Link>
-        ))}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <ActionTile
+          href={`${base}/inventory/stock`}
+          label="Xem tồn"
+          icon={<Package size={24} aria-hidden />}
+        />
+        <ActionTile
+          href={`${base}/inventory/transactions`}
+          label="Phiếu kho"
+          icon={<ClipboardList size={24} aria-hidden />}
+        />
+        <ActionTile
+          href={`${base}/inventory/warehouses`}
+          label="Danh mục kho"
+          icon={<Warehouse size={24} aria-hidden />}
+        />
       </section>
     </div>
   );

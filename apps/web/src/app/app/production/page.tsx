@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  ArrowRight,
   Factory,
   Layers,
   ClipboardList,
@@ -11,6 +10,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { BentoStackBars } from '@/components/sales/bento-charts';
+import { ActionTile, BentoPanel } from '@/components/ui/bento';
 import { FlowSteps } from '@/components/ui/flow-steps';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatTile } from '@/components/ui/stat-tile';
@@ -31,10 +31,10 @@ export default async function ProductionHubPage() {
 
   if (!hasSx) {
     return (
-      <div className="glass rounded-2xl py-16 text-center max-w-lg mx-auto">
-        <Factory className="mx-auto text-warning" size={32} aria-hidden />
-        <p className="mt-4 font-medium">Chưa mở Sản xuất</p>
-        <p className="mt-1 text-sm text-ink-muted px-4">Liên hệ quản trị để bật module Sản xuất.</p>
+      <div className="glass mx-auto max-w-lg rounded-3xl py-16 text-center">
+        <Factory className="mx-auto text-warning" size={36} aria-hidden />
+        <p className="mt-4 text-lg font-semibold">Chưa mở Sản xuất</p>
+        <p className="mt-2 px-4 text-base text-ink-muted">Liên hệ quản trị để bật module Sản xuất.</p>
       </div>
     );
   }
@@ -105,23 +105,22 @@ export default async function ProductionHubPage() {
         ]}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatTile icon={<Layers size={18} />} label="Định mức đang dùng" value={activeBoms} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatTile icon={<Layers size={20} />} label="Định mức đang dùng" value={activeBoms} />
         <StatTile
-          icon={<ClipboardList size={18} />}
+          icon={<ClipboardList size={20} />}
           label="Lệnh đang mở"
           value={draft + released + running}
         />
         <StatTile
-          icon={<CheckCircle2 size={18} />}
+          icon={<CheckCircle2 size={20} />}
           label="Đã hoàn thành"
           value={done}
           tone="success"
         />
       </div>
 
-      <section className="glass rounded-2xl p-4">
-        <h2 className="text-sm font-semibold mb-2">Phân loại lệnh</h2>
+      <BentoPanel title="Phân loại lệnh">
         <BentoStackBars
           ariaLabel="Phân loại lệnh sản xuất"
           slices={[
@@ -131,33 +130,19 @@ export default async function ProductionHubPage() {
             { key: 'c', label: 'Xong', count: done, tone: 'success' },
           ]}
         />
-      </section>
+      </BentoPanel>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Link
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ActionTile
           href={`${base}/production/boms`}
-          className="glass glass-hover rounded-2xl p-4 min-h-24 flex items-center gap-3 group"
-        >
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
-            <Layers size={22} aria-hidden />
-          </span>
-          <span className="font-semibold group-hover:text-accent flex items-center gap-1">
-            Định mức nguyên liệu
-            <ArrowRight size={14} aria-hidden />
-          </span>
-        </Link>
-        <Link
+          label="Định mức nguyên liệu"
+          icon={<Layers size={24} aria-hidden />}
+        />
+        <ActionTile
           href={`${base}/production/work-orders`}
-          className="glass glass-hover rounded-2xl p-4 min-h-24 flex items-center gap-3 group"
-        >
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
-            <ClipboardList size={22} aria-hidden />
-          </span>
-          <span className="font-semibold group-hover:text-accent flex items-center gap-1">
-            Lệnh sản xuất
-            <ArrowRight size={14} aria-hidden />
-          </span>
-        </Link>
+          label="Lệnh sản xuất"
+          icon={<ClipboardList size={24} aria-hidden />}
+        />
       </section>
     </div>
   );

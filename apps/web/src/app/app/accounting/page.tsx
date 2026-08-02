@@ -140,26 +140,26 @@ export default async function AccountingHubPage() {
             ]}
           />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
-              icon={<Wallet size={18} />}
+              icon={<Wallet size={20} />}
               label="Còn hạn"
               value={formatMoney(aging.current, currency)}
             />
             <StatTile
-              icon={<AlertTriangle size={18} />}
+              icon={<AlertTriangle size={20} />}
               label="Quá 1–30 ngày"
               value={formatMoney(aging.d1_30, currency)}
               tone={aging.d1_30 > 0 ? 'warning' : 'default'}
             />
             <StatTile
-              icon={<AlertTriangle size={18} />}
+              icon={<AlertTriangle size={20} />}
               label="Quá 31–60 ngày"
               value={formatMoney(aging.d31_60, currency)}
               tone={aging.d31_60 > 0 ? 'warning' : 'default'}
             />
             <StatTile
-              icon={<CircleDollarSign size={18} />}
+              icon={<CircleDollarSign size={20} />}
               label="Quá trên 60 ngày"
               value={formatMoney(aging.d60p, currency)}
               tone={aging.d60p > 0 ? 'danger' : 'default'}

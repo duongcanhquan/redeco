@@ -21,14 +21,16 @@ export function StatTile({
           : '';
 
   return (
-    <div className="glass rounded-2xl p-4 min-h-28 flex flex-col justify-between">
-      <div className="flex items-center gap-2 text-ink-muted">
-        <span className="text-accent" aria-hidden>
+    <div className="glass flex min-h-32 flex-col justify-between rounded-3xl p-5 sm:min-h-36 sm:p-6">
+      <div className="flex items-center gap-2.5 text-ink-muted">
+        <span className="grid size-11 place-items-center rounded-2xl bg-accent-soft text-accent" aria-hidden>
           {icon}
         </span>
-        <p className="text-xs font-medium">{label}</p>
+        <p className="text-sm font-medium sm:text-base">{label}</p>
       </div>
-      <p className={`mt-2 text-2xl font-bold tabular-nums ${valueTone}`}>{value}</p>
+      <p className={`mt-4 text-3xl font-bold tabular-nums leading-none sm:text-4xl ${valueTone}`}>
+        {value}
+      </p>
     </div>
   );
 }

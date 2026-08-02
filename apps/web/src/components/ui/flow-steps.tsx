@@ -5,7 +5,6 @@ export type FlowStep = {
   key: string;
   label: string;
   icon: ReactNode;
-  /** Số lượng / trạng thái phụ */
   count?: number;
   tone?: 'default' | 'accent' | 'warning' | 'success' | 'danger';
 };
@@ -18,37 +17,30 @@ const TONE: Record<NonNullable<FlowStep['tone']>, string> = {
   danger: 'border-danger/40 text-danger',
 };
 
-/** Luồng phân loại ngang — dễ đọc trên phone (scroll) và desktop. */
+/** Luồng bước — ô lớn, số to, dễ đọc trên phone. */
 export function FlowSteps({ steps, ariaLabel }: { steps: FlowStep[]; ariaLabel: string }) {
   return (
-    <nav
-      aria-label={ariaLabel}
-      className="glass rounded-2xl px-3 py-3 overflow-x-auto"
-    >
-      <ol className="flex items-stretch gap-1 min-w-min">
+    <nav aria-label={ariaLabel} className="glass overflow-x-auto rounded-3xl px-3 py-3 sm:px-4">
+      <ol className="flex min-w-min items-stretch gap-1.5">
         {steps.map((s, i) => (
-          <li key={s.key} className="flex items-center gap-1">
+          <li key={s.key} className="flex items-center gap-1.5">
             <div
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 min-h-11 min-w-[7.5rem] ${TONE[s.tone ?? 'default']}`}
+              className={`flex min-h-16 min-w-[8.5rem] items-center gap-3 rounded-2xl border px-4 py-3 ${TONE[s.tone ?? 'default']}`}
             >
               <span className="shrink-0" aria-hidden>
                 {s.icon}
               </span>
               <span className="min-w-0">
-                <span className="block text-xs font-medium leading-tight truncate">{s.label}</span>
+                <span className="block truncate text-sm font-medium leading-tight">{s.label}</span>
                 {typeof s.count === 'number' && (
-                  <span className="block text-lg font-bold tabular-nums leading-tight">
+                  <span className="mt-0.5 block text-2xl font-bold tabular-nums leading-none">
                     {s.count}
                   </span>
                 )}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <ChevronRight
-                size={16}
-                className="text-ink-muted/50 shrink-0 mx-0.5"
-                aria-hidden
-              />
+              <ChevronRight size={18} className="mx-0.5 shrink-0 text-ink-muted/50" aria-hidden />
             )}
           </li>
         ))}

@@ -36,7 +36,7 @@ export function DocSearchBar({
   return (
     <form
       onSubmit={submit}
-      className="flex flex-1 min-w-[12rem] max-w-md items-center gap-2"
+      className="flex w-full min-w-0 flex-1 items-center gap-2 sm:max-w-md"
       role="search"
     >
       <label htmlFor="doc-search" className="sr-only">
@@ -44,8 +44,8 @@ export function DocSearchBar({
       </label>
       <div className="relative flex-1">
         <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
+          size={18}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
           aria-hidden
         />
         <input
@@ -54,12 +54,12 @@ export function DocSearchBar({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={placeholder}
-          className="h-11 w-full rounded-xl border border-panel/50 bg-app/50 pl-9 pr-3 text-sm text-ink placeholder:text-ink-muted/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="h-12 w-full rounded-2xl border border-panel/50 bg-app/50 pl-11 pr-3 text-base text-ink placeholder:text-ink-muted/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         />
       </div>
       <button
         type="submit"
-        className="h-11 shrink-0 rounded-xl border border-panel/50 px-4 text-sm font-medium text-ink-muted hover:text-ink hover:bg-glass-strong transition-colors cursor-pointer"
+        className="h-12 shrink-0 cursor-pointer rounded-2xl border border-panel/50 px-5 text-base font-medium text-ink-muted transition-colors hover:bg-glass-strong hover:text-ink"
       >
         Tìm
       </button>
