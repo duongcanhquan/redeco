@@ -239,18 +239,18 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 2. Ngữ cảnh hiện tại
 
-- **Sales + Kho K1 + SX1 + KT1** đã có UI cơ bản; in chứng từ + CTA tạo LSX từ đơn thiếu hàng.
-- **QA 2026-08-02**: đã chặn duplicate GH/HĐ; confirm optimistic-lock; LSX từ đơn idempotent; HĐ cho phép từ `confirmed` (trước giao); UI touch 44px + print trên card phone.
-- Settings AI / webhook / email / SMS: lưu cấu hình — **chưa** worker gửi thật. `reserveOnSoConfirm` / `autoCreateWoOnSoShortfall` **disabled UI** (chưa wire).
-- Demo: `demo@optimake.com` / `Demo@123` — `/demo/...`.
+- **Menu theo chức danh (N2+R2)**: sidebar 1 dòng/phân hệ; hub + tab; lọc node con + phụ thuộc đọc. Spec: `docs/superpowers/specs/2026-08-02-role-nav-hub-tabs-design.md`.
+- **A Giữ chỗ (K2)**: RPC `inventory_reserve_for_sales_order` / release / consume; confirm → giữ chỗ; hủy → nhả; xuất giao → tiêu thụ rồi trừ tồn. Cài đặt Kho: «Giữ chỗ khi xác nhận» + «Chỉ xác nhận khi giữ chỗ đủ 100%».
+- Sales + Kho + SX + KT; in chứng từ; CTA tạo LSX.
+- Tiếp: **B** GH/HĐ linh hoạt · **C** bảng giá theo loại khách.
+- Demo: `demo@optimake.com` / `Demo@123`.
 
 ---
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **Sales linh hoạt (đã brainstorm)**: Pricelist theo loại KH; Reservation thật khi confirm; GH/HĐ song song đầy đủ (partial ship, đặt cọc).
-2. Worker webhook/email/SMS khi cần.
-3. KT2 AP/Vendor; Metadata Engine + R2.
+1. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
+2. Worker webhook/email/SMS; Metadata Engine + R2.
 
 ---
 
@@ -283,3 +283,5 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | UI hubs: HelpTip `?`, FlowSteps, biểu đồ, copy đơn giản; BOM nhiều dòng NVL |
 | 2026-08-02 | Sales: in chứng từ BG/ĐH/GH/HĐ; CTA tạo LSX từ đơn thiếu hàng; redesign settings AI/webhook/email/SMS |
 | 2026-08-02 | QA parallel: fix idempotency O2C (GH/HĐ/LSX), HĐ từ confirmed, UI touch/print mobile; dead settings disabled |
+| 2026-08-02 | Menu N2+R2: sidebar gọn, hub tab theo quyền node con, chữ Việt + mở ngoặc viết tắt |
+| 2026-08-02 | Giữ chỗ tồn khi confirm đơn (RPC + settings); menu + reservation commit |

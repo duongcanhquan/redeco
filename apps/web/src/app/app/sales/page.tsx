@@ -2,12 +2,8 @@ import {
   AlertTriangle,
   ArrowRight,
   FileText,
-  GitBranch,
-  Package,
-  Percent,
   ScrollText,
   ShoppingCart,
-  Truck,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -20,17 +16,6 @@ import { getSalesDashboardData } from '@/services/sales-analytics.service';
 import { getMyRootModules } from '@/services/sales.service';
 
 export const dynamic = 'force-dynamic';
-
-const NAV = [
-  { href: '/sales/customers', label: 'Khách hàng', icon: Users },
-  { href: '/sales/quotations', label: 'Báo giá', icon: FileText },
-  { href: '/sales/orders', label: 'Đơn hàng', icon: ScrollText },
-  { href: '/sales/deliveries', label: 'Giao hàng', icon: Truck },
-  { href: '/sales/invoices', label: 'Hóa đơn', icon: Wallet },
-  { href: '/sales/products', label: 'Sản phẩm', icon: Package },
-  { href: '/sales/discount-rules', label: 'Chiết khấu', icon: Percent },
-  { href: '/sales/approvals', label: 'Quy trình duyệt', icon: GitBranch },
-] as const;
 
 export default async function SalesHubPage() {
   const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
@@ -67,7 +52,7 @@ export default async function SalesHubPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShoppingCart className="text-accent" size={24} aria-hidden />
-          <h1 className="text-2xl font-bold">Bán hàng</h1>
+          <h1 className="text-2xl font-bold">Kinh doanh</h1>
         </div>
         <p className="text-xs text-ink-muted tabular-nums">
           {new Date().toLocaleDateString('vi-VN', {
@@ -207,22 +192,6 @@ export default async function SalesHubPage() {
           )}
         </section>
 
-        {/* Lối tắt chức năng — một hàng bento */}
-        <section className="col-span-2 lg:col-span-12 glass rounded-2xl p-4 sm:p-5">
-          <h2 className="font-semibold text-sm sm:text-base mb-3">Chức năng</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            {NAV.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={`${base}${href}`}
-                className="rounded-xl border border-panel/40 bg-app/40 px-3 py-3.5 hover:border-accent/40 hover:bg-accent-soft/40 transition-colors min-h-14 group flex flex-col items-start"
-              >
-                <Icon size={22} className="text-accent mb-2" aria-hidden />
-                <span className="block text-sm font-medium group-hover:text-accent">{label}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

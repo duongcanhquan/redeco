@@ -27,12 +27,18 @@ import {
   type TenantContext,
 } from '@/services/sales-context';
 import { ensureDefaultQuotationWorkflow } from '@/services/sales-config.service';
-import { getProductionSettings, getSalesSettings } from '@/services/tenant-settings.service';
+import {
+  getInventorySettings,
+  getProductionSettings,
+  getSalesSettings,
+} from '@/services/tenant-settings.service';
 import { getOpenWoByProductIds } from '@/services/production.service';
 import {
   getAtpByProductIds,
   hasKhoAccess,
   issueFinishedGoodsForDelivery,
+  releaseSalesOrderReservations,
+  reserveStockForSalesOrder,
 } from '@/services/inventory.service';
 
 export type { ActionResult, TenantContext };
@@ -1125,14 +1131,31 @@ export async function confirmSalesOrder(
     };
   });
 
-  // Tôn trọng cài đặt công ty: có thể chặn confirm khi thiếu ATP
+  // Tôn trọng cài đặt công ty: có thể chặn confirm khi thiếu số còn bán được (ATP)
   const salesSettings = await getSalesSettings();
   if (!salesSettings.allowConfirmWithoutAtp && !promise.allCovered) {
     return {
       ok: false,
       error:
-        'Không đủ tồn kho (ATP) để xác nhận đơn. Bật “Cho phép xác nhận khi ATP thiếu” trong Cài đặt → Kinh doanh, hoặc bổ sung tồn / chờ sản xuất.',
+        'Không đủ số còn bán được (ATP) để xác nhận đơn. Bật «Cho phép xác nhận khi thiếu tồn» trong Cài đặt → Kinh doanh, hoặc bổ sung tồn / chờ sản xuất.',
     };
+  }
+
+  // Giữ chỗ trước khi đổi trạng thái (có module Kho + cài đặt bật)
+  const invSettings = await getInventorySettings();
+  let reservedInThisCall = false;
+  if (invSettings.reserveOnSoConfirm && (await hasKhoAccess(ctx.supabase))) {
+    const reserved = await reserveStockForSalesOrder(
+      orderId,
+      invSettings.requireFullReserveOnConfirm,
+    );
+    if (!reserved.ok) {
+      if (reserved.error !== 'NO_KHO') {
+        return { ok: false, error: reserved.error };
+      }
+    } else if (!reserved.data.skipped) {
+      reservedInThisCall = true;
+    }
   }
 
   for (const it of order.sales_order_items) {
@@ -1152,8 +1175,12 @@ export async function confirmSalesOrder(
     .eq('status', 'draft')
     .select('id')
     .maybeSingle();
-  if (error) return { ok: false, error: `Xác nhận đơn thất bại: ${error.message}` };
+  if (error) {
+    if (reservedInThisCall) await releaseSalesOrderReservations(orderId);
+    return { ok: false, error: `Xác nhận đơn thất bại: ${error.message}` };
+  }
   if (!updated) {
+    if (reservedInThisCall) await releaseSalesOrderReservations(orderId);
     return {
       ok: false,
       error: 'Đơn đã được xác nhận hoặc không còn ở trạng thái nháp.',
@@ -1181,12 +1208,27 @@ async function appendSalesOutbox(
 
 export async function cancelSalesOrder(orderId: string): Promise<ActionResult> {
   const ctx = await getTenantContext();
-  const { error } = await ctx.supabase
+  const { data: before } = await ctx.supabase
+    .from('sales_orders')
+    .select('status')
+    .eq('id', orderId)
+    .maybeSingle();
+  const prevStatus = (before as { status: SalesOrderStatus } | null)?.status;
+
+  const { data: updated, error } = await ctx.supabase
     .from('sales_orders')
     .update({ status: 'cancelled' })
     .eq('id', orderId)
-    .in('status', ['draft', 'confirmed']);
+    .in('status', ['draft', 'confirmed'])
+    .select('id')
+    .maybeSingle();
   if (error) return { ok: false, error: `Hủy đơn thất bại: ${error.message}` };
+  if (!updated) return { ok: false, error: 'Chỉ hủy được đơn nháp hoặc đã xác nhận.' };
+
+  // Nhả giữ chỗ nếu đơn từng confirmed
+  if (prevStatus === 'confirmed') {
+    await releaseSalesOrderReservations(orderId);
+  }
   return { ok: true, data: undefined };
 }
 
@@ -1264,6 +1306,7 @@ export async function shipDelivery(deliveryId: string): Promise<ActionResult> {
         qty: Number(l.qty),
       })),
       `Xuất giao hàng — đơn ${delivery.sales_order_id}`,
+      delivery.sales_order_id,
     );
     if (!issued.ok) {
       return {

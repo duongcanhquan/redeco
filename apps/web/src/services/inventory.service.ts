@@ -293,6 +293,7 @@ export async function postInventoryTxn(
 export async function issueFinishedGoodsForDelivery(
   lines: { productId: string; productName: string; qty: number }[],
   note: string,
+  salesOrderId?: string,
 ): Promise<ActionResult<{ id: string; code: string } | undefined>> {
   const ctx = await getTenantContext();
   if (!(await hasKhoAccess(ctx.supabase))) {
@@ -300,6 +301,13 @@ export async function issueFinishedGoodsForDelivery(
   }
   // narrow: callers treat NO_KHO specially
   await ctx.supabase.rpc('inventory_ensure_defaults');
+
+  // Nhả giữ chỗ → số còn bán được (ATP) tăng lại trước khi trừ tồn vật lý
+  if (salesOrderId) {
+    await ctx.supabase.rpc('inventory_consume_sales_order_reservations', {
+      p_sales_order_id: salesOrderId,
+    });
+  }
 
   const { getInventorySettings } = await import('@/services/tenant-settings.service');
   const invSettings = await getInventorySettings();
@@ -376,6 +384,64 @@ export async function createWarehouse(input: {
 
 export function balanceAtp(row: StockBalanceRow): number {
   return computeAtp(Number(row.qty_on_hand), Number(row.qty_reserved));
+}
+
+export interface ReserveSalesOrderResult {
+  reservedLines: { product_id: string; product_name: string; qty: number }[];
+  shortfalls: { product_id: string; product_name: string; shortfall: number }[];
+  skipped?: boolean;
+}
+
+/** Giữ chỗ tồn cho đơn bán (RPC). Chỉ gọi khi đã bật cài đặt + có module Kho. */
+export async function reserveStockForSalesOrder(
+  salesOrderId: string,
+  requireFull: boolean,
+): Promise<ActionResult<ReserveSalesOrderResult>> {
+  const ctx = await getTenantContext();
+  if (!(await hasKhoAccess(ctx.supabase))) {
+    return { ok: false, error: 'NO_KHO' };
+  }
+  const { data, error } = await ctx.supabase.rpc('inventory_reserve_for_sales_order', {
+    p_sales_order_id: salesOrderId,
+    p_require_full: requireFull,
+  });
+  if (error) {
+    return { ok: false, error: `Giữ chỗ thất bại: ${error.message}` };
+  }
+  const raw = data as {
+    ok?: boolean;
+    error?: string;
+    reserved_lines?: { product_id: string; product_name: string; qty: number }[];
+    shortfalls?: { product_id: string; product_name: string; shortfall: number }[];
+    skipped?: boolean;
+  } | null;
+  if (!raw || raw.ok === false) {
+    return { ok: false, error: raw?.error ?? 'Giữ chỗ thất bại.' };
+  }
+  return {
+    ok: true,
+    data: {
+      reservedLines: raw.reserved_lines ?? [],
+      shortfalls: raw.shortfalls ?? [],
+      skipped: raw.skipped === true,
+    },
+  };
+}
+
+export async function releaseSalesOrderReservations(salesOrderId: string): Promise<void> {
+  const ctx = await getTenantContext();
+  if (!(await hasKhoAccess(ctx.supabase))) return;
+  await ctx.supabase.rpc('inventory_release_sales_order_reservations', {
+    p_sales_order_id: salesOrderId,
+  });
+}
+
+export async function consumeSalesOrderReservations(salesOrderId: string): Promise<void> {
+  const ctx = await getTenantContext();
+  if (!(await hasKhoAccess(ctx.supabase))) return;
+  await ctx.supabase.rpc('inventory_consume_sales_order_reservations', {
+    p_sales_order_id: salesOrderId,
+  });
 }
 
 export { hasKhoAccess };

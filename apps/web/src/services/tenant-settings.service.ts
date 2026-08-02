@@ -60,7 +60,10 @@ export interface InventorySettings {
   defaultFgWarehouseCode: string;
   defaultRmWarehouseCode: string;
   lowStockThreshold: number;
+  /** Giữ chỗ tồn khi xác nhận đơn (cần module Kho). */
   reserveOnSoConfirm: boolean;
+  /** true = không xác nhận nếu không giữ chỗ đủ 100% số lượng. */
+  requireFullReserveOnConfirm: boolean;
 }
 
 /** ADR-010 — tham số / cờ quy trình Sản xuất theo công ty. */
@@ -123,7 +126,8 @@ const INVENTORY_DEFAULTS: InventorySettings = {
   defaultFgWarehouseCode: 'KHO-TP',
   defaultRmWarehouseCode: 'KHO-NVL',
   lowStockThreshold: 5,
-  reserveOnSoConfirm: false,
+  reserveOnSoConfirm: true,
+  requireFullReserveOnConfirm: false,
 };
 
 const PRODUCTION_DEFAULTS: ProductionSettings = {
@@ -405,6 +409,10 @@ export async function getInventorySettings(): Promise<InventorySettings> {
       map.get('reserve_on_so_confirm'),
       INVENTORY_DEFAULTS.reserveOnSoConfirm,
     ),
+    requireFullReserveOnConfirm: asBool(
+      map.get('require_full_reserve_on_confirm'),
+      INVENTORY_DEFAULTS.requireFullReserveOnConfirm,
+    ),
   };
 }
 
@@ -432,6 +440,12 @@ export async function saveInventorySettings(input: InventorySettings): Promise<A
     );
     await upsertSetting(ctx, 'inventory', 'low_stock_threshold', input.lowStockThreshold);
     await upsertSetting(ctx, 'inventory', 'reserve_on_so_confirm', input.reserveOnSoConfirm);
+    await upsertSetting(
+      ctx,
+      'inventory',
+      'require_full_reserve_on_confirm',
+      input.requireFullReserveOnConfirm,
+    );
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };

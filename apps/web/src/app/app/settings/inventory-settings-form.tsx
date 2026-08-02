@@ -70,17 +70,41 @@ export function InventorySettingsForm({ initial }: { initial: InventorySettings 
             </div>
           </Field>
         </div>
-        <label className="flex items-center gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 min-h-11 opacity-60 cursor-not-allowed">
+
+        <label className="flex items-center gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11">
           <input
             type="checkbox"
             className="size-4 accent-accent"
             checked={form.reserveOnSoConfirm}
-            disabled
-            readOnly
+            onChange={(e) => setForm({ ...form, reserveOnSoConfirm: e.target.checked })}
           />
           <span className="text-sm font-medium flex-1">Giữ chỗ hàng khi xác nhận đơn</span>
           <HelpTip title="Giữ chỗ">
-            <p>Sắp có. Tính năng giữ chỗ chưa được kích hoạt.</p>
+            <p>
+              Khi xác nhận đơn, số lượng sẽ chuyển sang «đã giữ chỗ» — nhân viên khác không bán
+              chồng vào phần đó. Số còn bán được (ATP) = tồn thực tế − giữ chỗ.
+            </p>
+            <p>Cần module Kho. Nếu thiếu hàng có thể giữ chỗ phần còn (trừ khi bật mục dưới).</p>
+          </HelpTip>
+        </label>
+
+        <label
+          className={`flex items-center gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 min-h-11 ${
+            form.reserveOnSoConfirm ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'
+          }`}
+        >
+          <input
+            type="checkbox"
+            className="size-4 accent-accent"
+            disabled={!form.reserveOnSoConfirm}
+            checked={form.requireFullReserveOnConfirm}
+            onChange={(e) =>
+              setForm({ ...form, requireFullReserveOnConfirm: e.target.checked })
+            }
+          />
+          <span className="text-sm font-medium flex-1">Chỉ xác nhận khi giữ chỗ đủ 100%</span>
+          <HelpTip title="Giữ chỗ đủ">
+            <p>Bật thì đơn thiếu tồn sẽ không xác nhận được. Tắt thì vẫn xác nhận và giữ chỗ phần còn.</p>
           </HelpTip>
         </label>
       </SettingsGroup>

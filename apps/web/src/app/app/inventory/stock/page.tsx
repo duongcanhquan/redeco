@@ -38,10 +38,10 @@ export default async function StockPage({
       <header>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Package className="text-accent" size={24} aria-hidden />
-          Tồn kho / ATP
+          Tồn kho (số còn bán được)
         </h1>
         <p className="text-sm text-ink-muted mt-1">
-          ATP = tồn thực tế − giữ chỗ. Sales dùng số này khi xác nhận đơn.
+          Số còn bán được (ATP) = tồn thực tế − đã giữ chỗ. Kinh doanh dùng số này khi xác nhận đơn.
         </p>
       </header>
 
@@ -70,7 +70,7 @@ export default async function StockPage({
                 <th className="px-5 py-3.5 font-medium text-right hidden lg:table-cell">
                   Giữ chỗ
                 </th>
-                <th className="px-5 py-3.5 font-medium text-right">ATP</th>
+                <th className="px-5 py-3.5 font-medium text-right">Còn bán (ATP)</th>
               </tr>
             </thead>
             <tbody>
@@ -128,7 +128,7 @@ export default async function StockPage({
                       Tồn {Number(b.qty_on_hand)} · Giữ {Number(b.qty_reserved)}
                     </p>
                   }
-                  amount={`ATP ${atp}`}
+                  amount={`Còn bán ${atp}`}
                 />
               );
             })}

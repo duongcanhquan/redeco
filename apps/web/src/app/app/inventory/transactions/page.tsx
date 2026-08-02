@@ -38,7 +38,7 @@ export default async function TransactionsPage() {
             Phiếu kho
           </h1>
           <p className="text-sm text-ink-muted mt-1">
-            Nhập (NK) tăng tồn · Xuất (XK) trừ ATP. Giao hàng Sales tự tạo XK từ KHO-TP.
+            Phiếu nhập tăng tồn · phiếu xuất trừ số còn bán được (ATP). Giao hàng từ Kinh doanh tự tạo phiếu xuất từ kho thành phẩm.
           </p>
         </div>
         <TxnDialog
