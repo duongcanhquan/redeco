@@ -81,6 +81,15 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
 - Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
 
+### ✅ Cài đặt công ty — Settings Hub đa tab (2026-08-02)
+
+Spec: `docs/superpowers/specs/2026-08-02-tenant-settings-design.md`.
+
+- **Migration** `20260802110000_tenant_settings.sql` (ĐÃ apply): bảng `tenant_settings (tenant_id, namespace, key, value jsonb)` — namespace `ai|sales|integrations|notifications|company`, RLS theo tenant.
+- **UI `/settings?tab=`** (TabBar glass, responsive): **Tổng quan** (công ty/HĐ/seats/module) · **AI & API** (provider, key masked, model, bật Copilot/Forecast/NLP/Churn) · **Kinh doanh** (chỉ khi có module — link duyệt N cấp + chiết khấu + tham số chứng từ) · **Tích hợp** (webhook n8n) · **Thông báo**. Tab module chỉ hiện khi entitled; sửa chỉ owner/admin.
+- **Service** `tenant-settings.service.ts`: mask API key; giữ key cũ nếu client gửi chuỗi mask; `allowConfirmWithoutAtp` được enforce trong `confirmSalesOrder`.
+- **Verify**: typecheck/lint/build sạch.
+
 ### ✅ Module Kinh doanh — Core Phase 2 (2026-08-02)
 
 Siết Must-have O2C theo brainstorming (hướng A + duyệt N cấp B). Spec: `docs/superpowers/specs/2026-08-02-sales-core-phase2-design.md` · Plan: `docs/superpowers/plans/2026-08-02-sales-core-phase2.md`.

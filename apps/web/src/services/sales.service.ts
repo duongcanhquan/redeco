@@ -27,6 +27,7 @@ import {
   type TenantContext,
 } from '@/services/sales-context';
 import { ensureDefaultQuotationWorkflow } from '@/services/sales-config.service';
+import { getSalesSettings } from '@/services/tenant-settings.service';
 
 export type { ActionResult, TenantContext };
 export { getTenantContext, requireManager };
@@ -932,6 +933,16 @@ export async function confirmSalesOrder(
       enough: available >= Number(it.qty),
     };
   });
+
+  // Tôn trọng cài đặt công ty: có thể chặn confirm khi thiếu ATP
+  const salesSettings = await getSalesSettings();
+  if (!salesSettings.allowConfirmWithoutAtp && !promise.allCovered) {
+    return {
+      ok: false,
+      error:
+        'Không đủ tồn kho (ATP) để xác nhận đơn. Bật “Cho phép xác nhận khi ATP thiếu” trong Cài đặt → Kinh doanh, hoặc bổ sung tồn / chờ sản xuất.',
+    };
+  }
 
   for (const it of order.sales_order_items) {
     await ctx.supabase
