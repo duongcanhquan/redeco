@@ -55,7 +55,7 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - **Supabase phía web**: `@supabase/supabase-js` + `@supabase/ssr`; helpers `src/lib/supabase/client.ts` (browser) & `server.ts` (RSC); `apps/web/.env.local` (gitignored) chứa URL + anon key.
 - **Route protection**: `src/proxy.ts` (Next 16 đổi tên middleware→proxy) — refresh session + chặn `/platform`: chưa login → `/login?next=...`, login nhưng không phải platform admin → `/login?error=forbidden`.
 - **`/login`**: đúng mẫu form animated đã duyệt (vòng 50 span neon xoay + floating label, cyan `#0ef`), tiếng Việt, responsive (scale ở <420px), `prefers-reduced-motion`, focus-visible, thông báo lỗi rõ. Sau login: platform admin → `/platform`; user thường → thông báo workspace công ty đang xây.
-- **Console `/platform`** (glassmorphism + bento, icon lucide-react, sidebar desktop / nav ngang mobile):
+- **Console `/platform`** (glassmorphism + bento, icon lucide-react; shell dùng chung `AppShell` — sidebar desktop / hamburger drawer phone):
   - Tổng quan: 4 stat cards (công ty, HĐ hiệu lực, sắp hết hạn ≤30 ngày, tổng seats) + HĐ gần đây + tóm tắt catalog.
   - `companies`, `contracts` (bảng + empty state; nút Tạo đang disabled chờ Platform API), `modules` (render cây 3 tầng), `settings` (JSON viewer), `account` (đổi mật khẩu qua `auth.updateUser` + signout).
   - Data đọc trực tiếp qua RLS (JWT có `is_platform_admin`) — mọi query nằm ở `src/services/platform.service.ts`, KHÔNG trong component.
@@ -240,6 +240,7 @@ Ghi chú kỹ thuật quan trọng:
 ## 2. Ngữ cảnh hiện tại
 
 - **Menu theo chức danh (N2+R2)**: sidebar 1 dòng/phân hệ; hub + tab; lọc node con + phụ thuộc đọc. Spec: `docs/superpowers/specs/2026-08-02-role-nav-hub-tabs-design.md`.
+- **Mobile UX**: `AppShell` — thanh trên gọn + hamburger drawer (workspace + platform); hub tab phone = dropdown 1 hàng; touch ≥44px; padding nội dung chặt hơn trên phone. Landing có `LandingMobileNav`.
 - **A Giữ chỗ (K2)**: RPC `inventory_reserve_for_sales_order` / release / consume; confirm → giữ chỗ; hủy → nhả; xuất giao → tiêu thụ rồi trừ tồn. Cài đặt Kho: «Giữ chỗ khi xác nhận» + «Chỉ xác nhận khi giữ chỗ đủ 100%».
 - Sales + Kho + SX + KT; in chứng từ; CTA tạo LSX.
 - Tiếp: **B** GH/HĐ linh hoạt · **C** bảng giá theo loại khách.
@@ -286,3 +287,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Menu N2+R2: sidebar gọn, hub tab theo quyền node con, chữ Việt + mở ngoặc viết tắt |
 | 2026-08-02 | Giữ chỗ tồn khi confirm đơn (RPC + settings); menu + reservation commit |
 | 2026-08-02 | QA fix: R2 tab filter, giữ chỗ cho KD, chỉ kho TP, consume sau validate, redirect layout |
+| 2026-08-02 | Mobile: hamburger drawer (`AppShell`), tab dropdown phone, touch target, landing menu |

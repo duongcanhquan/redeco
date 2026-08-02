@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { LogoMark } from '@/components/brand/logo';
+import { AppShell } from '@/components/layout/app-shell';
 import { SidebarNav, type SidebarModuleItem } from '@/components/workspace/sidebar-nav';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getWorkspaceNavContext } from '@/services/module-access.service';
@@ -83,32 +83,28 @@ export default async function WorkspaceLayout({
     }
   }
 
-  return (
-    <div className="flex min-h-dvh flex-col lg:flex-row bg-app">
-      <aside className="glass lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:flex lg:flex-col shrink-0 border-b lg:border-b-0 lg:border-r border-panel/40 bg-app-deep/60 no-print">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <LogoMark size={40} />
-          <div className="min-w-0">
-            <p className="font-bold leading-tight tracking-wide truncate">
-              {(tenant as { name: string } | null)?.name ?? 'Công ty'}
-            </p>
-            <p className="text-xs text-ink-muted">
-              <span className="text-accent">O</span>ptimake Workspace
-            </p>
-          </div>
-        </div>
+  const companyName = (tenant as { name: string } | null)?.name ?? 'Công ty';
+  const loginRedirect = slug ? `/${slug}/login` : '/login';
 
+  return (
+    <AppShell
+      title={companyName}
+      subtitle={
+        <>
+          <span className="text-accent">O</span>ptimake Workspace
+        </>
+      }
+      renderNav={({ onNavigate }) => (
         <SidebarNav
           base={base}
           isManager={isManager}
           modules={modules}
-          loginRedirect={slug ? `/${slug}/login` : '/login'}
+          loginRedirect={loginRedirect}
+          onNavigate={onNavigate}
         />
-      </aside>
-
-      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8 max-w-7xl w-full mx-auto">
-        {children}
-      </main>
-    </div>
+      )}
+    >
+      {children}
+    </AppShell>
   );
 }

@@ -16,15 +16,19 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-accent shrink-0" aria-hidden>
+    <header className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="shrink-0 text-accent" aria-hidden>
           {icon}
         </span>
-        <h1 className="text-2xl font-bold truncate">{title}</h1>
+        <h1 className="truncate text-xl font-bold sm:text-2xl">{title}</h1>
         {help && helpTitle && <HelpTip title={helpTitle}>{help}</HelpTip>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }

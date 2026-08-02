@@ -37,6 +37,7 @@ import { Logo, LogoMark } from '@/components/brand/logo';
 import { CountUp } from '@/components/landing/count-up';
 import { Reveal } from '@/components/landing/reveal';
 import { RobotEasterEgg } from '@/components/landing/robot-easter-egg';
+import { LandingMobileNav } from '@/components/landing/mobile-nav';
 import { ScrollProgress } from '@/components/landing/scroll-progress';
 
 export const metadata: Metadata = {
@@ -59,8 +60,8 @@ export default function LandingPage() {
       <ScrollProgress />
       {/* ===== Navbar ===== */}
       <header className="fixed inset-x-0 top-0 z-40">
-        <div className="glass mx-3 mt-3 flex h-14 max-w-6xl items-center justify-between rounded-2xl px-4 sm:mx-auto sm:px-6">
-          <Link href="/" aria-label="Optimake — về đầu trang" className="shrink-0">
+        <div className="glass relative mx-3 mt-3 flex h-14 max-w-6xl items-center justify-between rounded-2xl px-2 sm:mx-auto sm:px-6">
+          <Link href="/" aria-label="Optimake — về đầu trang" className="shrink-0 px-2">
             <Logo markSize={32} textClassName="text-lg" />
           </Link>
           <nav aria-label="Điều hướng trang chủ" className="hidden md:flex items-center gap-1">
@@ -74,13 +75,16 @@ export default function LandingPage() {
               </a>
             ))}
           </nav>
-          <Link
-            href="/login"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-app transition-shadow hover:shadow-[0_0_18px_rgba(0,238,255,0.45)]"
-          >
-            Đăng nhập
-            <ArrowRight size={15} aria-hidden />
-          </Link>
+          <div className="flex items-center gap-1">
+            <LandingMobileNav />
+            <Link
+              href="/login"
+              className="hidden h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-app transition-shadow hover:shadow-[0_0_18px_rgba(0,238,255,0.45)] sm:inline-flex"
+            >
+              Đăng nhập
+              <ArrowRight size={15} aria-hidden />
+            </Link>
+          </div>
         </div>
       </header>
 

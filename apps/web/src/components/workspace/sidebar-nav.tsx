@@ -41,10 +41,12 @@ function ModuleBlock({
   item,
   base,
   isManager,
+  onNavigate,
 }: {
   item: SidebarModuleItem;
   base: string;
   isManager: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname() ?? '';
   const appPath = stripWorkspaceBase(pathname, base);
@@ -55,7 +57,7 @@ function ModuleBlock({
     return (
       <span
         title={item.comingSoonHint}
-        className="flex flex-col gap-0.5 rounded-xl px-3 py-2.5 text-sm text-ink-muted/60 cursor-not-allowed"
+        className="flex min-h-11 flex-col justify-center gap-0.5 rounded-xl px-3 py-2 text-sm text-ink-muted/60 cursor-not-allowed"
       >
         <span className="flex items-center gap-3">
           {MODULE_ICONS[item.icon]}
@@ -76,6 +78,7 @@ function ModuleBlock({
             href={`${base}${item.href}`}
             label={item.label}
             icon={MODULE_ICONS[item.icon]}
+            onNavigate={onNavigate}
           />
         </div>
         {isManager && subTabs.length > 0 && (
@@ -95,13 +98,14 @@ function ModuleBlock({
         )}
       </div>
       {isManager && open && subTabs.length > 0 && (
-        <div className="ml-3 pl-2 border-l border-panel/40 space-y-0.5">
+        <div className="ml-3 space-y-0.5 border-l border-panel/40 pl-2">
           {subTabs.map((t) => (
             <NavLink
               key={t.key}
               href={`${base}${t.path}`}
               label={t.label}
               icon={<ChevronRight size={14} className="text-ink-muted/50" aria-hidden />}
+              onNavigate={onNavigate}
             />
           ))}
         </div>
@@ -115,36 +119,46 @@ export function SidebarNav({
   isManager,
   modules,
   loginRedirect,
+  onNavigate,
 }: {
   base: string;
   isManager: boolean;
   modules: SidebarModuleItem[];
   loginRedirect: string;
+  /** Đóng drawer mobile sau khi chọn mục */
+  onNavigate?: () => void;
 }) {
   return (
     <nav
       aria-label="Điều hướng workspace"
-      className="flex lg:flex-col gap-1.5 px-4 pb-4 overflow-x-auto lg:overflow-visible lg:flex-1"
+      className="flex flex-1 flex-col gap-1 px-3 pb-4"
     >
       <NavLink
         href={base}
         exact
         label="Tổng quan"
         icon={<LayoutDashboard size={18} aria-hidden />}
+        onNavigate={onNavigate}
       />
 
       {modules.length > 0 && (
         <>
-          <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          <p className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
             Phân hệ
           </p>
           {modules.map((m) => (
-            <ModuleBlock key={m.key} item={m} base={base} isManager={isManager} />
+            <ModuleBlock
+              key={m.key}
+              item={m}
+              base={base}
+              isManager={isManager}
+              onNavigate={onNavigate}
+            />
           ))}
         </>
       )}
 
-      <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+      <p className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
         Công ty
       </p>
       {isManager && (
@@ -152,20 +166,23 @@ export function SidebarNav({
           href={`${base}/members`}
           label="Thành viên"
           icon={<UserCog size={18} aria-hidden />}
+          onNavigate={onNavigate}
         />
       )}
       <NavLink
         href={`${base}/settings`}
         label="Cài đặt"
         icon={<Settings size={18} aria-hidden />}
+        onNavigate={onNavigate}
       />
       <NavLink
         href={`${base}/account`}
         label="Tài khoản"
         icon={<UserRound size={18} aria-hidden />}
+        onNavigate={onNavigate}
       />
 
-      <div className="hidden lg:block lg:mt-auto lg:pt-4 lg:border-t lg:border-panel/40">
+      <div className="mt-auto border-t border-panel/40 pt-3">
         <SignOutButton redirectTo={loginRedirect} />
       </div>
     </nav>
