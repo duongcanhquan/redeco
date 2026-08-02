@@ -94,7 +94,7 @@ export function WorkspaceShell({
       {/* Drawer mobile / tablet */}
       <aside
         id="workspace-mobile-nav"
-        className={`fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep shadow-xl transition-transform duration-200 ease-out lg:hidden no-print ${
+        className={`nav-scroll fixed inset-y-0 left-0 z-50 w-[min(20rem,92vw)] overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep shadow-xl transition-transform duration-200 ease-out lg:hidden no-print ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -126,8 +126,8 @@ export function WorkspaceShell({
 
       {/* Sidebar desktop — một cột cuộn liên tục; Đăng xuất cuối menu */}
       <aside
-        className={`glass sticky top-0 z-20 hidden h-dvh shrink-0 overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep/60 no-print lg:block transition-[width] duration-200 ease-out ${
-          collapsed ? 'w-[4.25rem]' : 'w-56 xl:w-60'
+        className={`nav-scroll glass sticky top-0 z-20 hidden h-dvh shrink-0 overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep/60 no-print lg:block transition-[width] duration-200 ease-out ${
+          collapsed ? 'w-[4.25rem]' : 'w-64 xl:w-72'
         }`}
       >
         <div
