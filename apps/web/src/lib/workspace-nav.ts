@@ -27,12 +27,17 @@ export interface HubTabDef {
   matchPrefixes: string[];
 }
 
-/** Có key hoặc bất kỳ node con (vd kinh-doanh.bao-gia.tao-bao-gia). */
+/** Có đúng key, hoặc bất kỳ node con (vd kinh-doanh.bao-gia.tao-bao-gia). */
 export function hasModuleKey(keys: readonly string[], target: string): boolean {
   return keys.some((k) => k === target || k.startsWith(`${target}.`));
 }
 
-/** Có quyền phân hệ gốc (chính root hoặc bất kỳ con). */
+/** Được giao đúng node gốc (không tính node con). */
+export function hasExactModuleKey(keys: readonly string[], target: string): boolean {
+  return keys.includes(target);
+}
+
+/** Có quyền phân hệ (root hoặc bất kỳ con). */
 export function hasModuleBranch(keys: readonly string[], root: string): boolean {
   return hasModuleKey(keys, root);
 }
@@ -118,8 +123,9 @@ export function resolveSalesTabs(
 ): HubTabDef[] {
   if (!hasModuleBranch(moduleKeys, 'kinh-doanh')) return [];
 
-  if (isManager || hasModuleKey(moduleKeys, 'kinh-doanh')) {
-    // Root kinh-doanh hoặc quản trị: đủ tab nghiệp vụ; cấu hình chỉ quản trị
+  // Quản trị hoặc được giao ĐÚNG root kinh-doanh → đủ tab
+  // (hasModuleKey('kinh-doanh') cũng khớp node con — KHÔNG dùng ở đây, nếu không R2 chết)
+  if (isManager || hasExactModuleKey(moduleKeys, 'kinh-doanh')) {
     const keys: SalesTabKey[] = [
       'tong-quan',
       'khach-hang',
@@ -195,7 +201,7 @@ export function resolveInventoryTabs(
   isManager: boolean,
 ): HubTabDef[] {
   if (!hasModuleBranch(moduleKeys, 'kho')) return [];
-  if (isManager || hasModuleKey(moduleKeys, 'kho')) {
+  if (isManager || hasExactModuleKey(moduleKeys, 'kho')) {
     return [
       INVENTORY_DEFS['tong-quan'],
       INVENTORY_DEFS['ton-kho'],

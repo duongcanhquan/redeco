@@ -63,6 +63,14 @@ async function hasKhoAccess(supabase: SupabaseClient): Promise<boolean> {
   return data === true;
 }
 
+/** Giữ chỗ / nhả chỗ: RPC cho phép Kho hoặc Kinh doanh. */
+async function canUseStockReservation(supabase: SupabaseClient): Promise<boolean> {
+  if (await hasKhoAccess(supabase)) return true;
+  const { data, error } = await supabase.rpc('has_module_access', { p_key: 'kinh-doanh' });
+  if (error) return false;
+  return data === true;
+}
+
 /** Kho hoặc Sản xuất được post phiếu (xuất NVL / nhập TP từ LSX). */
 async function canPostStock(supabase: SupabaseClient): Promise<boolean> {
   if (await hasKhoAccess(supabase)) return true;
@@ -302,13 +310,6 @@ export async function issueFinishedGoodsForDelivery(
   // narrow: callers treat NO_KHO specially
   await ctx.supabase.rpc('inventory_ensure_defaults');
 
-  // Nhả giữ chỗ → số còn bán được (ATP) tăng lại trước khi trừ tồn vật lý
-  if (salesOrderId) {
-    await ctx.supabase.rpc('inventory_consume_sales_order_reservations', {
-      p_sales_order_id: salesOrderId,
-    });
-  }
-
   const { getInventorySettings } = await import('@/services/tenant-settings.service');
   const invSettings = await getInventorySettings();
   const fgCode = invSettings.defaultFgWarehouseCode || 'KHO-TP';
@@ -333,26 +334,75 @@ export async function issueFinishedGoodsForDelivery(
       .maybeSingle();
     const itemId = (item as { id: string } | null)?.id;
     if (!itemId) {
-      return { ok: false, error: `Chưa có mã kho cho "${line.productName}". Mở module Kho để đồng bộ.` };
-    }
-    const { data: atp } = await ctx.supabase.rpc('inventory_get_atp', {
-      p_product_id: line.productId,
-    });
-    if (!canIssue(Number(atp ?? 0), line.qty)) {
       return {
         ok: false,
-        error: `Không đủ ATP cho "${line.productName}" (cần ${line.qty}, ATP ${Number(atp ?? 0)}).`,
+        error: `Chưa có mã kho cho «${line.productName}». Mở phân hệ Kho để đồng bộ.`,
+      };
+    }
+    // Kiểm tra tồn khả dụng tại kho thành phẩm (cùng kho sẽ xuất)
+    const { data: bal } = await ctx.supabase
+      .from('stock_balances')
+      .select('qty_on_hand, qty_reserved')
+      .eq('warehouse_id', warehouseId)
+      .eq('item_id', itemId)
+      .maybeSingle();
+    const atp = computeAtp(
+      Number((bal as { qty_on_hand?: number } | null)?.qty_on_hand ?? 0),
+      Number((bal as { qty_reserved?: number } | null)?.qty_reserved ?? 0),
+    );
+    // Có giữ chỗ của chính đơn này → coi như đã «có chỗ» trong on_hand
+    // (consume ngay trước khi xuất sẽ trả reserved về ATP)
+    const reservedForOrder = salesOrderId
+      ? await sumActiveReservationQty(ctx.supabase, salesOrderId, itemId, warehouseId)
+      : 0;
+    const availableForShip = atp + reservedForOrder;
+    if (!canIssue(availableForShip, line.qty)) {
+      return {
+        ok: false,
+        error: `Không đủ số còn bán được (ATP) cho «${line.productName}» tại ${fgCode} (cần ${line.qty}, còn ${availableForShip}).`,
       };
     }
     txnLines.push({ itemId, qty: line.qty });
   }
 
-  return postInventoryTxn({
+  // Chỉ tiêu thụ giữ chỗ SAU khi validate — tránh orphan nếu xuất thất bại
+  if (salesOrderId) {
+    await ctx.supabase.rpc('inventory_consume_sales_order_reservations', {
+      p_sales_order_id: salesOrderId,
+    });
+  }
+
+  const posted = await postInventoryTxn({
     warehouseId,
     txnType: 'issue',
     notes: note,
     lines: txnLines,
   });
+  if (!posted.ok && salesOrderId) {
+    // Xuất thất bại sau khi đã tiêu thụ giữ chỗ → giữ chỗ lại (best-effort)
+    await ctx.supabase.rpc('inventory_reserve_for_sales_order', {
+      p_sales_order_id: salesOrderId,
+      p_require_full: false,
+    });
+  }
+  return posted;
+}
+
+async function sumActiveReservationQty(
+  supabase: SupabaseClient,
+  salesOrderId: string,
+  itemId: string,
+  warehouseId: string,
+): Promise<number> {
+  const { data } = await supabase
+    .from('stock_reservations')
+    .select('qty')
+    .eq('source_type', 'sales_order')
+    .eq('source_id', salesOrderId)
+    .eq('item_id', itemId)
+    .eq('warehouse_id', warehouseId)
+    .eq('status', 'active');
+  return ((data ?? []) as { qty: number }[]).reduce((s, r) => s + Number(r.qty), 0);
 }
 
 export async function createWarehouse(input: {
@@ -392,14 +442,14 @@ export interface ReserveSalesOrderResult {
   skipped?: boolean;
 }
 
-/** Giữ chỗ tồn cho đơn bán (RPC). Chỉ gọi khi đã bật cài đặt + có module Kho. */
+/** Giữ chỗ tồn cho đơn bán (RPC). Cần Kho hoặc Kinh doanh. */
 export async function reserveStockForSalesOrder(
   salesOrderId: string,
   requireFull: boolean,
 ): Promise<ActionResult<ReserveSalesOrderResult>> {
   const ctx = await getTenantContext();
-  if (!(await hasKhoAccess(ctx.supabase))) {
-    return { ok: false, error: 'NO_KHO' };
+  if (!(await canUseStockReservation(ctx.supabase))) {
+    return { ok: false, error: 'NO_RESERVE_ACCESS' };
   }
   const { data, error } = await ctx.supabase.rpc('inventory_reserve_for_sales_order', {
     p_sales_order_id: salesOrderId,
@@ -430,7 +480,7 @@ export async function reserveStockForSalesOrder(
 
 export async function releaseSalesOrderReservations(salesOrderId: string): Promise<void> {
   const ctx = await getTenantContext();
-  if (!(await hasKhoAccess(ctx.supabase))) return;
+  if (!(await canUseStockReservation(ctx.supabase))) return;
   await ctx.supabase.rpc('inventory_release_sales_order_reservations', {
     p_sales_order_id: salesOrderId,
   });
@@ -438,7 +488,7 @@ export async function releaseSalesOrderReservations(salesOrderId: string): Promi
 
 export async function consumeSalesOrderReservations(salesOrderId: string): Promise<void> {
   const ctx = await getTenantContext();
-  if (!(await hasKhoAccess(ctx.supabase))) return;
+  if (!(await canUseStockReservation(ctx.supabase))) return;
   await ctx.supabase.rpc('inventory_consume_sales_order_reservations', {
     p_sales_order_id: salesOrderId,
   });

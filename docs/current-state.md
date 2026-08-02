@@ -285,3 +285,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | QA parallel: fix idempotency O2C (GH/HĐ/LSX), HĐ từ confirmed, UI touch/print mobile; dead settings disabled |
 | 2026-08-02 | Menu N2+R2: sidebar gọn, hub tab theo quyền node con, chữ Việt + mở ngoặc viết tắt |
 | 2026-08-02 | Giữ chỗ tồn khi confirm đơn (RPC + settings); menu + reservation commit |
+| 2026-08-02 | QA fix: R2 tab filter, giữ chỗ cho KD, chỉ kho TP, consume sau validate, redirect layout |

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function ApprovalsPage() {
   const [ctx, claims] = await Promise.all([getTenantContext(), getSessionClaims()]);
   if (ctx.role !== 'owner' && ctx.role !== 'admin') {
-    redirect(claims?.tenantSlug ? `/${claims.tenantSlug}/sales/quotations` : '/app');
+    redirect(claims?.tenantSlug ? `/${claims.tenantSlug}/sales` : '/app/sales');
   }
   const workflows = await listApprovalWorkflows();
 

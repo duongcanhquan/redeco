@@ -34,6 +34,7 @@ import {
 } from '@/services/tenant-settings.service';
 import { getOpenWoByProductIds } from '@/services/production.service';
 import {
+  consumeSalesOrderReservations,
   getAtpByProductIds,
   hasKhoAccess,
   issueFinishedGoodsForDelivery,
@@ -1144,15 +1145,16 @@ export async function confirmSalesOrder(
   // Giữ chỗ trước khi đổi trạng thái (có module Kho + cài đặt bật)
   const invSettings = await getInventorySettings();
   let reservedInThisCall = false;
-  if (invSettings.reserveOnSoConfirm && (await hasKhoAccess(ctx.supabase))) {
+  if (invSettings.reserveOnSoConfirm) {
     const reserved = await reserveStockForSalesOrder(
       orderId,
       invSettings.requireFullReserveOnConfirm,
     );
     if (!reserved.ok) {
-      if (reserved.error !== 'NO_KHO') {
+      if (reserved.error !== 'NO_RESERVE_ACCESS') {
         return { ok: false, error: reserved.error };
       }
+      // Không có quyền gọi RPC giữ chỗ — vẫn cho xác nhận (tenant chưa có Kho/sync)
     } else if (!reserved.data.skipped) {
       reservedInThisCall = true;
     }
@@ -1317,6 +1319,8 @@ export async function shipDelivery(deliveryId: string): Promise<ActionResult> {
       };
     }
   } else {
+    // Không có module Kho: trừ product_stock; vẫn tiêu thụ giữ chỗ nếu có (tránh treo ATP)
+    await consumeSalesOrderReservations(delivery.sales_order_id);
     const decremented: { product_id: string; qty: number }[] = [];
     for (const line of lines) {
       const { data: okDec, error } = await ctx.supabase.rpc('decrement_stock', {
@@ -1332,7 +1336,7 @@ export async function shipDelivery(deliveryId: string): Promise<ActionResult> {
         }
         return {
           ok: false,
-          error: `Không đủ tồn kho cho "${line.product_name}" (cần ${line.qty}). Nhập thêm hàng hoặc chờ sản xuất.`,
+          error: `Không đủ tồn kho cho «${line.product_name}» (cần ${line.qty}). Nhập thêm hàng hoặc chờ sản xuất.`,
         };
       }
       decremented.push({ product_id: line.product_id, qty: line.qty });

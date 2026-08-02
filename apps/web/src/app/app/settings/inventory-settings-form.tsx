@@ -81,10 +81,13 @@ export function InventorySettingsForm({ initial }: { initial: InventorySettings 
           <span className="text-sm font-medium flex-1">Giữ chỗ hàng khi xác nhận đơn</span>
           <HelpTip title="Giữ chỗ">
             <p>
-              Khi xác nhận đơn, số lượng sẽ chuyển sang «đã giữ chỗ» — nhân viên khác không bán
-              chồng vào phần đó. Số còn bán được (ATP) = tồn thực tế − giữ chỗ.
+              Khi xác nhận đơn, số lượng chuyển sang «đã giữ chỗ» tại kho thành phẩm — người khác
+              không bán chồng phần đó. Số còn bán được (ATP) = tồn thực tế − giữ chỗ.
             </p>
-            <p>Cần module Kho. Nếu thiếu hàng có thể giữ chỗ phần còn (trừ khi bật mục dưới).</p>
+            <p>
+              Cần phân hệ Kho (dữ liệu tồn) và quyền Kinh doanh hoặc Kho. Thiếu hàng thì giữ chỗ phần
+              còn (trừ khi bật mục dưới).
+            </p>
           </HelpTip>
         </label>
 
