@@ -5,8 +5,11 @@ import type { ActionResult } from '@/services/sales-context';
 import {
   importRedecoRfqExcel,
   softDeleteRedecoRfqRequest,
+  saveFilterRules,
+  reclassifyAllRedeecoRfq,
   type ImportRedecoRfqResult,
 } from '@/services/customiz/redeco-rfq.service';
+import { parseFilterRules } from '@/lib/customiz/redeco-rfq-filter';
 
 export async function importRedecoRfqAction(
   formData: FormData,
@@ -42,6 +45,39 @@ export async function deleteRedecoRfqAction(
     return {
       ok: false,
       error: e instanceof Error ? e.message : 'Xóa thất bại.',
+    };
+  }
+}
+
+export async function saveFilterRulesAction(
+  rulesJson: string,
+  basePath: string,
+): Promise<ActionResult> {
+  try {
+    const parsed: unknown = JSON.parse(rulesJson);
+    const rules = parseFilterRules(parsed);
+    await saveFilterRules(rules);
+    revalidatePath(`${basePath}/sales/customiz/redeco-rfq`);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Lưu bộ lọc thất bại.',
+    };
+  }
+}
+
+export async function reclassifyAllAction(
+  basePath: string,
+): Promise<ActionResult<{ updated: number }>> {
+  try {
+    const result = await reclassifyAllRedeecoRfq();
+    revalidatePath(`${basePath}/sales/customiz/redeco-rfq`);
+    return { ok: true, data: result };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Chạy lại lọc thất bại.',
     };
   }
 }

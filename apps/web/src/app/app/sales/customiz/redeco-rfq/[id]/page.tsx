@@ -5,6 +5,11 @@ import {
   getRedecoRfqRequest,
   listDuplicatesForQuoteNo,
 } from '@/services/customiz/redeco-rfq.service';
+import {
+  CLASSIFICATION_LABELS,
+  CLASSIFICATION_TAGS,
+  type ClassificationTag,
+} from '@/lib/customiz/redeco-rfq-filter';
 import { RedecoRfqDeleteButton } from '../delete-button';
 
 export const dynamic = 'force-dynamic';
@@ -64,6 +69,14 @@ export default async function RedecoRfqDetailPage({
                 Trùng số báo giá
               </span>
             )}
+            {CLASSIFICATION_TAGS.filter((t) => row.tags.includes(t)).map((t) => (
+              <span
+                key={t}
+                className="rounded-lg border border-accent/35 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent"
+              >
+                {CLASSIFICATION_LABELS[t as ClassificationTag]}
+              </span>
+            ))}
             {row.source_row != null && (
               <span className="rounded-lg border border-panel/40 px-2.5 py-1 text-xs text-ink-muted">
                 Dòng Excel {row.source_row}

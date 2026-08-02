@@ -6,7 +6,13 @@ import {
   REDECO_RFQ_PACK_KEY,
   tagRowsForDuplicates,
 } from '@/lib/customiz/redeco-rfq-parse';
-import { getTenantContext } from '@/services/sales.service';
+import {
+  classifyWithRules,
+  mergeClassificationTags,
+  parseFilterRules,
+  type FilterRule,
+} from '@/lib/customiz/redeco-rfq-filter';
+import { getTenantContext, requireManager } from '@/services/sales.service';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_ROWS = 2000;
@@ -77,6 +83,7 @@ function mapRequest(row: Record<string, unknown>): RedecoRfqRequest {
 
 export async function listRedecoRfqRequests(opts?: {
   onlyDuplicates?: boolean;
+  classification?: string;
   includeDeleted?: boolean;
 }): Promise<RedecoRfqRequest[]> {
   const ctx = await getTenantContext();
@@ -95,6 +102,9 @@ export async function listRedecoRfqRequests(opts?: {
   }
   if (opts?.onlyDuplicates) {
     q = q.contains('tags', ['trung']);
+  }
+  if (opts?.classification) {
+    q = q.contains('tags', [opts.classification]);
   }
 
   const { data, error } = await q;
@@ -196,6 +206,18 @@ export async function importRedecoRfqExcel(
   );
   const duplicateCount = tagged.filter((t) => t.tags.includes('trung')).length;
 
+  const rules = await loadActiveFilterRules(ctx.tenantId, client);
+  const classified = tagged.map((t) => {
+    const tag = classifyWithRules(
+      { externalQuoteNo: t.externalQuoteNo, attributes: t.attributes },
+      rules,
+    );
+    return {
+      ...t,
+      tags: mergeClassificationTags(t.tags, tag),
+    };
+  });
+
   const { data: batch, error: batchErr } = await client
     .from('customiz_rfq_batches')
     .insert({
@@ -203,7 +225,7 @@ export async function importRedecoRfqExcel(
       pack_key: REDECO_RFQ_PACK_KEY,
       file_name: file.name,
       row_total: parsed.rows.length + parsed.errors.length,
-      row_imported: tagged.length,
+      row_imported: classified.length,
       row_duplicate: duplicateCount,
       row_error: parsed.errors.length,
       created_by: ctx.userId,
@@ -214,8 +236,8 @@ export async function importRedecoRfqExcel(
   if (batchErr) throw new Error(batchErr.message);
   const batchId = String((batch as { id: string }).id);
 
-  if (tagged.length > 0) {
-    const insertRows = tagged.map((t) => ({
+  if (classified.length > 0) {
+    const insertRows = classified.map((t) => ({
       tenant_id: ctx.tenantId,
       pack_key: REDECO_RFQ_PACK_KEY,
       batch_id: batchId,
@@ -230,8 +252,116 @@ export async function importRedecoRfqExcel(
 
   return {
     batchId,
-    imported: tagged.length,
+    imported: classified.length,
     duplicate: duplicateCount,
     errors: parsed.errors,
   };
+}
+
+async function loadActiveFilterRules(
+  tenantId: string,
+  client: SupabaseClient,
+): Promise<FilterRule[]> {
+  const { data, error } = await client
+    .from('customiz_rfq_filter_profiles')
+    .select('rules')
+    .eq('tenant_id', tenantId)
+    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return [];
+  return parseFilterRules((data as { rules: unknown }).rules);
+}
+
+export type FilterProfile = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  rules: FilterRule[];
+  updated_at: string;
+};
+
+export async function getOrCreateFilterProfile(): Promise<FilterProfile> {
+  const ctx = await getTenantContext();
+  const { data, error } = await ctx.supabase
+    .from('customiz_rfq_filter_profiles')
+    .select('id, name, is_active, rules, updated_at')
+    .eq('tenant_id', ctx.tenantId)
+    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data) {
+    const row = data as Record<string, unknown>;
+    return {
+      id: String(row['id']),
+      name: String(row['name']),
+      is_active: Boolean(row['is_active']),
+      rules: parseFilterRules(row['rules']),
+      updated_at: String(row['updated_at']),
+    };
+  }
+  const { data: created, error: cErr } = await ctx.supabase
+    .from('customiz_rfq_filter_profiles')
+    .insert({
+      tenant_id: ctx.tenantId,
+      pack_key: REDECO_RFQ_PACK_KEY,
+      name: 'Mặc định',
+      is_active: true,
+      rules: [],
+    })
+    .select('id, name, is_active, rules, updated_at')
+    .single();
+  if (cErr) throw new Error(cErr.message);
+  const row = created as Record<string, unknown>;
+  return {
+    id: String(row['id']),
+    name: String(row['name']),
+    is_active: Boolean(row['is_active']),
+    rules: [],
+    updated_at: String(row['updated_at']),
+  };
+}
+
+export async function saveFilterRules(rules: FilterRule[]): Promise<void> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const profile = await getOrCreateFilterProfile();
+  const { error } = await ctx.supabase
+    .from('customiz_rfq_filter_profiles')
+    .update({ rules, is_active: true })
+    .eq('id', profile.id)
+    .eq('tenant_id', ctx.tenantId);
+  if (error) throw new Error(error.message);
+}
+
+/** Chạy lại bộ lọc trên toàn bộ yêu cầu còn sống. */
+export async function reclassifyAllRedeecoRfq(): Promise<{ updated: number }> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const rules = await loadActiveFilterRules(ctx.tenantId, ctx.supabase);
+  const rows = await listRedecoRfqRequests();
+  let updated = 0;
+  for (const row of rows) {
+    const tag = classifyWithRules(
+      { externalQuoteNo: row.external_quote_no, attributes: row.attributes },
+      rules,
+    );
+    const next = mergeClassificationTags(row.tags, tag);
+    const same =
+      next.length === row.tags.length && next.every((t) => row.tags.includes(t));
+    if (same) continue;
+    const { error } = await ctx.supabase
+      .from('customiz_rfq_requests')
+      .update({ tags: next })
+      .eq('id', row.id)
+      .eq('tenant_id', ctx.tenantId);
+    if (error) throw new Error(error.message);
+    updated += 1;
+  }
+  return { updated };
 }

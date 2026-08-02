@@ -3,14 +3,48 @@ import Link from 'next/link';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { hasModuleKey } from '@/lib/workspace-nav';
 import { REDECO_RFQ_PACK_KEY } from '@/lib/customiz/redeco-rfq-parse';
+import {
+  CLASSIFICATION_LABELS,
+  CLASSIFICATION_TAGS,
+  type ClassificationTag,
+} from '@/lib/customiz/redeco-rfq-filter';
 import { formatDate } from '@/lib/format';
 import { getMyModuleKeys } from '@/services/module-access.service';
-import { listRedecoRfqRequests } from '@/services/customiz/redeco-rfq.service';
+import {
+  getOrCreateFilterProfile,
+  listRedecoRfqRequests,
+} from '@/services/customiz/redeco-rfq.service';
 import { DocCard, ResponsiveDocList } from '@/components/sales/responsive-doc-list';
 import { RedecoRfqUploadForm } from './upload-form';
 import { RedecoRfqDeleteButton } from './delete-button';
+import { FilterRulesPanel } from './filter-rules-panel';
 
 export const dynamic = 'force-dynamic';
+
+function classificationOf(tags: string[]): ClassificationTag | null {
+  for (const t of CLASSIFICATION_TAGS) {
+    if (tags.includes(t)) return t;
+  }
+  return null;
+}
+
+function TagBadges({ tags }: { tags: string[] }) {
+  const cls = classificationOf(tags);
+  return (
+    <span className="inline-flex flex-wrap gap-1.5">
+      {tags.includes('trung') && (
+        <span className="rounded-lg border border-warning/40 bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+          Trùng
+        </span>
+      )}
+      {cls && (
+        <span className="rounded-lg border border-accent/35 bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
+          {CLASSIFICATION_LABELS[cls]}
+        </span>
+      )}
+    </span>
+  );
+}
 
 export default async function RedecoRfqListPage({
   searchParams,
@@ -19,6 +53,8 @@ export default async function RedecoRfqListPage({
 }) {
   const { tag } = await searchParams;
   const onlyDuplicates = tag === 'trung';
+  const classification =
+    tag && (CLASSIFICATION_TAGS as readonly string[]).includes(tag) ? tag : undefined;
 
   const claims = await getSessionClaims();
   const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
@@ -39,7 +75,34 @@ export default async function RedecoRfqListPage({
     );
   }
 
-  const rows = await listRedecoRfqRequests({ onlyDuplicates });
+  const [rows, profile] = await Promise.all([
+    listRedecoRfqRequests({
+      onlyDuplicates,
+      classification,
+    }),
+    getOrCreateFilterProfile(),
+  ]);
+
+  const filterChips: { key: string; label: string; href: string; active: boolean }[] = [
+    {
+      key: 'all',
+      label: 'Tất cả',
+      href: `${base}/sales/customiz/redeco-rfq`,
+      active: !tag,
+    },
+    {
+      key: 'trung',
+      label: 'Trùng',
+      href: `${base}/sales/customiz/redeco-rfq?tag=trung`,
+      active: tag === 'trung',
+    },
+    ...CLASSIFICATION_TAGS.map((t) => ({
+      key: t,
+      label: CLASSIFICATION_LABELS[t],
+      href: `${base}/sales/customiz/redeco-rfq?tag=${t}`,
+      active: tag === t,
+    })),
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -51,35 +114,30 @@ export default async function RedecoRfqListPage({
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-ink sm:text-2xl">Yêu cầu BG · REDECO</h1>
             <p className="text-sm text-ink-muted mt-0.5">
-              Customiz Kinh doanh — import Excel, phát hiện trùng số báo giá
+              Customiz — import Excel, trùng số BG, bộ lọc phân loại
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`${base}/sales/customiz/redeco-rfq`}
-            className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium border ${
-              !onlyDuplicates
-                ? 'border-accent/40 bg-accent-soft text-accent'
-                : 'border-panel/40 text-ink-muted hover:text-ink'
-            }`}
-          >
-            Tất cả
-          </Link>
-          <Link
-            href={`${base}/sales/customiz/redeco-rfq?tag=trung`}
-            className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium border ${
-              onlyDuplicates
-                ? 'border-warning/50 bg-warning/10 text-warning'
-                : 'border-panel/40 text-ink-muted hover:text-ink'
-            }`}
-          >
-            Chỉ trùng
-          </Link>
+          {filterChips.map((c) => (
+            <Link
+              key={c.key}
+              href={c.href}
+              className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium border ${
+                c.active
+                  ? 'border-accent/40 bg-accent-soft text-accent'
+                  : 'border-panel/40 text-ink-muted hover:text-ink'
+              }`}
+            >
+              {c.label}
+            </Link>
+          ))}
         </div>
       </header>
 
       <RedecoRfqUploadForm basePath={base} />
+
+      <FilterRulesPanel basePath={base} initialRules={profile.rules} />
 
       <ResponsiveDocList
         empty={rows.length === 0}
@@ -99,7 +157,6 @@ export default async function RedecoRfqListPage({
                 <th className="px-4 py-3 font-semibold">Khách hàng</th>
                 <th className="px-4 py-3 font-semibold">Sản phẩm</th>
                 <th className="px-4 py-3 font-semibold">SL</th>
-                <th className="px-4 py-3 font-semibold">Đóng BG</th>
                 <th className="px-4 py-3 font-semibold">Tag</th>
                 <th className="px-4 py-3 font-semibold" />
               </tr>
@@ -122,20 +179,11 @@ export default async function RedecoRfqListPage({
                   <td className="px-4 py-3 text-ink-muted">
                     {r.attributes.qty_expected || '—'} {r.attributes.uom || ''}
                   </td>
-                  <td className="px-4 py-3 text-ink-muted">
-                    {r.attributes.quotation_closing_date || '—'}
-                  </td>
                   <td className="px-4 py-3">
-                    {r.tags.includes('trung') ? (
-                      <span className="text-warning font-semibold">Trùng</span>
-                    ) : (
-                      <span className="text-ink-muted">—</span>
-                    )}
+                    <TagBadges tags={r.tags} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="inline-flex justify-end">
-                      <RedecoRfqDeleteButton id={r.id} basePath={base} />
-                    </div>
+                    <RedecoRfqDeleteButton id={r.id} basePath={base} />
                   </td>
                 </tr>
               ))}
@@ -149,21 +197,12 @@ export default async function RedecoRfqListPage({
                 key={r.id}
                 code={r.external_quote_no}
                 title={r.attributes.product_name || '—'}
-                badge={
-                  r.tags.includes('trung') ? (
-                    <span className="rounded-lg border border-warning/40 bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-                      Trùng
-                    </span>
-                  ) : null
-                }
+                badge={<TagBadges tags={r.tags} />}
                 meta={
                   <>
                     <p>{r.attributes.end_customer || '—'}</p>
                     <p>
                       SL {r.attributes.qty_expected || '—'} {r.attributes.uom || ''}
-                      {r.attributes.quotation_closing_date
-                        ? ` · Đóng ${r.attributes.quotation_closing_date}`
-                        : ''}
                     </p>
                     <p>Import {formatDate(r.created_at)}</p>
                   </>

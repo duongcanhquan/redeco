@@ -251,8 +251,7 @@ Ghi chú kỹ thuật quan trọng:
 - Sidebar: rộng hơn (w-64/72); scrollbar `.nav-scroll`; phân hệ sổ + mục con.
 - Login: Optimake ngoài vòng; tên CT + form gọn trong vòng.
 - AI module + Hỏi AI KD (modal chia đôi).
-- **Customiz REDECO RFQ Phase 1 — ĐÃ XONG (code + DB + demo entitle):** import `.xls`/`.xlsx`, tag trùng, list/chi tiết/xóa; menu «Yêu cầu BG · REDECO».
-- File mẫu `TÀI LIỆU/REDECO_Infor báo giá.1.xls` hiện **chỉ header** — cần file có data để smoke UI thật.
+- **Customiz REDECO:** P1 inbox Excel xong; P2 bộ lọc phân loại (form nếu–thì, ↑↓ ưu tiên). C3–C4: danh mục tính toán BG theo DN → tạo BG chuẩn.
 - **A Giữ chỗ (K2)** đã wire.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
@@ -260,21 +259,21 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 3. Các bước tiếp theo (Next actions)
 
-### Customiz REDECO (ưu tiên nếu tiếp tục gói này)
+### Customiz REDECO
 
-| # | Việc | Ghi chú |
+| # | Việc | Trạng thái |
 |---|---|---|
-| C1 | Smoke UI với Excel **có data** (dòng ≥6) | File mẫu hiện trống data |
-| C2 | **Phase 2** — bộ lọc kéo-thả / nếu–thì → tag Tiềm năng · Cần cân nhắc · Không tiềm năng | Spec §6 |
-| C3 | Phase 3 — bổ sung chi phí / kết nối SP nội bộ trên chi tiết yêu cầu | |
-| C4 | Phase 4 — «Tạo báo giá» → quotation chuẩn Optimake | |
-| C5 | (Tuỳ chọn) Logo công ty upload — brainstorm đã hỏi A/B/C storage, chưa chốt | |
+| P1 | Import Excel + trùng + inbox | **Xong** |
+| P2 | Bộ lọc nếu–thì → tag Tiềm năng / Cần cân nhắc / Không tiềm năng | **Đang làm / vừa ship** |
+| C3 | Danh mục tính toán báo giá theo DN (công thức/quy tắc sửa được, vd REDECO) + bổ sung chi phí trên RFQ | Tiếp theo |
+| C4 | «Tạo báo giá» từ RFQ → quotation chuẩn + áp dụng danh mục tính toán | Sau C3 |
 
 ### Roadmap Kinh doanh / nền tảng (song song)
 
 1. **B** GH/HĐ linh hoạt + đặt cọc · **C** Bảng giá theo loại khách  
 2. Worker webhook / email / SMS  
-3. Metadata Engine + R2 (metadata UI + uploads)  
+3. Metadata Engine + R2  
+4. (Tuỳ chọn) Logo công ty — chưa chốt storage  
 
 ---
 
@@ -315,3 +314,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Hub Setup KD: panel/checklist/preset/profile; icon menu hub+sidebar; contrast HDSD |
 | 2026-08-02 | **Customiz REDECO RFQ P1**: migration batches/requests, parse xls/xlsx, inbox UI, entitle demo |
 | 2026-08-02 | Ghi backlog Customiz P2–P4 + ops (Excel có data) vào current-state / spec |
+| 2026-08-02 | **Customiz REDECO P2**: bộ lọc nếu–thì + tag phân loại; ghi C3–C4 danh mục tính toán BG |
