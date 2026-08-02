@@ -14,6 +14,7 @@ export const RESERVED_TENANT_SLUGS = new Set([
   'www',
   'optimake',
   'icon',
+  'ai',
   '_next',
 ]);
 

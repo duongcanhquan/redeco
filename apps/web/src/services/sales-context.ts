@@ -35,3 +35,15 @@ export function requireManager(ctx: TenantContext): void {
     throw new Error('Chỉ quản trị công ty (owner/admin) được thực hiện thao tác này.');
   }
 }
+
+/** Soft gate — dùng khi mutation cần trả ActionResult thay vì throw. */
+export function managerDeniedMessage(ctx: TenantContext): string | null {
+  if (ctx.role !== 'owner' && ctx.role !== 'admin') {
+    return 'Chỉ quản trị công ty (owner/admin) được thực hiện thao tác này.';
+  }
+  return null;
+}
+
+export function isTenantManager(ctx: TenantContext): boolean {
+  return ctx.role === 'owner' || ctx.role === 'admin';
+}

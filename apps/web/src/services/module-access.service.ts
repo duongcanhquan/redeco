@@ -3,11 +3,14 @@ import { cache } from 'react';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import {
   resolveAccountingTabs,
+  resolveEquipmentTabs,
+  resolveHrTabs,
   resolveInventoryTabs,
   resolveProductionTabs,
   resolveSalesTabs,
   type HubTabDef,
 } from '@/lib/workspace-nav';
+import { hasAiModule } from '@/lib/ai-access';
 import type { EntitledModule } from '@/services/sales.service';
 
 interface ModuleRow {
@@ -62,6 +65,9 @@ export interface WorkspaceNavContext {
   inventoryTabs: HubTabDef[];
   productionTabs: HubTabDef[];
   accountingTabs: HubTabDef[];
+  hrTabs: HubTabDef[];
+  equipmentTabs: HubTabDef[];
+  hasAi: boolean;
 }
 
 /** Dedupe trong cùng request — layout cha + layout hub chỉ query 1 lần. */
@@ -96,6 +102,9 @@ export const getWorkspaceNavContext = cache(
       inventoryTabs: resolveInventoryTabs(moduleKeys, isManager),
       productionTabs: resolveProductionTabs(moduleKeys),
       accountingTabs: resolveAccountingTabs(moduleKeys),
+      hrTabs: resolveHrTabs(moduleKeys),
+      equipmentTabs: resolveEquipmentTabs(moduleKeys),
+      hasAi: hasAiModule(moduleKeys),
     };
   },
 );

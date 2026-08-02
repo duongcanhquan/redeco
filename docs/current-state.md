@@ -81,6 +81,75 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
 - Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
 
+### ✅ Module Nhân sự — Phase NS1 Core (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-hr-ns1-blueprint.md` (đã duyệt). Plan: `docs/superpowers/plans/2026-08-02-hr-ns1.md`.
+
+- **Migration** `20260802220000_hr_module_ns1.sql` (**đã apply**): `hr_departments`, `hr_employees`, `hr_employment_contracts`; RLS `nhan-su`; 1 HĐ active/NV; namespace settings `hr`.
+- **Domain**: status/types + `isValidContractPeriod` / `canActivateContractForEmployee`.
+- **Service** `hr.service.ts` + actions; UI `/{slug}/hr` (hub, phòng ban, NV + chi tiết/HĐ).
+- **Demo**: `scripts/entitle-demo-hr.cjs` — `/demo/hr`.
+- **Chưa**: T&A, phép, payroll, ATS, AI, `hanh-chinh`.
+
+### ✅ Module Thiết bị / Bảo trì — Phase TB1 Core (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-maintenance-tb1-blueprint.md` (đã duyệt triển khai).
+
+- **Migration** `20260802280000_maintenance_module_tb1.sql` (**đã apply**): `eam_equipment`, `eam_work_requests`, `eam_maintenance_orders` + `eam_maintenance_tasks`, `eam_maintenance_plans`; RLS `thiet-bi`; namespace `maintenance`.
+- **Domain**: transitions WR/MO + `selectDueMaintenancePlans` (PM engine, catch-up).
+- **Service** `maintenance.service.ts` — CRUD thiết bị/YC/lệnh/kế hoạch; convert YC→lệnh; `runPreventiveMaintenance`.
+- **UI** `/{slug}/equipment` — hub, assets, requests, orders (+ chi tiết checklist), plans («Chạy PM đến hạn»).
+- **Demo**: `scripts/entitle-demo-thiet-bi.cjs` — `/demo/equipment`.
+- **Chưa**: phụ tùng Kho, IoT/PdM, OEE, AI ask thiết bị.
+
+### ✅ Module Thiết bị / Bảo trì — Phase TB2 (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-maintenance-tb2-blueprint.md`.
+
+- **Migration** `20260802290000_maintenance_module_tb2.sql` (**đã apply**): `eam_maintenance_part_lines` + RLS bridge `thiet-bi` ↔ Kho (tx/balances/quants/lots/locations).
+- Xuất phụ tùng qua `postInventoryTxn`; lệnh `in_progress` → máy `down`, complete/cancel → khôi phục status.
+- UI phụ tùng trên chi tiết lệnh BT.
+- **Chưa**: IoT/PdM, OEE, AI ask, PO phụ tùng.
+
+### ✅ Module Thiết bị / Bảo trì — Phase TB3 (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-maintenance-tb3-blueprint.md`.
+
+- **Migration** `20260802300000_maintenance_module_tb3.sql` (**đã apply**): `eam_meters`, `eam_meter_readings`.
+- PdM: ngưỡng warn/critical; critical → auto WorkRequest; nút IoT stub.
+- OEE 30 ngày: Availability từ downtime BT; P=Q=1 (stub).
+
+### ✅ AI RAG — Phase R1 (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-ai-rag-r1-blueprint.md`. Spec: `docs/superpowers/specs/2026-08-02-ai-rag-r1-design.md`.
+
+- **Migration** `20260802310000_ai_rag_module_r1.sql` (**đã apply**): `rag_collections`, `rag_documents`, `rag_chunks` (embedding jsonb float[]); RLS `ai`.
+- Domain: chunk / cosine / rank / format context (`packages/domain/src/ai/rag.ts`).
+- Service `rag.service.ts` + `callTenantEmbeddings`; settings `tenant_settings.ai.rag`.
+- UI: Cài đặt → AI → Tri thức (bật RAG, model embed, chunk/topK, paste+index).
+- Wire `buildUserPromptWithRag` vào ask Sales/Kho/SX/HR/TB; catalog `ai.rag`.
+- **Chưa**: PDF/R2, Nest queue, pgvector.
+- AI: catalog `ai.thiet-bi.hoi-dap`, panel hub, Cài đặt `equipmentAsk`.
+- **Chưa (cố ý)**: MQTT/OPC realtime, Digital Twin 3D, camera CV, OEE từ sản lượng máy thật.
+
+### ✅ Module Nhân sự — Phase NS2 T&A mỏng (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-hr-ns2-blueprint.md`.
+
+- **Migration** `20260802230000_hr_module_ns2.sql` (**đã apply**): `hr_shifts`, `hr_attendance_logs` (1 dòng/NV/ngày).
+- **Domain** `processTimesheet` — công chuẩn, muộn, về sớm, OT; test `scripts/test-hr-timesheet.cjs`.
+- **UI**: `/hr/shifts`, `/hr/attendance` (nhập tay; cache kết quả trong `attributes.timesheet`).
+- **Chưa**: máy chấm công, rostering, duyệt OT, Leave/Payroll.
+
+### ✅ Module Nhân sự — Phase NS3 Leave + Payroll mỏng (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-hr-ns3-blueprint.md`.
+
+- **Migration** `20260802240000_hr_module_ns3.sql` (**đã apply**): leave types/requests, payroll runs/lines.
+- **Domain**: `countLeaveDays`, `rangesOverlap`, `computeOtAmount` / `computeNetPay`.
+- **UI**: `/hr/leave` (đơn + duyệt), `/hr/payroll` (tính kỳ từ HĐ + OT chấm công, khóa sổ).
+- **Chưa**: BHXH đầy đủ, piece-rate SX, payslip email, ATS, AI.
+
 ### ✅ Module Kho — Phase K1 (2026-08-02)
 
 Blueprint đã duyệt (thứ tự nhà máy). Plan: `docs/superpowers/plans/2026-08-02-inventory-k1.md`.
@@ -89,6 +158,17 @@ Blueprint đã duyệt (thứ tự nhà máy). Plan: `docs/superpowers/plans/202
 - **Service** `inventory.service.ts`; Sales confirm đọc ATP Kho; ship → phiếu XK KHO-TP (fallback `decrement_stock` nếu chưa có kho).
 - **UI** `/{slug}/inventory` (+ stock, transactions, warehouses); catalog module `kho`.
 - **Demo**: `scripts/entitle-demo-kho.cjs`.
+
+### ✅ Module Kho — Phase K2+K3 Location + Lot (2026-08-02)
+
+Blueprint: `docs/blueprints/2026-08-02-inventory-k2-k3-location-lot.md`. Approach 1: StockQuant (warehouse+location+item+lot); `stock_balances` = rollup.
+
+- **Migration** `20260802210000_inventory_k2_k3_location_lot.sql` (**đã apply**): `warehouse_locations`, `inventory_lots`, `stock_quants`; item `track_lot` + `pick_strategy` (fifo/fefo/lifo); line `location_id`/`lot_id`; seed bin `__DEFAULT__` + migrate balances → quants; RPC `inventory_apply_quant`, `inventory_rollup_balance`; legacy `inventory_apply_line` → default bin.
+- **Domain** `@optimake/domain`: `allocatePickQty` / FIFO·FEFO·LIFO (`packages/domain/src/inventory/allocate.ts`); test `scripts/test-inventory-allocate.cjs`.
+- **Service**: `postInventoryTxn` ghi quant + auto-allocate khi XK; `listWarehouseLocations` / `createWarehouseLocation` / `listStockQuants`; Sales ship vẫn qua `postInventoryTxn` (allocate).
+- **UI**: tab **Vị trí (Bin)** `/inventory/locations`; tồn `?view=quant` (Bin/Lô); phiếu kho chọn Bin + mã lô/HSD khi nhập; **Danh mục kho** bật «Theo dõi lô» + FIFO/FEFO/LIFO; dòng phiếu lưu Bin/Lô sau allocate; hub shortcut Bin/quant.
+- **Verify**: `scripts/test-inventory-allocate.cjs`, `scripts/test-inventory-k2-k3-schema.cjs` PASS; tsc sạch.
+- **Chưa làm (K4+)**: QC/quarantine, PO typed inbound, Serial, multi-UoM, cycle count, AI; chuyển kho (transfer) UI.
 
 ### ✅ Sales Hub bento + analytics (2026-08-02)
 
@@ -104,7 +184,7 @@ Blueprint đã duyệt (thứ tự nhà máy). Plan: `docs/superpowers/plans/202
 - **currencyLabel** dùng trong `formatMoney`; **debtWarningDays** → badge «quá hạn cảnh báo» (tuổi nợ từ `issued_on`) trên HĐ + hub.
 - Settings AI / webhook / email: copy rõ «lưu cấu hình — chưa kích hoạt runtime».
 - Card phone KH + SP; catalog seed bổ sung `san-pham`, `giao-hang`, `hoa-don`, `chiet-khau`, `duyet`.
-- **5 module gốc khác** (SX, KT, NS, HC, TB): vẫn placeholder «sắp ra mắt» — cần Blueprint trước khi implement (theo `ddd-blueprint.mdc`).
+- **5 module gốc khác** (HC, TB): vẫn placeholder «sắp ra mắt» — cần Blueprint trước khi implement (theo `ddd-blueprint.mdc`). SX/KT/NS đã có UI.
 
 ### ✅ Cài đặt công ty — Settings Hub đa tab (2026-08-02)
 
@@ -252,7 +332,13 @@ Ghi chú kỹ thuật quan trọng:
 - Login: Optimake ngoài vòng; tên CT + form gọn trong vòng.
 - AI module + Hỏi AI KD (modal chia đôi).
 - **Kinh doanh.REDECO hub (H1–H3):** catalog `kinh-doanh.redeco`, menu option B, hub `/sales/redeco` 4 tab (đề xuất/tính/đã xong/cài đặt), stub calc + sync BG Optimake. Spec: `docs/superpowers/specs/2026-08-02-kinh-doanh-redeco-hub-design.md`. **H4 công thức** chờ user.
-- **A Giữ chỗ (K2)** đã wire.
+- **Kho K1 + K2+K3** đã wire (Bin/Lot/quant + FIFO/FEFO). Giữ chỗ tồn khi confirm đơn đã có.
+- **Nhân sự NS1–NS3** — hồ sơ, ca/chấm công, nghỉ phép, bảng lương mỏng.
+- **QA Kho+HR (2026-08-02):** migration `20260802250000` — ATP FG-only, issue tôn trọng reserved, rollup không wipe khi chưa có quant, seed quant từ balance, RLS `san-xuat` ghi quant/lot; HR soft manager gate, TZ VN chấm công, payroll/leave quyết định có kiểm tra dòng, terminate đóng HĐ, hub đủ shortcut. Ship atomic RPC vẫn backlog.
+- **AI Platform Ops + multi-module (2026-08-02):** hub `/ai` (checklist + usage), `ai_usage_logs`, Test kết nối, feature toggles Kho/SX/HR/TB + hỏi đáp snapshot trên từng hub; catalog `ai.kho|san-xuat|nhan-su|thiet-bi`.
+- **AI RAG R1 (2026-08-02):** Approach A + float[]/cosine — Easy Mode: 3 bước (key → dán SOP → hỏi AI), tự bật khi thêm tài liệu, knobs ẩn; wire ask*; catalog `ai.rag`. Chưa: PDF/R2, Nest queue, pgvector.
+- **AI harden (2026-08-02):** RPC rate-limit tenant-wide + đếm mọi lần gọi (ngày VN); RLS ẩn `ai.api_key` với member; key đọc qua service role khi gọi LLM; slug `ai` reserved; revalidate workspace slug-aware.
+- **Thiết bị / Bảo trì TB1–TB3 (2026-08-02):** hub `/equipment` — BT đầy đủ slice + meter PdM + OEE mỏng + AI ask.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
 ---
@@ -267,12 +353,51 @@ Ghi chú kỹ thuật quan trọng:
 | Hub H1–H3 | Shell + profile/tính stub + sync BG | **Xong** 2026-08-02 |
 | H4 | Công thức tính REDECO | Chờ user viết chi tiết |
 
+### Kho (tiếp)
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| K1 | Warehouses / ATP / phiếu NK-XK | **Xong** |
+| K2+K3 | Location hierarchy + Lot FIFO/FEFO | **Xong** 2026-08-02 |
+| QA harden | ATP FG, reserved issue, quant seed, SX RLS | **Xong** 2026-08-02 |
+| K4+ | QC, PO inbound typed, Serial, UoM, cycle count, AI | Chờ duyệt |
+
+### Nhân sự
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| NS1 | Department + Employee + Contract | **Xong** 2026-08-02 |
+| NS2 | Ca + Attendance + Timesheet | **Xong** 2026-08-02 |
+| NS3 | Leave + Payroll mỏng | **Xong** 2026-08-02 |
+| QA harden | Soft gate, TZ VN, payroll/leave integrity | **Xong** 2026-08-02 |
+| NS4+ | ATS / Training / AI / Hành chính | Chờ |
+
+### Thiết bị / Bảo trì
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| TB1 | Equipment + WorkRequest + MO + PM plans/engine | **Xong** 2026-08-02 |
+| TB2 | Spare parts XK + equipment status sync | **Xong** 2026-08-02 |
+| TB3 | Meter/PdM + OEE mỏng + AI ask | **Xong** 2026-08-02 |
+| Backlog | MQTT realtime, Twin 3D, CV, OEE sản lượng | Ngoài scope |
+
 ### Roadmap Kinh doanh / nền tảng (song song)
 
 1. **B** GH/HĐ linh hoạt + đặt cọc · **C** Bảng giá theo loại khách  
 2. Worker webhook / email / SMS  
 3. Metadata Engine + R2  
-4. (Tuỳ chọn) Logo công ty — chưa chốt storage  
+4. Metadata Engine + R2  
+5. (Tuỳ chọn) Logo công ty — chưa chốt storage  
+
+### AI
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| Sales AI v1 | Hub chat + đánh giá BG/ĐH | **Xong** |
+| Platform Ops | usage log, test connection, hub `/ai`, multi-module toggles | **Xong** 2026-08-02 |
+| Kho/SX/HR/TB ask | Snapshot assistants | **Xong** 2026-08-02 |
+| RAG R1 | Collections + paste ingest + cosine retrieve → ask* | **Xong** 2026-08-02 |
+| RAG R2+ | PDF/R2, Nest worker, pgvector IVFFlat | Chờ |
 
 ---
 
@@ -316,3 +441,18 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | **Customiz REDECO P2**: bộ lọc nếu–thì + tag phân loại; ghi C3–C4 danh mục tính toán BG |
 | 2026-08-02 | Placeholder C3–C4 (danh mục tính toán BG theo DN) — chờ user viết chi tiết |
 | 2026-08-02 | **Hub Kinh doanh.REDECO H1–H3**: catalog `kinh-doanh.redeco`, 4 tab, stub calc, sync BG Optimake |
+| 2026-08-02 | **Kho K2+K3**: locations/lots/quants, FIFO/FEFO allocate, UI Bin + tồn quant + phiếu lô |
+| 2026-08-02 | Kho K2+K3 polish: bật track_lot/pick trên danh mục, rewrite dòng phiếu Bin/Lô, smoke schema |
+| 2026-08-02 | Gỡ thử nghiệm ADR-012/EventBus (prompt kiến trúc chỉ để phân tích) |
+| 2026-08-02 | **HR NS1**: departments/employees/contracts, hub `/hr`, entitle demo |
+| 2026-08-02 | **HR NS2**: shifts + attendance + processTimesheet |
+| 2026-08-02 | **HR NS3**: leave requests + payroll run (base + OT) |
+| 2026-08-02 | **QA Kho+HR**: audit song song → fix CRITICAL/HIGH (migration 20260802250000 + service/UI); typecheck pass; repair history 02200000–02240000 |
+| 2026-08-02 | **AI Platform Ops**: `ai_usage_logs`, test connection, hub `/ai`, catalog+ask Kho/SX/HR; seed+entitle demo; typecheck pass |
+| 2026-08-02 | **QA hoàn thiện**: AI rate-limit RPC + khóa api_key RLS; inventory/HR manager UI + revalidate slug; attendance/payroll harden; migration 20260802270000 |
+| 2026-08-02 | **EAM TB1**: migration `eam_*`, PM engine, hub `/equipment`, entitle demo `thiet-bi`; typecheck pass |
+| 2026-08-02 | **EAM TB2**: part lines + Kho bridge RLS, issue phụ tùng, sync máy down/restore; migration 02290000 |
+| 2026-08-02 | **EAM TB3**: meters/PdM, OEE, AI `ai.thiet-bi`, migration 02300000; seed+entitle |
+| 2026-08-02 | **EAM QA harden**: restore máy theo prev+MO mở; meter merge/dedupe WR; Duyệt YC; Kho-only post phiếu UI; setTaskDone manager |
+| 2026-08-02 | **AI RAG R1**: migration `rag_*`, settings Tri thức, embed cosine, wire ask* KD/Kho/SX/HR/TB; seed `ai.rag` + entitle demo |
+| 2026-08-02 | **RAG Easy Mode**: auto-enable khi thêm SOP, ẩn knobs, defaults tốt, cảnh báo provider không embed |

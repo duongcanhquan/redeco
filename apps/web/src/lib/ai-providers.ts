@@ -142,3 +142,27 @@ export function usesOpenAiCompatibleChat(provider: AiProviderId): boolean {
     provider === 'azure'
   );
 }
+
+/** Providers có /v1/embeddings (hoặc Azure embeddings) — dùng cho RAG Easy Mode. */
+export function providerSupportsEmbeddings(provider: AiProviderId): boolean {
+  return usesOpenAiCompatibleChat(provider);
+}
+
+/** Model embedding mặc định theo nhà cung cấp — không bắt user chọn. */
+export function defaultEmbeddingModelForProvider(provider: AiProviderId): string {
+  switch (provider) {
+    case 'openai':
+    case 'azure':
+    case 'custom':
+      return 'text-embedding-3-small';
+    case 'mistral':
+      return 'mistral-embed';
+    case 'deepseek':
+      // DeepSeek chat API; nhiều gateway OpenAI-compatible dùng cùng key với ada/3-small
+      return 'text-embedding-3-small';
+    case 'groq':
+      return 'text-embedding-3-small';
+    default:
+      return 'text-embedding-3-small';
+  }
+}

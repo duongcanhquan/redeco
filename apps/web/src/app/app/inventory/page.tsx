@@ -6,6 +6,7 @@ import {
   ClipboardList,
   AlertTriangle,
   FileCheck2,
+  Layers,
 } from 'lucide-react';
 import { BentoBarChart, BentoStackBars } from '@/components/sales/bento-charts';
 import { FlowSteps } from '@/components/ui/flow-steps';
@@ -20,16 +21,20 @@ import {
   listWarehouses,
 } from '@/services/inventory.service';
 import { getMyRootModules } from '@/services/sales.service';
-import { getInventorySettings } from '@/services/tenant-settings.service';
+import { getInventorySettings, getAiAssistantAvailability } from '@/services/tenant-settings.service';
+import { getWorkspaceNavContext } from '@/services/module-access.service';
 import { EnsureDefaultsButton } from './ensure-defaults-button';
+import { InventoryAiPanel } from './inventory-ai-panel';
 
 export const dynamic = 'force-dynamic';
 
 export default async function InventoryHubPage() {
-  const [supabase, claims] = await Promise.all([
+  const [supabase, claims, nav] = await Promise.all([
     createServerSupabase(),
     getSessionClaims(),
+    getWorkspaceNavContext(),
   ]);
+  const canManage = nav?.isManager ?? false;
   const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
   const modules = await getMyRootModules(supabase);
   const hasKho = modules.some((m) => m.key === 'kho');
@@ -46,11 +51,12 @@ export default async function InventoryHubPage() {
 
   await ensureInventoryDefaults();
 
-  const [warehouses, balances, txns, invSettings] = await Promise.all([
+  const [warehouses, balances, txns, invSettings, aiAvail] = await Promise.all([
     listWarehouses(supabase),
     listStockBalances(supabase),
     listInventoryTransactions(supabase),
     getInventorySettings(),
+    getAiAssistantAvailability(),
   ]);
 
   const lowAtp = balances.filter((b) => balanceAtp(b) <= invSettings.lowStockThreshold).length;
@@ -76,7 +82,17 @@ export default async function InventoryHubPage() {
             <p>Bán hàng xem số còn bán được từ đây khi xác nhận đơn và giao hàng.</p>
           </>
         }
-        actions={<EnsureDefaultsButton />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <InventoryAiPanel
+              basePath={base}
+              entitled={aiAvail.entitledInventoryAsk}
+              configured={aiAvail.configured}
+              featureEnabled={aiAvail.features.inventoryAsk}
+            />
+            {canManage ? <EnsureDefaultsButton /> : null}
+          </div>
+        }
       />
 
       <FlowSteps
@@ -136,9 +152,15 @@ export default async function InventoryHubPage() {
         </section>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         {[
-          { href: `${base}/inventory/stock`, label: 'Xem tồn', icon: Package },
+          { href: `${base}/inventory/stock`, label: 'Xem tồn (ATP)', icon: Package },
+          {
+            href: `${base}/inventory/stock?view=quant`,
+            label: 'Tồn Bin / Lô',
+            icon: Package,
+          },
+          { href: `${base}/inventory/locations`, label: 'Vị trí (Bin)', icon: Layers },
           { href: `${base}/inventory/transactions`, label: 'Phiếu kho', icon: ClipboardList },
           { href: `${base}/inventory/warehouses`, label: 'Danh mục kho', icon: Warehouse },
         ].map(({ href, label, icon: Icon }) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Bot,
   Boxes,
   Calculator,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   UserCog,
   UserRound,
   Warehouse,
+  Wrench,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -24,7 +26,7 @@ export interface SidebarModuleItem {
   key: string;
   label: string;
   href: string;
-  icon: 'sales' | 'kho' | 'sx' | 'kt' | 'other';
+  icon: 'sales' | 'kho' | 'sx' | 'kt' | 'hr' | 'tb' | 'ai' | 'other';
   tabs: HubTabDef[];
   comingSoonHint?: string;
 }
@@ -34,6 +36,9 @@ const MODULE_ICONS: Record<SidebarModuleItem['icon'], ReactNode> = {
   kho: <Warehouse size={18} aria-hidden />,
   sx: <Factory size={18} aria-hidden />,
   kt: <Calculator size={18} aria-hidden />,
+  hr: <UserCog size={18} aria-hidden />,
+  tb: <Wrench size={18} aria-hidden />,
+  ai: <Bot size={18} aria-hidden />,
   other: <Boxes size={18} aria-hidden />,
 };
 

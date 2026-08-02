@@ -17,6 +17,8 @@ import { StatTile } from '@/components/ui/stat-tile';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { listBoms, listWorkOrders } from '@/services/production.service';
 import { getMyRootModules } from '@/services/sales.service';
+import { getAiAssistantAvailability } from '@/services/tenant-settings.service';
+import { ProductionAiPanel } from './production-ai-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +41,11 @@ export default async function ProductionHubPage() {
     );
   }
 
-  const [boms, orders] = await Promise.all([listBoms(supabase), listWorkOrders(supabase)]);
+  const [boms, orders, aiAvail] = await Promise.all([
+    listBoms(supabase),
+    listWorkOrders(supabase),
+    getAiAssistantAvailability(),
+  ]);
 
   const draft = orders.filter((o) => o.status === 'draft').length;
   const released = orders.filter((o) => o.status === 'released').length;
@@ -60,13 +66,21 @@ export default async function ProductionHubPage() {
           </p>
         }
         actions={
-          <Link
-            href={`${base}/settings?tab=production`}
-            className="inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-panel/40 text-sm hover:border-accent/40"
-          >
-            <Settings size={16} aria-hidden />
-            Cài đặt
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <ProductionAiPanel
+              basePath={base}
+              entitled={aiAvail.entitledProductionAsk}
+              configured={aiAvail.configured}
+              featureEnabled={aiAvail.features.productionAsk}
+            />
+            <Link
+              href={`${base}/settings?tab=production`}
+              className="inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-panel/40 text-sm hover:border-accent/40"
+            >
+              <Settings size={16} aria-hidden />
+              Cài đặt
+            </Link>
+          </div>
         }
       />
 

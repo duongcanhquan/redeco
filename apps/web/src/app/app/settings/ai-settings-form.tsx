@@ -1,17 +1,29 @@
 'use client';
 
-import { Bot, KeyRound, ShoppingCart, Sparkles } from 'lucide-react';
+import {
+  Bot,
+  Factory,
+  KeyRound,
+  PlugZap,
+  ShoppingCart,
+  Sparkles,
+  UserCog,
+  Warehouse,
+  Wrench,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Field, inputClass } from '@/components/platform/modal';
 import { HelpTip } from '@/components/ui/help-tip';
 import {
   AI_PROVIDERS,
+  defaultEmbeddingModelForProvider,
   getAiProvider,
   type AiProviderId,
 } from '@/lib/ai-providers';
-import type { AiFeatureFlags, AiSettingsPublic } from '@/services/tenant-settings.service';
-import { saveAiSettingsAction } from './actions';
+import type { AiFeatureFlags, AiRagSettings, AiSettingsPublic } from '@/services/tenant-settings.service';
+import { saveAiSettingsAction, testAiConnectionAction } from './actions';
+import { RagKnowledgePanel } from './rag-knowledge-panel';
 import { SettingsGroup } from './settings-group';
 
 const SALES_FEATURE_OPTIONS: {
@@ -36,6 +48,38 @@ const SALES_FEATURE_OPTIONS: {
   },
 ];
 
+const MODULE_FEATURE_OPTIONS: {
+  key: keyof AiFeatureFlags;
+  label: string;
+  hint: string;
+  icon: typeof Warehouse;
+}[] = [
+  {
+    key: 'inventoryAsk',
+    label: 'Hỏi đáp Kho',
+    hint: 'Hub Kho — tồn thấp, phiếu gần đây, ATP.',
+    icon: Warehouse,
+  },
+  {
+    key: 'productionAsk',
+    label: 'Hỏi đáp Sản xuất',
+    hint: 'Hub SX — LSX mở, BOM.',
+    icon: Factory,
+  },
+  {
+    key: 'hrAsk',
+    label: 'Hỏi đáp Nhân sự',
+    hint: 'Hub NS — NV, HĐ sắp hết, chấm công.',
+    icon: UserCog,
+  },
+  {
+    key: 'equipmentAsk',
+    label: 'Hỏi đáp Thiết bị',
+    hint: 'Hub TB — máy, lệnh BT, OEE, meter.',
+    icon: Wrench,
+  },
+];
+
 const FUTURE_FEATURE_OPTIONS: {
   key: keyof AiFeatureFlags;
   label: string;
@@ -44,7 +88,7 @@ const FUTURE_FEATURE_OPTIONS: {
   {
     key: 'demandForecast',
     label: 'Dự báo nhu cầu',
-    hint: 'Lưu cấu hình — runtime sau.',
+    hint: 'Lưu cấu hình — runtime sau (cần dữ liệu lịch sử).',
   },
   {
     key: 'nlpOrderParsing',
@@ -65,7 +109,9 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
   const [apiKey, setApiKey] = useState(initial.apiKeyMasked ?? '');
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
   const [features, setFeatures] = useState(initial.features);
+  const [rag, setRag] = useState<AiRagSettings>(initial.rag);
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
 
   const meta = getAiProvider(provider);
@@ -79,6 +125,10 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
     } else if (!initial.baseUrl) {
       setBaseUrl('');
     }
+    setRag((prev) => ({
+      ...prev,
+      embeddingModel: defaultEmbeddingModelForProvider(next),
+    }));
   };
 
   const submit = async (e: FormEvent): Promise<void> => {
@@ -91,6 +141,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
       apiKey,
       baseUrl,
       features,
+      rag,
     });
     setBusy(false);
     if (!result.ok) {
@@ -99,6 +150,18 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
     }
     setMsg({ type: 'ok', text: 'Đã lưu.' });
     router.refresh();
+  };
+
+  const testConnection = async (): Promise<void> => {
+    setTesting(true);
+    setMsg(null);
+    const result = await testAiConnectionAction();
+    setTesting(false);
+    if (!result.ok) {
+      setMsg({ type: 'error', text: result.error });
+      return;
+    }
+    setMsg({ type: 'ok', text: `Kết nối OK — ${result.data.reply}` });
   };
 
   return (
@@ -116,8 +179,8 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
           </span>
           <HelpTip title="Hai lớp quyền">
             <p>
-              Superadmin Optimake cấp module «Trợ lý AI» trên hợp đồng (và có thể chỉ một phần tính
-              năng). Admin công ty cấu hình nhà cung cấp / key và bật từng chỗ dùng bên dưới.
+              Superadmin Optimake cấp module «Trợ lý AI» trên hợp đồng. Admin công ty cấu hình
+              nhà cung cấp / key và bật từng chỗ dùng theo phân hệ bên dưới.
             </p>
           </HelpTip>
         </div>
@@ -184,11 +247,25 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
             />
           </Field>
         </div>
+        <div className="mt-3">
+          <button
+            type="button"
+            disabled={testing || busy}
+            onClick={() => void testConnection()}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-panel/40 px-4 text-sm font-medium disabled:opacity-60"
+          >
+            <PlugZap size={16} aria-hidden />
+            {testing ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}
+          </button>
+          <p className="mt-1 text-xs text-ink-muted">
+            Gửi ping ngắn tới provider (ghi vào nhật ký sử dụng). Lưu key trước nếu vừa đổi.
+          </p>
+        </div>
       </SettingsGroup>
 
       <SettingsGroup
         title="Áp dụng trong Kinh doanh"
-        description="Bật từng nơi AI được phép dùng. Cần có API key."
+        description="Cần entitlement ai.kinh-doanh.* trên hợp đồng + API key."
         icon={<ShoppingCart size={18} className="text-accent" aria-hidden />}
       >
         <div className="grid grid-cols-1 gap-3">
@@ -211,6 +288,40 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
           ))}
         </div>
       </SettingsGroup>
+
+      <SettingsGroup
+        title="Áp dụng Kho / SX / Nhân sự"
+        description="Mỗi phân hệ cần entitlement ai.kho / ai.san-xuat / ai.nhan-su / ai.thiet-bi tương ứng."
+        icon={<Warehouse size={18} className="text-accent" aria-hidden />}
+      >
+        <div className="grid grid-cols-1 gap-3">
+          {MODULE_FEATURE_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <label
+                key={opt.key}
+                className="flex items-start gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-accent"
+                  checked={features[opt.key]}
+                  onChange={(e) => setFeatures({ ...features, [opt.key]: e.target.checked })}
+                />
+                <span className="flex-1">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <Icon size={16} className="text-accent" aria-hidden />
+                    {opt.label}
+                  </span>
+                  <span className="block text-xs text-ink-muted mt-0.5">{opt.hint}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </SettingsGroup>
+
+      <RagKnowledgePanel rag={rag} onRagChange={setRag} provider={provider} />
 
       <SettingsGroup
         title="Tính năng khác (chuẩn bị)"

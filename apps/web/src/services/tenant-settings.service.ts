@@ -32,9 +32,28 @@ export interface AiFeatureFlags {
   salesQuoteReview: boolean;
   /** Đánh giá / nhận xét đơn hàng */
   salesOrderReview: boolean;
+  /** Hỏi đáp hub Kho */
+  inventoryAsk: boolean;
+  /** Hỏi đáp hub Sản xuất */
+  productionAsk: boolean;
+  /** Hỏi đáp hub Nhân sự */
+  hrAsk: boolean;
+  /** Hỏi đáp hub Thiết bị / Bảo trì */
+  equipmentAsk: boolean;
   demandForecast: boolean;
   nlpOrderParsing: boolean;
   churnScoring: boolean;
+}
+
+export interface AiRagSettings {
+  /** Bật retrieve + inject vào ask* */
+  ragEnabled: boolean;
+  /** Model embeddings OpenAI-compatible */
+  embeddingModel: string;
+  /** Kích thước chunk (ước lượng token) */
+  chunkSize: number;
+  chunkOverlap: number;
+  topK: number;
 }
 
 export interface AiSettingsPublic {
@@ -45,6 +64,7 @@ export interface AiSettingsPublic {
   hasApiKey: boolean;
   baseUrl: string;
   features: AiFeatureFlags;
+  rag: AiRagSettings;
 }
 
 export interface SalesSettings {
@@ -100,6 +120,14 @@ export interface AccountingSettings {
   defaultPaymentTermsDays: number;
 }
 
+const AI_RAG_DEFAULTS: AiRagSettings = {
+  ragEnabled: false,
+  embeddingModel: 'text-embedding-3-small',
+  chunkSize: 350,
+  chunkOverlap: 50,
+  topK: 6,
+};
+
 const AI_DEFAULTS: AiSettingsPublic = {
   provider: 'openai',
   model: 'gpt-4o-mini',
@@ -110,11 +138,31 @@ const AI_DEFAULTS: AiSettingsPublic = {
     copilot: false,
     salesQuoteReview: false,
     salesOrderReview: false,
+    inventoryAsk: false,
+    productionAsk: false,
+    hrAsk: false,
+    equipmentAsk: false,
     demandForecast: false,
     nlpOrderParsing: false,
     churnScoring: false,
   },
+  rag: AI_RAG_DEFAULTS,
 };
+
+function parseAiRag(raw: unknown): AiRagSettings {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const chunkSize = asNumber(o['chunkSize'], AI_RAG_DEFAULTS.chunkSize);
+  const chunkOverlap = asNumber(o['chunkOverlap'], AI_RAG_DEFAULTS.chunkOverlap);
+  const topK = asNumber(o['topK'], AI_RAG_DEFAULTS.topK);
+  return {
+    ragEnabled: asBool(o['ragEnabled'], AI_RAG_DEFAULTS.ragEnabled),
+    embeddingModel: asString(o['embeddingModel'], AI_RAG_DEFAULTS.embeddingModel).trim() ||
+      AI_RAG_DEFAULTS.embeddingModel,
+    chunkSize: Math.min(2000, Math.max(100, Math.round(chunkSize))),
+    chunkOverlap: Math.min(500, Math.max(0, Math.round(chunkOverlap))),
+    topK: Math.min(20, Math.max(1, Math.round(topK))),
+  };
+}
 
 function parseAiFeatures(raw: unknown): AiFeatureFlags {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
@@ -122,6 +170,10 @@ function parseAiFeatures(raw: unknown): AiFeatureFlags {
     copilot: asBool(o['copilot'], AI_DEFAULTS.features.copilot),
     salesQuoteReview: asBool(o['salesQuoteReview'], AI_DEFAULTS.features.salesQuoteReview),
     salesOrderReview: asBool(o['salesOrderReview'], AI_DEFAULTS.features.salesOrderReview),
+    inventoryAsk: asBool(o['inventoryAsk'], AI_DEFAULTS.features.inventoryAsk),
+    productionAsk: asBool(o['productionAsk'], AI_DEFAULTS.features.productionAsk),
+    hrAsk: asBool(o['hrAsk'], AI_DEFAULTS.features.hrAsk),
+    equipmentAsk: asBool(o['equipmentAsk'], AI_DEFAULTS.features.equipmentAsk),
     demandForecast: asBool(o['demandForecast'], AI_DEFAULTS.features.demandForecast),
     nlpOrderParsing: asBool(o['nlpOrderParsing'], AI_DEFAULTS.features.nlpOrderParsing),
     churnScoring: asBool(o['churnScoring'], AI_DEFAULTS.features.churnScoring),
@@ -244,16 +296,21 @@ export async function getAiSettings(): Promise<AiSettingsPublic> {
     hasApiKey: rawKey.length > 0,
     baseUrl: asString(map.get('base_url'), ''),
     features: parseAiFeatures(map.get('features')),
+    rag: parseAiRag(map.get('rag')),
   };
 }
 
-/** Trạng thái AI KD — mọi user đăng nhập trong tenant (không lộ key). */
+/** Trạng thái AI — mọi user đăng nhập trong tenant (không lộ key). */
 export async function getAiAssistantAvailability(): Promise<{
   /** Superadmin đã cấp module `ai` (hoặc con) cho công ty/user */
   entitled: boolean;
   entitledHubChat: boolean;
   entitledQuoteReview: boolean;
   entitledOrderReview: boolean;
+  entitledInventoryAsk: boolean;
+  entitledProductionAsk: boolean;
+  entitledHrAsk: boolean;
+  entitledEquipmentAsk: boolean;
   configured: boolean;
   features: AiFeatureFlags;
 }> {
@@ -266,27 +323,44 @@ export async function getAiAssistantAvailability(): Promise<{
   } = await import('@/lib/ai-access');
   const moduleKeys = await getMyModuleKeys();
   const map = await loadNamespaceMap(ctx, 'ai');
-  const rawKey = asString(map.get('api_key'), '');
+  const { data: configuredRaw } = await ctx.supabase.rpc('ai_is_configured');
+  const configured = configuredRaw === true;
   return {
     entitled: hasAiModule(moduleKeys),
     entitledHubChat: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.hubChat),
     entitledQuoteReview: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.quoteReview),
     entitledOrderReview: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.orderReview),
-    configured: rawKey.length > 0,
+    entitledInventoryAsk: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.inventoryAsk),
+    entitledProductionAsk: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.productionAsk),
+    entitledHrAsk: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.hrAsk),
+    entitledEquipmentAsk: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.equipmentAsk),
+    configured,
     features: parseAiFeatures(map.get('features')),
   };
 }
 
-/** Chỉ dùng server khi gọi LLM — có plaintext key. */
+/** Chỉ dùng server khi gọi LLM — đọc key qua service role (RLS ẩn key với member). */
 export async function getAiRuntimeSecret(): Promise<{
   provider: AiProviderId;
   model: string;
   baseUrl: string;
   apiKey: string;
   features: AiFeatureFlags;
+  rag: AiRagSettings;
 } | null> {
   const ctx = await getTenantContext();
-  const map = await loadNamespaceMap(ctx, 'ai');
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('tenant_settings')
+    .select('key, value')
+    .eq('tenant_id', ctx.tenantId)
+    .eq('namespace', 'ai');
+  if (error) throw new Error(error.message);
+  const map = new Map<string, unknown>();
+  for (const row of (data ?? []) as { key: string; value: unknown }[]) {
+    map.set(row.key, row.value);
+  }
   const apiKey = asString(map.get('api_key'), '').trim();
   if (!apiKey) return null;
   return {
@@ -295,6 +369,7 @@ export async function getAiRuntimeSecret(): Promise<{
     baseUrl: asString(map.get('base_url'), ''),
     apiKey,
     features: parseAiFeatures(map.get('features')),
+    rag: parseAiRag(map.get('rag')),
   };
 }
 
@@ -305,6 +380,7 @@ export interface AiSettingsInput {
   apiKey: string;
   baseUrl: string;
   features: AiSettingsPublic['features'];
+  rag: AiRagSettings;
 }
 
 export async function saveAiSettings(input: AiSettingsInput): Promise<ActionResult> {
@@ -318,12 +394,17 @@ export async function saveAiSettings(input: AiSettingsInput): Promise<ActionResu
   if (provider === 'custom' && !input.baseUrl.trim()) {
     return { ok: false, error: 'Tùy chỉnh bắt buộc điền địa chỉ API.' };
   }
+  const rag = parseAiRag(input.rag);
+  if (!rag.embeddingModel.trim()) {
+    return { ok: false, error: 'Model embedding không được để trống.' };
+  }
 
   try {
     await upsertSetting(ctx, 'ai', 'provider', provider);
     await upsertSetting(ctx, 'ai', 'model', input.model.trim());
     await upsertSetting(ctx, 'ai', 'base_url', input.baseUrl.trim());
     await upsertSetting(ctx, 'ai', 'features', input.features);
+    await upsertSetting(ctx, 'ai', 'rag', rag);
 
     if (!looksMasked(input.apiKey)) {
       await upsertSetting(ctx, 'ai', 'api_key', input.apiKey.trim());
@@ -331,6 +412,67 @@ export async function saveAiSettings(input: AiSettingsInput): Promise<ActionResu
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+/**
+ * Easy Mode: bật RAG + defaults tốt khi user thêm tài liệu đầu tiên.
+ * Không đụng API key / provider / feature flags chat.
+ */
+export async function enableRagEasyMode(): Promise<ActionResult<AiRagSettings>> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  try {
+    const map = await loadNamespaceMap(ctx, 'ai');
+    const provider = parseAiProviderId(asString(map.get('provider'), AI_DEFAULTS.provider));
+    const { defaultEmbeddingModelForProvider } = await import('@/lib/ai-providers');
+    const current = parseAiRag(map.get('rag'));
+    const next: AiRagSettings = {
+      ...current,
+      ragEnabled: true,
+      embeddingModel:
+        current.embeddingModel.trim() || defaultEmbeddingModelForProvider(provider),
+      chunkSize: current.chunkSize || AI_RAG_DEFAULTS.chunkSize,
+      chunkOverlap: current.chunkOverlap || AI_RAG_DEFAULTS.chunkOverlap,
+      topK: current.topK || AI_RAG_DEFAULTS.topK,
+    };
+    await upsertSetting(ctx, 'ai', 'rag', next);
+    return { ok: true, data: next };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Không bật được RAG.' };
+  }
+}
+
+/** Kiểm tra kết nối provider bằng câu ping ngắn — ghi usage log. */
+export async function testAiConnection(): Promise<ActionResult<{ reply: string }>> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const runtime = await getAiRuntimeSecret();
+  if (!runtime) {
+    return { ok: false, error: 'Chưa có API key — lưu key trước khi kiểm tra.' };
+  }
+  if (!runtime.model.trim()) {
+    return { ok: false, error: 'Chưa chọn model AI.' };
+  }
+  try {
+    const { runLoggedLlmCall } = await import('@/services/ai-usage.service');
+    const reply = await runLoggedLlmCall({
+      supabase: ctx.supabase,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      featureKey: 'ai.test-connection',
+      moduleKey: 'ai',
+      provider: runtime.provider,
+      model: runtime.model,
+      apiKey: runtime.apiKey,
+      baseUrl: runtime.baseUrl,
+      system:
+        'Bạn là kiểm tra kết nối. Trả lời đúng một câu ngắn tiếng Việt: «Kết nối AI OK».',
+      user: 'ping',
+    });
+    return { ok: true, data: { reply } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Kiểm tra thất bại.' };
   }
 }
 

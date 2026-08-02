@@ -6,9 +6,7 @@ import { getWorkspaceNavContext } from '@/services/module-access.service';
 
 /** Module chưa có màn — chỉ hiện tên, gợi ý qua title. */
 const MODULE_COMING_SOON: Record<string, string> = {
-  'nhan-su': 'Đang thiết kế',
   'hanh-chinh': 'Đang thiết kế',
-  'thiet-bi': 'Đang thiết kế',
 };
 
 export default async function WorkspaceLayout({
@@ -19,8 +17,19 @@ export default async function WorkspaceLayout({
     redirect('/login?error=forbidden');
   }
 
-  const { base, companyName, isManager, rootModules, salesTabs, inventoryTabs, productionTabs, accountingTabs } =
-    nav;
+  const {
+    base,
+    companyName,
+    isManager,
+    rootModules,
+    salesTabs,
+    inventoryTabs,
+    productionTabs,
+    accountingTabs,
+    hrTabs,
+    equipmentTabs,
+    hasAi,
+  } = nav;
   const slug = base.startsWith('/') && base !== '/app' ? base.slice(1) : null;
 
   const modules: SidebarModuleItem[] = [];
@@ -60,10 +69,43 @@ export default async function WorkspaceLayout({
       tabs: accountingTabs,
     });
   }
+  if (hrTabs.length > 0) {
+    modules.push({
+      key: 'nhan-su',
+      label: 'Nhân sự',
+      href: '/hr',
+      icon: 'hr',
+      tabs: hrTabs,
+    });
+  }
+  if (equipmentTabs.length > 0) {
+    modules.push({
+      key: 'thiet-bi',
+      label: 'Thiết bị',
+      href: '/equipment',
+      icon: 'tb',
+      tabs: equipmentTabs,
+    });
+  }
+  if (hasAi) {
+    modules.push({
+      key: 'ai',
+      label: 'Trợ lý AI',
+      href: '/ai',
+      icon: 'ai',
+      tabs: [{ key: 'overview', label: 'Tổng quan', path: '/ai', matchPrefixes: ['/ai'] }],
+    });
+  }
 
   for (const m of rootModules) {
     // `ai` cấu hình qua Cài đặt — không hiện sidebar «sắp ra mắt»
-    if (['kinh-doanh', 'kho', 'san-xuat', 'ke-toan', 'ai', 'customiz'].includes(m.key)) continue;
+    if (
+      ['kinh-doanh', 'kho', 'san-xuat', 'ke-toan', 'nhan-su', 'thiet-bi', 'ai', 'customiz'].includes(
+        m.key,
+      )
+    ) {
+      continue;
+    }
     const hint = MODULE_COMING_SOON[m.key];
     if (hint) {
       modules.push({

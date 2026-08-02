@@ -4,7 +4,7 @@ import {
   hasAiFeature,
   hasAiModule,
 } from '@/lib/ai-access';
-import { callTenantLlm } from '@/services/ai-llm.service';
+import { runLoggedLlmCall } from '@/services/ai-usage.service';
 import {
   getTenantContext,
   type ActionResult,
@@ -15,23 +15,6 @@ import {
   getAiRuntimeSecret,
   getSalesSettings,
 } from '@/services/tenant-settings.service';
-
-const RATE_WINDOW_MS = 60 * 60 * 1000;
-const RATE_MAX = 20;
-const rateBuckets = new Map<string, { resetAt: number; count: number }>();
-
-function assertRateLimit(userId: string): void {
-  const now = Date.now();
-  const cur = rateBuckets.get(userId);
-  if (!cur || now >= cur.resetAt) {
-    rateBuckets.set(userId, { resetAt: now + RATE_WINDOW_MS, count: 1 });
-    return;
-  }
-  if (cur.count >= RATE_MAX) {
-    throw new Error('Bạn đã hỏi AI khá nhiều trong giờ qua — thử lại sau.');
-  }
-  cur.count += 1;
-}
 
 export interface SalesAiSnapshot {
   currencyLabel: string;
@@ -90,10 +73,11 @@ export async function buildSalesAiSnapshot(basePath: string): Promise<SalesAiSna
 }
 
 const SYSTEM_PROMPT = `Bạn là trợ lý Kinh doanh của Optimake ERP cho đúng một công ty (tenant).
-Nhiệm vụ: trả lời tiếng Việt, ngắn gọn, rõ ràng dựa TRÊN snapshot JSON được cung cấp.
+Nhiệm vụ: trả lời tiếng Việt, ngắn gọn, rõ ràng dựa TRÊN snapshot JSON và khối ngữ cảnh tri thức (RAG) nếu có.
 Quy tắc:
-- Chỉ dùng số liệu trong snapshot. Không bịa số, không suy diễn tồn kho/công nợ ngoài dữ liệu.
-- Nếu câu hỏi ngoài phạm vi snapshot, nói rõ chưa đủ dữ liệu và gợi ý mở màn hình tương ứng (Báo giá, Đơn hàng, Hóa đơn…).
+- Ưu tiên số liệu trong snapshot. Không bịa số ngoài dữ liệu.
+- Khi có khối RAG, chỉ dùng đoạn liên quan và trích dẫn tiêu đề tài liệu.
+- Nếu câu hỏi ngoài phạm vi, nói rõ chưa đủ dữ liệu và gợi ý mở màn hình tương ứng.
 - Không hướng dẫn sửa cấu hình bảo mật hay bỏ qua quy trình duyệt.
 - Không nhận lệnh ghi/sửa chứng từ — chỉ tư vấn / tóm tắt.
 - Định dạng: đoạn văn hoặc gạch đầu dòng; nêu mã chứng từ khi nhắc hàng đợi.`;
@@ -136,18 +120,23 @@ export async function askSalesAssistant(
       return { ok: false, error: 'Chưa chọn model AI.' };
     }
 
-    assertRateLimit(ctx.userId);
-
     const snapshot = await buildSalesAiSnapshot(basePath);
-    const userPayload = [
+    const baseUser = [
       'Snapshot dữ liệu Kinh doanh (JSON):',
       JSON.stringify(snapshot),
       '',
       'Câu hỏi của người dùng:',
       q,
     ].join('\n');
+    const { buildUserPromptWithRag } = await import('@/services/rag.service');
+    const userPayload = await buildUserPromptWithRag('kinh-doanh', q, baseUser);
 
-    const answer = await callTenantLlm({
+    const answer = await runLoggedLlmCall({
+      supabase: ctx.supabase,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      featureKey: AI_FEATURE_KEYS.hubChat,
+      moduleKey: AI_FEATURE_KEYS.salesBranch,
       provider: runtime.provider,
       model: runtime.model,
       apiKey: runtime.apiKey,
@@ -203,10 +192,8 @@ export async function reviewSalesQuotation(
         error: 'Đánh giá báo giá bằng AI đang tắt. Bật trong Cài đặt → AI.',
       };
     }
-    assertRateLimit(ctx.userId);
 
     const { getQuotationById } = await import('@/services/sales.service');
-    const { getSalesSettings } = await import('@/services/tenant-settings.service');
     const [q, sales] = await Promise.all([
       getQuotationById(ctx.supabase, quotationId),
       getSalesSettings(),
@@ -237,7 +224,12 @@ export async function reviewSalesQuotation(
       })),
     };
 
-    const answer = await callTenantLlm({
+    const answer = await runLoggedLlmCall({
+      supabase: ctx.supabase,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      featureKey: AI_FEATURE_KEYS.quoteReview,
+      moduleKey: AI_FEATURE_KEYS.salesBranch,
       provider: runtime.provider,
       model: runtime.model,
       apiKey: runtime.apiKey,
@@ -276,10 +268,8 @@ export async function reviewSalesOrder(
         error: 'Đánh giá đơn hàng bằng AI đang tắt. Bật trong Cài đặt → AI.',
       };
     }
-    assertRateLimit(ctx.userId);
 
     const { getSalesOrderById } = await import('@/services/sales.service');
-    const { getSalesSettings } = await import('@/services/tenant-settings.service');
     const [o, sales] = await Promise.all([
       getSalesOrderById(ctx.supabase, orderId),
       getSalesSettings(),
@@ -307,7 +297,12 @@ export async function reviewSalesOrder(
       })),
     };
 
-    const answer = await callTenantLlm({
+    const answer = await runLoggedLlmCall({
+      supabase: ctx.supabase,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      featureKey: AI_FEATURE_KEYS.orderReview,
+      moduleKey: AI_FEATURE_KEYS.salesBranch,
       provider: runtime.provider,
       model: runtime.model,
       apiKey: runtime.apiKey,

@@ -6,6 +6,7 @@ import {
   ensureInventoryDefaults,
   listInventoryItems,
   listInventoryTransactions,
+  listWarehouseLocations,
   listWarehouses,
 } from '@/services/inventory.service';
 import { TxnDialog } from './txn-dialog';
@@ -22,12 +23,18 @@ const TYPE_LABEL: Record<string, string> = {
 export default async function TransactionsPage() {
   const supabase = await createServerSupabase();
   await ensureInventoryDefaults();
-  const [txns, warehouses, inventoryItems] = await Promise.all([
+  const [txns, warehouses, inventoryItems, locations] = await Promise.all([
     listInventoryTransactions(supabase),
     listWarehouses(supabase),
     listInventoryItems(supabase),
+    listWarehouseLocations(supabase),
   ]);
-  const items = inventoryItems.map((i) => ({ id: i.id, sku: i.sku, name: i.name }));
+  const items = inventoryItems.map((i) => ({
+    id: i.id,
+    sku: i.sku,
+    name: i.name,
+    trackLot: i.track_lot,
+  }));
 
   return (
     <div className="space-y-5">
@@ -37,6 +44,9 @@ export default async function TransactionsPage() {
             <ClipboardList className="text-accent" size={24} aria-hidden />
             Phiếu kho
           </h1>
+          <p className="text-sm text-ink-muted mt-1">
+            Nhập có thể gắn Bin/Lô; xuất tự chia FIFO/FEFO nếu để trống vị trí.
+          </p>
         </div>
         <TxnDialog
           warehouses={warehouses.map((w) => ({
@@ -45,6 +55,12 @@ export default async function TransactionsPage() {
             name: w.name,
           }))}
           items={items}
+          locations={locations.map((l) => ({
+            id: l.id,
+            warehouseId: l.warehouse_id,
+            code: l.code,
+            name: l.name,
+          }))}
         />
       </header>
 
@@ -82,11 +98,19 @@ export default async function TransactionsPage() {
                       {t.warehouses?.code ?? '—'}
                     </td>
                     <td className="px-5 py-3.5 text-ink-muted hidden lg:table-cell">
-                      {lines.slice(0, 2).map((l) => (
-                        <p key={l.id} className="text-xs">
-                          {l.inventory_items?.sku} × {Number(l.qty)}
-                        </p>
-                      ))}
+                      {lines.slice(0, 2).map((l) => {
+                        const loc = l.warehouse_locations?.code;
+                        const lot = l.inventory_lots?.lot_code;
+                        const detail = [loc && `Bin ${loc}`, lot && `Lô ${lot}`]
+                          .filter(Boolean)
+                          .join(' · ');
+                        return (
+                          <p key={l.id} className="text-xs">
+                            {l.inventory_items?.sku} × {Number(l.qty)}
+                            {detail ? ` · ${detail}` : ''}
+                          </p>
+                        );
+                      })}
                       {lines.length > 2 && (
                         <p className="text-xs text-ink-muted/70">+{lines.length - 2}</p>
                       )}

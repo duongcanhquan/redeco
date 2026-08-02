@@ -14,6 +14,15 @@ export const AI_FEATURE_KEYS = {
   quoteReview: 'ai.kinh-doanh.danh-gia-bao-gia',
   orderReview: 'ai.kinh-doanh.danh-gia-don-hang',
   salesBranch: 'ai.kinh-doanh',
+  inventoryAsk: 'ai.kho.hoi-dap',
+  inventoryBranch: 'ai.kho',
+  productionAsk: 'ai.san-xuat.hoi-dap',
+  productionBranch: 'ai.san-xuat',
+  hrAsk: 'ai.nhan-su.hoi-dap',
+  hrBranch: 'ai.nhan-su',
+  equipmentAsk: 'ai.thiet-bi.hoi-dap',
+  equipmentBranch: 'ai.thiet-bi',
+  rag: 'ai.rag',
 } as const;
 
 export type AiFeatureModuleKey =

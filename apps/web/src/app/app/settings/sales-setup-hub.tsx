@@ -222,6 +222,7 @@ function SalesAiSetupPanel({
       apiKey: ai.apiKeyMasked ?? '',
       baseUrl: ai.baseUrl,
       features,
+      rag: ai.rag,
     });
     setBusy(false);
     if (!result.ok) {

@@ -151,6 +151,82 @@ async function callGemini(input: LlmChatInput, signal: AbortSignal): Promise<str
   return text;
 }
 
+export interface EmbeddingInput {
+  provider: AiProviderId;
+  model: string;
+  apiKey: string;
+  baseUrl: string;
+  texts: string[];
+  timeoutMs?: number;
+}
+
+/**
+ * Embeddings OpenAI-compatible. Anthropic/Google: dùng cùng base custom hoặc
+ * bắt buộc provider openai/azure/custom/deepseek/groq tương thích /v1/embeddings.
+ */
+export async function callTenantEmbeddings(input: EmbeddingInput): Promise<number[][]> {
+  if (input.texts.length === 0) return [];
+  if (input.provider === 'anthropic' || input.provider === 'google') {
+    throw new Error(
+      'RAG embedding cần nhà cung cấp OpenAI-compatible (OpenAI / Azure / Custom / DeepSeek…). Đổi provider hoặc base URL hỗ trợ /v1/embeddings.',
+    );
+  }
+  const timeoutMs = input.timeoutMs ?? 60_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const base = resolveProviderBaseUrl(input.provider, input.baseUrl);
+    if (!base) throw new Error('Thiếu địa chỉ API embedding.');
+
+    let url: string;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (input.provider === 'azure') {
+      url = `${base}/openai/deployments/${encodeURIComponent(input.model)}/embeddings?api-version=2024-08-01-preview`;
+      headers['api-key'] = input.apiKey;
+    } else {
+      const root = base.endsWith('/v1') ? base : `${base}/v1`;
+      url = `${root}/embeddings`;
+      headers.Authorization = `Bearer ${input.apiKey}`;
+    }
+
+    const payload =
+      input.provider === 'azure'
+        ? { input: input.texts }
+        : { model: input.model, input: input.texts };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(friendlyHttpError(res.status, body));
+    }
+    const json = (await res.json()) as {
+      data?: { embedding?: number[]; index?: number }[];
+    };
+    const rows = json.data ?? [];
+    if (rows.length !== input.texts.length) {
+      throw new Error('Embedding API trả thiếu vector.');
+    }
+    return [...rows]
+      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+      .map((r) => {
+        const emb = r.embedding;
+        if (!emb || emb.length === 0) throw new Error('Embedding rỗng.');
+        return emb;
+      });
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Embedding quá lâu — thử lại.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function friendlyHttpError(status: number, body: string): string {
   if (status === 401 || status === 403) {
     return 'API key AI bị từ chối — kiểm tra lại ở Cài đặt → AI.';

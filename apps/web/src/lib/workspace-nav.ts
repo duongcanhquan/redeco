@@ -15,7 +15,12 @@ export type SalesTabKey =
   | 'duyet'
   | 'kinh-doanh-redeco';
 
-export type InventoryTabKey = 'tong-quan' | 'ton-kho' | 'phieu-kho' | 'danh-muc-kho';
+export type InventoryTabKey =
+  | 'tong-quan'
+  | 'ton-kho'
+  | 'phieu-kho'
+  | 'danh-muc-kho'
+  | 'vi-tri-kho';
 export type ProductionTabKey = 'tong-quan' | 'dinh-muc' | 'lenh-sx';
 export type AccountingTabKey = 'tong-quan';
 
@@ -242,6 +247,12 @@ const INVENTORY_DEFS: Record<InventoryTabKey, HubTabDef> = {
     path: '/inventory/warehouses',
     matchPrefixes: ['/inventory/warehouses'],
   },
+  'vi-tri-kho': {
+    key: 'vi-tri-kho',
+    label: 'Vị trí (Bin)',
+    path: '/inventory/locations',
+    matchPrefixes: ['/inventory/locations'],
+  },
 };
 
 export function resolveInventoryTabs(
@@ -253,6 +264,7 @@ export function resolveInventoryTabs(
     return [
       INVENTORY_DEFS['tong-quan'],
       INVENTORY_DEFS['ton-kho'],
+      INVENTORY_DEFS['vi-tri-kho'],
       INVENTORY_DEFS['phieu-kho'],
       INVENTORY_DEFS['danh-muc-kho'],
     ];
@@ -260,7 +272,13 @@ export function resolveInventoryTabs(
   const allowed = new Set<InventoryTabKey>(['tong-quan']);
   if (hasModuleKey(moduleKeys, 'kho.ton-kho')) allowed.add('ton-kho');
   if (hasModuleKey(moduleKeys, 'kho.phieu-kho')) allowed.add('phieu-kho');
-  const order: InventoryTabKey[] = ['tong-quan', 'ton-kho', 'phieu-kho', 'danh-muc-kho'];
+  const order: InventoryTabKey[] = [
+    'tong-quan',
+    'ton-kho',
+    'vi-tri-kho',
+    'phieu-kho',
+    'danh-muc-kho',
+  ];
   return order.filter((k) => allowed.has(k)).map((k) => INVENTORY_DEFS[k]);
 }
 
@@ -306,6 +324,140 @@ export function resolveAccountingTabs(moduleKeys: readonly string[]): HubTabDef[
   ];
 }
 
+export type HrTabKey =
+  | 'tong-quan'
+  | 'phong-ban'
+  | 'nhan-vien'
+  | 'ca-lam'
+  | 'cham-cong'
+  | 'nghi-phep'
+  | 'bang-luong';
+
+const HR_DEFS: Record<HrTabKey, HubTabDef> = {
+  'tong-quan': {
+    key: 'tong-quan',
+    label: 'Tổng quan',
+    path: '/hr',
+    matchPrefixes: ['/hr'],
+  },
+  'phong-ban': {
+    key: 'phong-ban',
+    label: 'Phòng ban',
+    path: '/hr/departments',
+    matchPrefixes: ['/hr/departments'],
+  },
+  'nhan-vien': {
+    key: 'nhan-vien',
+    label: 'Nhân viên',
+    path: '/hr/employees',
+    matchPrefixes: ['/hr/employees'],
+  },
+  'ca-lam': {
+    key: 'ca-lam',
+    label: 'Ca làm',
+    path: '/hr/shifts',
+    matchPrefixes: ['/hr/shifts'],
+  },
+  'cham-cong': {
+    key: 'cham-cong',
+    label: 'Chấm công',
+    path: '/hr/attendance',
+    matchPrefixes: ['/hr/attendance'],
+  },
+  'nghi-phep': {
+    key: 'nghi-phep',
+    label: 'Nghỉ phép',
+    path: '/hr/leave',
+    matchPrefixes: ['/hr/leave'],
+  },
+  'bang-luong': {
+    key: 'bang-luong',
+    label: 'Bảng lương',
+    path: '/hr/payroll',
+    matchPrefixes: ['/hr/payroll'],
+  },
+};
+
+export function resolveHrTabs(moduleKeys: readonly string[]): HubTabDef[] {
+  if (!hasModuleBranch(moduleKeys, 'nhan-su')) return [];
+  return [
+    HR_DEFS['tong-quan'],
+    HR_DEFS['phong-ban'],
+    HR_DEFS['nhan-vien'],
+    HR_DEFS['ca-lam'],
+    HR_DEFS['cham-cong'],
+    HR_DEFS['nghi-phep'],
+    HR_DEFS['bang-luong'],
+  ];
+}
+
+export type EquipmentTabKey =
+  | 'tong-quan'
+  | 'thiet-bi'
+  | 'yeu-cau'
+  | 'lenh-bt'
+  | 'ke-hoach-pm'
+  | 'meter'
+  | 'oee';
+
+const EQUIPMENT_DEFS: Record<EquipmentTabKey, HubTabDef> = {
+  'tong-quan': {
+    key: 'tong-quan',
+    label: 'Tổng quan',
+    path: '/equipment',
+    matchPrefixes: ['/equipment'],
+  },
+  'thiet-bi': {
+    key: 'thiet-bi',
+    label: 'Thiết bị',
+    path: '/equipment/assets',
+    matchPrefixes: ['/equipment/assets'],
+  },
+  'yeu-cau': {
+    key: 'yeu-cau',
+    label: 'Yêu cầu',
+    path: '/equipment/requests',
+    matchPrefixes: ['/equipment/requests'],
+  },
+  'lenh-bt': {
+    key: 'lenh-bt',
+    label: 'Lệnh BT',
+    path: '/equipment/orders',
+    matchPrefixes: ['/equipment/orders'],
+  },
+  'ke-hoach-pm': {
+    key: 'ke-hoach-pm',
+    label: 'Kế hoạch PM',
+    path: '/equipment/plans',
+    matchPrefixes: ['/equipment/plans'],
+  },
+  meter: {
+    key: 'meter',
+    label: 'Meter / PdM',
+    path: '/equipment/meters',
+    matchPrefixes: ['/equipment/meters'],
+  },
+  oee: {
+    key: 'oee',
+    label: 'OEE',
+    path: '/equipment/oee',
+    matchPrefixes: ['/equipment/oee'],
+  },
+};
+
+export function resolveEquipmentTabs(moduleKeys: readonly string[]): HubTabDef[] {
+  if (!hasModuleBranch(moduleKeys, 'thiet-bi')) return [];
+  return [
+    EQUIPMENT_DEFS['tong-quan'],
+    EQUIPMENT_DEFS['thiet-bi'],
+    EQUIPMENT_DEFS['yeu-cau'],
+    EQUIPMENT_DEFS['lenh-bt'],
+    EQUIPMENT_DEFS['ke-hoach-pm'],
+    EQUIPMENT_DEFS.meter,
+    EQUIPMENT_DEFS.oee,
+  ];
+}
+
 /** Bỏ tiền tố /{slug} hoặc /app khỏi pathname để khớp matchPrefixes. */
 export function stripWorkspaceBase(pathname: string, base: string): string {
   if (pathname === base) return '/';
@@ -332,7 +484,14 @@ export function resolveActiveTabKey(
   let best: { key: string; len: number } | null = null;
   for (const tab of tabs) {
     for (const prefix of tab.matchPrefixes) {
-      if (prefix === '/sales' || prefix === '/inventory' || prefix === '/production' || prefix === '/accounting') {
+      if (
+        prefix === '/sales' ||
+        prefix === '/inventory' ||
+        prefix === '/production' ||
+        prefix === '/accounting' ||
+        prefix === '/hr' ||
+        prefix === '/equipment'
+      ) {
         if (appPath === prefix) {
           return tab.key;
         }
