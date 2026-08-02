@@ -21,10 +21,6 @@ export default async function DiscountRulesPage() {
           <Percent className="text-accent" size={24} aria-hidden />
           Quy tắc chiết khấu / KM
         </h1>
-        <p className="text-sm text-ink-muted mt-1">
-          Rule thắng = ưu tiên số nhỏ hơn trong các rule khớp điều kiện (loại KH, tổng tiền, thời
-          hạn…). Tự áp khi tạo báo giá.
-        </p>
       </header>
       <DiscountRulesManager initial={rules} />
     </div>

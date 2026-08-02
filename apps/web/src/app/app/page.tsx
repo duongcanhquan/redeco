@@ -42,9 +42,6 @@ export default async function WorkspaceDashboard() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Tổng quan</h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Bức tranh vận hành hôm nay — nhấn vào từng ô để đi sâu.
-          </p>
         </div>
         <Link
           href={`${base}/sales`}

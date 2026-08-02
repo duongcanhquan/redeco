@@ -42,13 +42,8 @@ export default async function WorkOrdersPage() {
       <PageHeader
         icon={<ClipboardList size={24} />}
         title="Lệnh sản xuất"
-        helpTitle="Các bước"
-        help={
-          <>
-            <p>Nháp → Phát hành → Xuất nguyên liệu → Nhập thành phẩm.</p>
-            <p>Phát hành có thể bị chặn nếu thiếu nguyên liệu (tuỳ Cài đặt).</p>
-          </>
-        }
+        helpTitle="Lệnh sản xuất"
+        help={<p>Phát hành có thể bị chặn nếu thiếu nguyên liệu (tuỳ Cài đặt).</p>}
       />
 
       <CreateWoForm

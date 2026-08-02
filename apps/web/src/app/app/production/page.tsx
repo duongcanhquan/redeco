@@ -52,13 +52,12 @@ export default async function ProductionHubPage() {
       <PageHeader
         icon={<Factory size={24} />}
         title="Sản xuất"
-        helpTitle="Làm việc thế nào?"
+        helpTitle="Sản xuất"
         help={
-          <>
-            <p>1. Tạo định mức (nguyên liệu cho mỗi sản phẩm).</p>
-            <p>2. Tạo lệnh sản xuất → phát hành → xuất NVL → nhập thành phẩm.</p>
-            <p>Ngày hẹn giao cho bán hàng lấy từ lệnh đang chạy và thời gian chờ của công ty.</p>
-          </>
+          <p>
+            Tạo định mức rồi lệnh sản xuất. Ngày hẹn giao lấy từ lệnh đang chạy và thời gian chờ
+            công ty.
+          </p>
         }
         actions={
           <Link

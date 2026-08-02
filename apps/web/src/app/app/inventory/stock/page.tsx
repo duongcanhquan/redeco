@@ -40,9 +40,6 @@ export default async function StockPage({
           <Package className="text-accent" size={24} aria-hidden />
           Tồn kho (số còn bán được)
         </h1>
-        <p className="text-sm text-ink-muted mt-1">
-          Số còn bán được (ATP) = tồn thực tế − đã giữ chỗ. Kinh doanh dùng số này khi xác nhận đơn.
-        </p>
       </header>
 
       <DocSearchBar

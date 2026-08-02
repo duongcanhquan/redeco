@@ -37,9 +37,6 @@ export default async function TransactionsPage() {
             <ClipboardList className="text-accent" size={24} aria-hidden />
             Phiếu kho
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Phiếu nhập tăng tồn · phiếu xuất trừ số còn bán được (ATP). Giao hàng từ Kinh doanh tự tạo phiếu xuất từ kho thành phẩm.
-          </p>
         </div>
         <TxnDialog
           warehouses={warehouses.map((w) => ({

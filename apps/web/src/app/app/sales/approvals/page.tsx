@@ -21,10 +21,6 @@ export default async function ApprovalsPage() {
           <GitBranch className="text-accent" size={24} aria-hidden />
           Quy trình duyệt báo giá (N cấp)
         </h1>
-        <p className="text-sm text-ink-muted mt-1">
-          Mỗi bước gán role/user và ngưỡng tiền. Báo giá chỉ kích hoạt các bước có ngưỡng ≤ tổng
-          tiền (bước min = 0 luôn chạy).
-        </p>
       </header>
       <ApprovalsManager initial={workflows} />
     </div>

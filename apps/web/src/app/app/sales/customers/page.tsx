@@ -40,15 +40,10 @@ export default async function CustomersPage({
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="text-accent" size={24} aria-hidden />
-            Khách hàng
-          </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Đối tác, hạn mức tín dụng và công nợ phải thu.
-          </p>
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+          <Users className="text-accent" size={22} aria-hidden />
+          Khách hàng
+        </h1>
         <CustomerDialog />
       </header>
 

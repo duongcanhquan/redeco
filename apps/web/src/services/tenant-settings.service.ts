@@ -1,5 +1,13 @@
 import 'server-only';
 import {
+  DEFAULT_SETUP_FLAGS,
+  SYSTEM_PRESETS,
+  type ActiveProfileId,
+  type SalesCompanyProfile,
+  type SalesProcessSnapshotV1,
+  type SalesSetupFlags,
+} from '@/lib/sales-setup';
+import {
   getTenantContext,
   requireManager,
   type ActionResult,
@@ -555,6 +563,322 @@ export async function saveAccountingSettings(input: AccountingSettings): Promise
       'default_payment_terms_days',
       input.defaultPaymentTermsDays,
     );
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+/* ─── Sales setup hub (flags + profiles) ─── */
+
+function parseSetupFlags(raw: unknown): SalesSetupFlags {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETUP_FLAGS };
+  const o = raw as Record<string, unknown>;
+  return {
+    skipApproval: asBool(o['skipApproval'], false),
+    skipDiscountRules: asBool(o['skipDiscountRules'], false),
+    ackDeliveryInvoice: asBool(o['ackDeliveryInvoice'], false),
+    ackStockPolicy: asBool(o['ackStockPolicy'], false),
+  };
+}
+
+function parseProfiles(raw: unknown): SalesCompanyProfile[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SalesCompanyProfile[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const o = item as Record<string, unknown>;
+    const snap = o['snapshot'];
+    if (!snap || typeof snap !== 'object') continue;
+    const s = snap as Record<string, unknown>;
+    const id = asString(o['id'], '');
+    const name = asString(o['name'], '');
+    if (!id || !name) continue;
+    out.push({
+      id,
+      name,
+      description: asString(o['description'], ''),
+      createdAt: asString(o['createdAt'], new Date().toISOString()),
+      updatedAt: asString(o['updatedAt'], new Date().toISOString()),
+      snapshot: {
+        schemaVersion: 1,
+        currencyLabel: asString(s['currencyLabel'], SALES_DEFAULTS.currencyLabel),
+        defaultQuotationValidDays: asNumber(
+          s['defaultQuotationValidDays'],
+          SALES_DEFAULTS.defaultQuotationValidDays,
+        ),
+        debtWarningDays: asNumber(s['debtWarningDays'], SALES_DEFAULTS.debtWarningDays),
+        allowConfirmWithoutAtp: asBool(
+          s['allowConfirmWithoutAtp'],
+          SALES_DEFAULTS.allowConfirmWithoutAtp,
+        ),
+        reserveOnSoConfirm: asBool(s['reserveOnSoConfirm'], true),
+        requireFullReserveOnConfirm: asBool(s['requireFullReserveOnConfirm'], false),
+        skipApproval: asBool(s['skipApproval'], false),
+        skipDiscountRules: asBool(s['skipDiscountRules'], false),
+      },
+    });
+  }
+  return out;
+}
+
+export interface SalesSetupState {
+  sales: SalesSettings;
+  inventory: Pick<
+    InventorySettings,
+    'reserveOnSoConfirm' | 'requireFullReserveOnConfirm'
+  >;
+  flags: SalesSetupFlags;
+  profiles: SalesCompanyProfile[];
+  activeProfileId: ActiveProfileId;
+}
+
+export async function getSalesSetupState(): Promise<SalesSetupState> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const [salesMap, invMap] = await Promise.all([
+    loadNamespaceMap(ctx, 'sales'),
+    loadNamespaceMap(ctx, 'inventory'),
+  ]);
+  const sales: SalesSettings = {
+    currencyLabel: asString(salesMap.get('currency_label'), SALES_DEFAULTS.currencyLabel),
+    debtWarningDays: asNumber(salesMap.get('debt_warning_days'), SALES_DEFAULTS.debtWarningDays),
+    allowConfirmWithoutAtp: asBool(
+      salesMap.get('allow_confirm_without_atp'),
+      SALES_DEFAULTS.allowConfirmWithoutAtp,
+    ),
+    defaultQuotationValidDays: asNumber(
+      salesMap.get('default_quotation_valid_days'),
+      SALES_DEFAULTS.defaultQuotationValidDays,
+    ),
+  };
+  return {
+    sales,
+    inventory: {
+      reserveOnSoConfirm: asBool(
+        invMap.get('reserve_on_so_confirm'),
+        INVENTORY_DEFAULTS.reserveOnSoConfirm,
+      ),
+      requireFullReserveOnConfirm: asBool(
+        invMap.get('require_full_reserve_on_confirm'),
+        INVENTORY_DEFAULTS.requireFullReserveOnConfirm,
+      ),
+    },
+    flags: parseSetupFlags(salesMap.get('setup_flags')),
+    profiles: parseProfiles(salesMap.get('profiles')),
+    activeProfileId: (() => {
+      const v = salesMap.get('active_profile_id');
+      return typeof v === 'string' && v.length > 0 ? v : null;
+    })(),
+  };
+}
+
+async function applySnapshot(
+  ctx: TenantContext,
+  snapshot: SalesProcessSnapshotV1,
+  activeId: string,
+): Promise<void> {
+  await upsertSetting(ctx, 'sales', 'currency_label', snapshot.currencyLabel.trim() || 'VND');
+  await upsertSetting(ctx, 'sales', 'debt_warning_days', snapshot.debtWarningDays);
+  await upsertSetting(
+    ctx,
+    'sales',
+    'allow_confirm_without_atp',
+    snapshot.allowConfirmWithoutAtp,
+  );
+  await upsertSetting(
+    ctx,
+    'sales',
+    'default_quotation_valid_days',
+    snapshot.defaultQuotationValidDays,
+  );
+  await upsertSetting(ctx, 'inventory', 'reserve_on_so_confirm', snapshot.reserveOnSoConfirm);
+  await upsertSetting(
+    ctx,
+    'inventory',
+    'require_full_reserve_on_confirm',
+    snapshot.requireFullReserveOnConfirm && snapshot.reserveOnSoConfirm,
+  );
+  const map = await loadNamespaceMap(ctx, 'sales');
+  const flags = parseSetupFlags(map.get('setup_flags'));
+  const nextFlags: SalesSetupFlags = {
+    ...flags,
+    skipApproval: snapshot.skipApproval,
+    skipDiscountRules: snapshot.skipDiscountRules,
+    ackStockPolicy: true,
+  };
+  await upsertSetting(ctx, 'sales', 'setup_flags', nextFlags);
+  await upsertSetting(ctx, 'sales', 'active_profile_id', activeId);
+}
+
+export async function applySalesPreset(presetId: string): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const preset = SYSTEM_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return { ok: false, error: 'Preset không tồn tại.' };
+  try {
+    await applySnapshot(ctx, preset.snapshot, preset.id);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Áp preset thất bại.' };
+  }
+}
+
+export async function applySalesCompanyProfile(profileId: string): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const map = await loadNamespaceMap(ctx, 'sales');
+  const profiles = parseProfiles(map.get('profiles'));
+  const profile = profiles.find((p) => p.id === profileId);
+  if (!profile) return { ok: false, error: 'Profile không tồn tại.' };
+  try {
+    await applySnapshot(ctx, profile.snapshot, `profile:${profile.id}`);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Áp profile thất bại.' };
+  }
+}
+
+export async function saveSalesCompanyProfile(input: {
+  id?: string;
+  name: string;
+  description: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: 'Tên profile không được để trống.' };
+  if (name.length > 80) return { ok: false, error: 'Tên profile tối đa 80 ký tự.' };
+
+  try {
+    const state = await getSalesSetupState();
+    const now = new Date().toISOString();
+    const snapshot: SalesProcessSnapshotV1 = {
+      schemaVersion: 1,
+      currencyLabel: state.sales.currencyLabel,
+      defaultQuotationValidDays: state.sales.defaultQuotationValidDays,
+      debtWarningDays: state.sales.debtWarningDays,
+      allowConfirmWithoutAtp: state.sales.allowConfirmWithoutAtp,
+      reserveOnSoConfirm: state.inventory.reserveOnSoConfirm,
+      requireFullReserveOnConfirm: state.inventory.requireFullReserveOnConfirm,
+      skipApproval: state.flags.skipApproval,
+      skipDiscountRules: state.flags.skipDiscountRules,
+    };
+
+    let profiles = [...state.profiles];
+    let id = input.id?.trim() ?? '';
+
+    if (id) {
+      const idx = profiles.findIndex((p) => p.id === id);
+      if (idx < 0) return { ok: false, error: 'Profile không tồn tại.' };
+      const prev = profiles[idx]!;
+      profiles[idx] = {
+        ...prev,
+        name,
+        description: input.description.trim(),
+        updatedAt: now,
+        snapshot,
+      };
+    } else {
+      if (profiles.length >= 20) {
+        return { ok: false, error: 'Tối đa 20 profile công ty. Xóa bớt trước khi lưu mới.' };
+      }
+      id = crypto.randomUUID();
+      profiles.push({
+        id,
+        name,
+        description: input.description.trim(),
+        createdAt: now,
+        updatedAt: now,
+        snapshot,
+      });
+    }
+
+    await upsertSetting(ctx, 'sales', 'profiles', profiles);
+    await upsertSetting(ctx, 'sales', 'active_profile_id', `profile:${id}`);
+    return { ok: true, data: { id } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu profile thất bại.' };
+  }
+}
+
+export async function deleteSalesCompanyProfile(profileId: string): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  try {
+    const map = await loadNamespaceMap(ctx, 'sales');
+    const profiles = parseProfiles(map.get('profiles')).filter((p) => p.id !== profileId);
+    const active = asString(map.get('active_profile_id'), '');
+    await upsertSetting(ctx, 'sales', 'profiles', profiles);
+    if (active === `profile:${profileId}` || active === profileId) {
+      await upsertSetting(ctx, 'sales', 'active_profile_id', null);
+    }
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Xóa profile thất bại.' };
+  }
+}
+
+export async function saveSalesSetupFlags(
+  patch: Partial<SalesSetupFlags>,
+): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  try {
+    const map = await loadNamespaceMap(ctx, 'sales');
+    const flags = { ...parseSetupFlags(map.get('setup_flags')), ...patch };
+    await upsertSetting(ctx, 'sales', 'setup_flags', flags);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu cờ setup thất bại.' };
+  }
+}
+
+/** Lưu panel chứng từ — đánh dấu tùy chỉnh thủ công (xóa active profile). */
+export async function saveSalesDocsSettings(input: SalesSettings): Promise<ActionResult> {
+  const saved = await saveSalesSettings(input);
+  if (!saved.ok) return saved;
+  const ctx = await getTenantContext();
+  try {
+    await upsertSetting(ctx, 'sales', 'active_profile_id', null);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+/** Lưu panel tồn + ack checklist. */
+export async function saveSalesStockPolicy(input: {
+  allowConfirmWithoutAtp: boolean;
+  reserveOnSoConfirm: boolean;
+  requireFullReserveOnConfirm: boolean;
+}): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  if (input.requireFullReserveOnConfirm && !input.reserveOnSoConfirm) {
+    return {
+      ok: false,
+      error: 'Không thể bắt buộc giữ chỗ đủ khi đã tắt giữ chỗ khi xác nhận.',
+    };
+  }
+  try {
+    await upsertSetting(
+      ctx,
+      'sales',
+      'allow_confirm_without_atp',
+      input.allowConfirmWithoutAtp,
+    );
+    await upsertSetting(ctx, 'inventory', 'reserve_on_so_confirm', input.reserveOnSoConfirm);
+    await upsertSetting(
+      ctx,
+      'inventory',
+      'require_full_reserve_on_confirm',
+      input.requireFullReserveOnConfirm,
+    );
+    const map = await loadNamespaceMap(ctx, 'sales');
+    const flags = parseSetupFlags(map.get('setup_flags'));
+    await upsertSetting(ctx, 'sales', 'setup_flags', { ...flags, ackStockPolicy: true });
+    await upsertSetting(ctx, 'sales', 'active_profile_id', null);
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };

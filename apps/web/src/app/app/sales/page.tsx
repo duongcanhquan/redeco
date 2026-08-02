@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   ArrowRight,
+  BookOpen,
   FileText,
   ScrollText,
   ShoppingCart,
@@ -48,19 +49,28 @@ export default async function SalesHubPage() {
   }));
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <ShoppingCart className="text-accent" size={24} aria-hidden />
-          <h1 className="text-2xl font-bold">Kinh doanh</h1>
+          <ShoppingCart className="text-accent" size={22} aria-hidden />
+          <h1 className="text-xl sm:text-2xl font-bold">Kinh doanh</h1>
         </div>
-        <p className="text-xs text-ink-muted tabular-nums">
-          {new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`${base}/sales/huong-dan`}
+            className="inline-flex h-11 min-h-11 items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 text-sm font-semibold text-accent hover:bg-accent-soft transition-colors active:scale-[0.98]"
+          >
+            <BookOpen size={18} aria-hidden />
+            HDSD
+          </Link>
+          <p className="text-xs text-ink-muted tabular-nums hidden sm:block">
+            {new Date().toLocaleDateString('vi-VN', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
+          </p>
+        </div>
       </header>
 
       {/* Bento Nhật: lưới bất đối xứng, mỗi ô một việc */}

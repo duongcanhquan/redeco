@@ -38,10 +38,6 @@ export default async function ProductsPage({
             <Package className="text-accent" size={24} aria-hidden />
             Sản phẩm &amp; tồn kho
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Danh mục thành phẩm và tồn kho khả dụng (ATP) khi xác nhận đơn. Sau này chuyển
-            chủ quyền sang module Kho nhà máy.
-          </p>
         </div>
         <ProductDialog />
       </header>

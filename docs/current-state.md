@@ -116,6 +116,15 @@ Spec: `docs/superpowers/specs/2026-08-02-tenant-settings-design.md`.
 - **Honesty**: badge «Đang lưu cấu hình» + HelpTip — AI / webhook / email / SMS chưa gửi thật (chưa có worker).
 - **Verify**: typecheck/lint/build sạch.
 
+### ✅ Hub Setup Kinh doanh + icon menu (2026-08-02)
+
+Spec: `docs/superpowers/specs/2026-08-02-sales-setup-hub-design.md`.
+
+- **Cài đặt → Kinh doanh** (`?tab=sales&panel=`): Tổng quan setup (checklist + %), Chứng từ, Xác nhận & tồn, Duyệt, Chiết khấu, Giao & HĐ, Profile.
+- Preset hệ thống (B2C / B2B / Đại lý) + profile công ty (lưu/áp/ghi đè/xóa) trong `tenant_settings` keys `setup_flags`, `profiles`, `active_profile_id`.
+- Áp snapshot đồng bộ cờ giữ chỗ sang namespace `inventory`; rà soát mâu thuẫn (banner vàng).
+- Icon Lucide chung `lib/hub-nav-icons.tsx` cho sidebar con + HubTabBar.
+
 ### ✅ Sales — In chứng từ + gắn SX + setup AI/Webhook/Email/SMS (2026-08-02)
 
 - **In**: trang print BG / ĐH / GH / HĐ (`/sales/.../[id]/print`) + CSS `@media print`; nút In trên chi tiết/list.
@@ -239,7 +248,7 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 2. Ngữ cảnh hiện tại
 
-- **Menu theo chức danh (N2+R2)** + **perf UX**: skeleton từng phân hệ, chấm pending trên link/tab, thanh tiến trình, cache quyền menu 1 lần/request, router cache 60s.
+- Sidebar: thu/mở desktop (icon rail), drawer phone/tablet; bỏ diễn giải dưới tiêu đề danh mục; bỏ HubTabBar.
 - **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
@@ -249,6 +258,7 @@ Ghi chú kỹ thuật quan trọng:
 
 1. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
 2. Worker webhook/email/SMS; Metadata Engine + R2.
+3. (Tuỳ chọn) Profile v2 nhúng snapshot bước duyệt / rule CK.
 
 ---
 
@@ -285,3 +295,5 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Giữ chỗ tồn khi confirm đơn (RPC + settings); menu + reservation commit |
 | 2026-08-02 | QA fix: R2 tab filter, giữ chỗ cho KD, chỉ kho TP, consume sau validate, redirect layout |
 | 2026-08-02 | Perf UX: loading từng phân hệ, useLinkStatus, cache nav, thanh tiến trình, nút spinner tức thì |
+| 2026-08-02 | HDSD Kinh doanh: trang /sales/huong-dan + nút HDSD trên tổng quan (luồng, mock UI, bảng) |
+| 2026-08-02 | Hub Setup KD: panel/checklist/preset/profile; icon menu hub+sidebar; contrast HDSD |

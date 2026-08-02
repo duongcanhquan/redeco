@@ -63,10 +63,6 @@ export default async function InvoicesPage({
             <FileText className="text-accent" size={24} aria-hidden />
             Hóa đơn
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Sinh từ đơn đã giao. Cảnh báo tuổi nợ sau {warnDays} ngày kể từ ngày phát hành
-            (Cài đặt → Kinh doanh).
-          </p>
         </div>
         <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5 min-h-11">
           <Wallet

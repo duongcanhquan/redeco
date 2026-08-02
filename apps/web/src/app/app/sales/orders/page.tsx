@@ -75,9 +75,6 @@ export default async function SalesOrdersPage({
             <ScrollText className="text-accent" size={24} aria-hidden />
             Đơn đặt hàng
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Xác nhận đơn kiểm tra hạn mức tín dụng và tồn kho khả dụng (ATP).
-          </p>
         </div>
         <OrderDialog customers={activeCustomers} products={activeProducts} />
       </header>

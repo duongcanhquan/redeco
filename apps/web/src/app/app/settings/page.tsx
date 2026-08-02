@@ -18,6 +18,8 @@ import { formatDate } from '@/lib/format';
 import { getSessionClaims } from '@/lib/supabase/server';
 import { getMyRootModules, getTenantContext } from '@/services/sales.service';
 import { getEntitledModuleTree, getSeatInfo } from '@/services/tenant-admin.service';
+import { parseSalesSetupPanel } from '@/lib/sales-setup';
+import { listApprovalWorkflows, listDiscountRules } from '@/services/sales-config.service';
 import {
   getAccountingSettings,
   getAiSettings,
@@ -25,7 +27,7 @@ import {
   getInventorySettings,
   getNotificationsSettings,
   getProductionSettings,
-  getSalesSettings,
+  getSalesSetupState,
 } from '@/services/tenant-settings.service';
 import { AccountingSettingsForm } from './accounting-settings-form';
 import { AiSettingsForm } from './ai-settings-form';
@@ -33,7 +35,7 @@ import { IntegrationsForm } from './integrations-form';
 import { InventorySettingsForm } from './inventory-settings-form';
 import { NotificationsForm } from './notifications-form';
 import { ProductionSettingsForm } from './production-settings-form';
-import { SalesSettingsForm } from './sales-settings-form';
+import { SalesSetupHub } from './sales-setup-hub';
 import { SettingsGroup } from './settings-group';
 
 export const dynamic = 'force-dynamic';
@@ -51,9 +53,10 @@ type TabKey =
 export default async function TenantSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; panel?: string }>;
 }) {
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, panel: rawPanel } = await searchParams;
+  const salesPanel = parseSalesSetupPanel(rawPanel);
   const ctx = await getTenantContext();
   const claims = await getSessionClaims();
   const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
@@ -161,17 +164,32 @@ export default async function TenantSettingsPage({
       : []),
   ];
 
-  const [ai, sales, inventory, production, accounting, integrations, notifications] = isManager
+  const [
+    ai,
+    salesSetup,
+    inventory,
+    production,
+    accounting,
+    integrations,
+    notifications,
+    workflows,
+    discountRules,
+  ] = isManager
     ? await Promise.all([
         safeTab === 'ai' ? getAiSettings() : Promise.resolve(null),
-        safeTab === 'sales' && hasSales ? getSalesSettings() : Promise.resolve(null),
+        safeTab === 'sales' && hasSales ? getSalesSetupState() : Promise.resolve(null),
         safeTab === 'inventory' && hasKho ? getInventorySettings() : Promise.resolve(null),
         safeTab === 'production' && hasSx ? getProductionSettings() : Promise.resolve(null),
         safeTab === 'accounting' && hasKt ? getAccountingSettings() : Promise.resolve(null),
         safeTab === 'integrations' ? getIntegrationsSettings() : Promise.resolve(null),
         safeTab === 'notifications' ? getNotificationsSettings() : Promise.resolve(null),
+        safeTab === 'sales' && hasSales ? listApprovalWorkflows() : Promise.resolve([]),
+        safeTab === 'sales' && hasSales ? listDiscountRules() : Promise.resolve([]),
       ])
-    : [null, null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null, [], []];
+
+  const defaultWorkflow = workflows.find((w) => w.is_default && w.is_active) ?? null;
+  const activeDiscountRuleCount = discountRules.filter((r) => r.is_active).length;
 
   return (
     <div className="space-y-5">
@@ -180,7 +198,6 @@ export default async function TenantSettingsPage({
           <Settings className="text-accent" size={24} aria-hidden />
           Cài đặt công ty
         </h1>
-        <p className="text-sm text-ink-muted mt-1">Chọn tab bên dưới để chỉnh từng phần.</p>
       </header>
 
       <TabBar items={tabs} activeKey={safeTab} />
@@ -258,8 +275,20 @@ export default async function TenantSettingsPage({
       )}
 
       {safeTab === 'ai' && ai && <AiSettingsForm initial={ai} />}
-      {safeTab === 'sales' && sales && (
-        <SalesSettingsForm initial={sales} basePath={base} />
+      {safeTab === 'sales' && salesSetup && (
+        <SalesSetupHub
+          basePath={base}
+          panel={salesPanel}
+          sales={salesSetup.sales}
+          inventory={salesSetup.inventory}
+          flags={salesSetup.flags}
+          profiles={salesSetup.profiles}
+          activeProfileId={salesSetup.activeProfileId}
+          hasDefaultWorkflow={defaultWorkflow !== null}
+          defaultWorkflowName={defaultWorkflow?.name ?? null}
+          activeDiscountRuleCount={activeDiscountRuleCount}
+          hasKhoModule={hasKho}
+        />
       )}
       {safeTab === 'inventory' && inventory && <InventorySettingsForm initial={inventory} />}
       {safeTab === 'production' && production && (

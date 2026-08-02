@@ -26,9 +26,6 @@ export default async function WarehousesPage() {
             <Warehouse className="text-accent" size={24} aria-hidden />
             Danh mục kho
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            KHO-TP / KHO-NVL tạo mặc định khi đồng bộ. Thêm kho phụ theo nhà máy.
-          </p>
         </div>
         <WarehouseDialog />
       </header>

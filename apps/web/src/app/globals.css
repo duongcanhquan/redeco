@@ -692,3 +692,45 @@ body {
   color: #64748b;
   font-weight: 600;
 }
+
+/* ============================================================
+   HDSD Kinh doanh — chữ trắng rõ trên nền navy/cyan
+   (không đổi token toàn app; chỉ phạm vi .sales-guide)
+   ============================================================ */
+.sales-guide {
+  /* Ghi đè token cục bộ → mọi text-ink / text-ink-muted (+ /opacity) đều sáng hơn */
+  --color-ink: #ffffff;
+  --color-ink-muted: #f1f5f9; /* gần trắng; trước đó #94a3b8 quá nhờ */
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.sales-guide h1,
+.sales-guide h2,
+.sales-guide h3 {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.sales-guide table th {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.sales-guide table td {
+  color: #f8fafc;
+}
+
+.sales-guide a:not(.text-accent):not(.text-success):not(.text-warning):not(.text-danger) {
+  color: #f8fafc;
+}
+
+.sales-guide .glass {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sales-guide strong {
+  color: #ffffff;
+  font-weight: 700;
+}

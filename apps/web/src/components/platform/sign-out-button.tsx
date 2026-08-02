@@ -5,16 +5,36 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-export function SignOutButton({ redirectTo = '/login' }: { redirectTo?: string }) {
+export function SignOutButton({
+  redirectTo = '/login',
+  iconOnly = false,
+}: {
+  redirectTo?: string;
+  iconOnly?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleSignOut = async (): Promise<void> => {
     setLoading(true);
     await createClient().auth.signOut();
-    // Quay về đúng trang login của khu vực (vd /{slug}/login của công ty)
     router.replace(redirectTo);
   };
+
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={() => void handleSignOut()}
+        disabled={loading}
+        aria-label={loading ? 'Đang thoát…' : 'Đăng xuất'}
+        title="Đăng xuất"
+        className="grid size-11 mx-auto place-items-center rounded-xl text-ink-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger cursor-pointer disabled:opacity-50"
+      >
+        <LogOut size={18} aria-hidden />
+      </button>
+    );
+  }
 
   return (
     <button

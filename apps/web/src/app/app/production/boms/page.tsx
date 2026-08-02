@@ -41,13 +41,8 @@ export default async function BomsPage() {
       <PageHeader
         icon={<Layers size={24} />}
         title="Định mức nguyên liệu"
-        helpTitle="Cách dùng"
-        help={
-          <>
-            <p>Tạo định mức → Kích hoạt để dùng cho lệnh sản xuất.</p>
-            <p>Mỗi thành phẩm chỉ có một định mức đang dùng.</p>
-          </>
-        }
+        helpTitle="Định mức"
+        help={<p>Mỗi thành phẩm chỉ có một định mức đang dùng.</p>}
       />
 
       <CreateBomForm

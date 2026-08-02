@@ -10,31 +10,58 @@ export function NavLink({
   icon,
   label,
   exact = false,
+  nested = false,
+  iconOnly = false,
 }: {
   href: string;
   icon: ReactNode;
   label: string;
-  /** Route gốc của khu vực (vd /{slug}, /platform) chỉ active khi khớp chính xác */
   exact?: boolean;
+  nested?: boolean;
+  /** Chỉ hiện icon (sidebar thu gọn) */
+  iconOnly?: boolean;
 }) {
   const pathname = usePathname();
   const isRootWorkspace =
     href === '/platform' || href === '/app' || /^\/[a-z0-9-]+$/i.test(href);
   const active = exact || isRootWorkspace ? pathname === href : pathname.startsWith(href);
 
+  if (iconOnly) {
+    return (
+      <Link
+        href={href}
+        prefetch
+        aria-current={active ? 'page' : undefined}
+        aria-label={label}
+        title={label}
+        className={`grid size-11 place-items-center rounded-xl transition-colors duration-100 cursor-pointer active:scale-[0.98] mx-auto ${
+          active
+            ? 'bg-accent-soft text-accent border border-accent/30'
+            : 'text-ink-muted hover:bg-glass-strong hover:text-ink border border-transparent'
+        }`}
+      >
+        {icon}
+        <span className="sr-only">{label}</span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={href}
       prefetch
       aria-current={active ? 'page' : undefined}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-[colors,transform,opacity] duration-100 cursor-pointer whitespace-nowrap active:scale-[0.98] ${
+      title={label}
+      className={`flex items-start gap-2 rounded-xl text-sm transition-[colors,transform,opacity] duration-100 cursor-pointer active:scale-[0.98] ${
+        nested ? 'px-2 py-2 min-h-10' : 'px-2.5 py-2.5 min-h-11 gap-2.5'
+      } ${
         active
           ? 'bg-accent-soft text-accent font-semibold border border-accent/30'
           : 'text-ink-muted hover:bg-glass-strong hover:text-ink border border-transparent'
       }`}
     >
-      {icon}
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="shrink-0 mt-0.5">{icon}</span>
+      <span className="min-w-0 flex-1 leading-snug whitespace-normal break-words">{label}</span>
       <NavPendingHint />
     </Link>
   );

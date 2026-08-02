@@ -91,15 +91,10 @@ export default async function QuotationsPage({
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileText className="text-accent" size={24} aria-hidden />
-            Báo giá
-          </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Nháp → Gửi duyệt (chuỗi N cấp) → Duyệt từng bước → Chuyển thành đơn hàng.
-          </p>
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+          <FileText className="text-accent" size={22} aria-hidden />
+          Báo giá
+        </h1>
         <QuotationDialog
           customers={activeCustomers}
           products={activeProducts}

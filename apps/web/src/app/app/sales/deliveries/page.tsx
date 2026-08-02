@@ -40,9 +40,6 @@ export default async function DeliveriesPage({
           <Truck className="text-accent" size={24} aria-hidden />
           Lệnh giao hàng
         </h1>
-        <p className="text-sm text-ink-muted mt-1">
-          Tạo từ Đơn hàng đã xác nhận. “Xuất kho” trừ tồn nguyên tử — chặn nếu thiếu hàng.
-        </p>
       </header>
 
       <StatusFilterBar

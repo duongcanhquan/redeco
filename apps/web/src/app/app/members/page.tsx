@@ -40,9 +40,6 @@ export default async function MembersPage() {
             <Users className="text-accent" size={24} aria-hidden />
             Thành viên
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Tạo tài khoản theo chức năng và phân công module từ những module công ty đang có.
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <span

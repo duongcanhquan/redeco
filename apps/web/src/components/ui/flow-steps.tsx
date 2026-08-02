@@ -46,7 +46,7 @@ export function FlowSteps({ steps, ariaLabel }: { steps: FlowStep[]; ariaLabel: 
             {i < steps.length - 1 && (
               <ChevronRight
                 size={16}
-                className="text-ink-muted/50 shrink-0 mx-0.5"
+                className="text-ink-muted shrink-0 mx-0.5 opacity-80"
                 aria-hidden
               />
             )}

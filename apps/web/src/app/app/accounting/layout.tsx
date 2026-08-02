@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { HubTabBar } from '@/components/workspace/hub-tab-bar';
+import { HubRouteGuard } from '@/components/workspace/hub-route-guard';
 import { getWorkspaceNavContext } from '@/services/module-access.service';
 
 export default async function AccountingLayout({
@@ -12,9 +12,9 @@ export default async function AccountingLayout({
   }
 
   return (
-    <div className="space-y-4">
-      <HubTabBar base={nav.base} tabs={nav.accountingTabs} />
+    <>
+      <HubRouteGuard base={nav.base} tabs={nav.accountingTabs} />
       {children}
-    </div>
+    </>
   );
 }

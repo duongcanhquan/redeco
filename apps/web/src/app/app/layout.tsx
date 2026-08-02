@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
-import { LogoMark } from '@/components/brand/logo';
 import { NavProgress } from '@/components/platform/nav-progress';
-import { SidebarNav, type SidebarModuleItem } from '@/components/workspace/sidebar-nav';
+import { WorkspaceShell } from '@/components/workspace/workspace-shell';
+import type { SidebarModuleItem } from '@/components/workspace/sidebar-nav';
 import { getWorkspaceNavContext } from '@/services/module-access.service';
 
-/** Gợi ý phân hệ chưa có màn hình */
+/** Module chưa có màn — chỉ hiện tên, gợi ý qua title. */
 const MODULE_COMING_SOON: Record<string, string> = {
-  'nhan-su': 'Hồ sơ · chấm công — đang thiết kế',
-  'hanh-chinh': 'Văn bản · tài sản — đang thiết kế',
-  'thiet-bi': 'Máy móc · bảo trì — đang thiết kế',
+  'nhan-su': 'Đang thiết kế',
+  'hanh-chinh': 'Đang thiết kế',
+  'thiet-bi': 'Đang thiết kế',
 };
 
 export default async function WorkspaceLayout({
@@ -77,30 +77,17 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row bg-app">
+    <>
       <NavProgress />
-      <aside className="glass lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:flex lg:flex-col shrink-0 border-b lg:border-b-0 lg:border-r border-panel/40 bg-app-deep/60 no-print">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <LogoMark size={40} />
-          <div className="min-w-0">
-            <p className="font-bold leading-tight tracking-wide truncate">{companyName}</p>
-            <p className="text-xs text-ink-muted">
-              <span className="text-accent">O</span>ptimake Workspace
-            </p>
-          </div>
-        </div>
-
-        <SidebarNav
-          base={base}
-          isManager={isManager}
-          modules={modules}
-          loginRedirect={slug ? `/${slug}/login` : '/login'}
-        />
-      </aside>
-
-      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8 max-w-7xl w-full mx-auto">
+      <WorkspaceShell
+        companyName={companyName}
+        base={base}
+        isManager={isManager}
+        modules={modules}
+        loginRedirect={slug ? `/${slug}/login` : '/login'}
+      >
         {children}
-      </main>
-    </div>
+      </WorkspaceShell>
+    </>
   );
 }

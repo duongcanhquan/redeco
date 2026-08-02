@@ -87,13 +87,13 @@ const SALES_TAB_DEFS: Record<SalesTabKey, HubTabDef> = {
   },
   'chiet-khau': {
     key: 'chiet-khau',
-    label: 'Chiết khấu / khuyến mãi',
+    label: 'Chiết khấu',
     path: '/sales/discount-rules',
     matchPrefixes: ['/sales/discount-rules'],
   },
   duyet: {
     key: 'duyet',
-    label: 'Quy trình duyệt',
+    label: 'Duyệt',
     path: '/sales/approvals',
     matchPrefixes: ['/sales/approvals'],
   },
@@ -178,7 +178,7 @@ const INVENTORY_DEFS: Record<InventoryTabKey, HubTabDef> = {
   },
   'ton-kho': {
     key: 'ton-kho',
-    label: 'Tồn kho (số còn bán được)',
+    label: 'Tồn kho',
     path: '/inventory/stock',
     matchPrefixes: ['/inventory/stock'],
   },
@@ -226,13 +226,13 @@ const PRODUCTION_DEFS: Record<ProductionTabKey, HubTabDef> = {
   },
   'dinh-muc': {
     key: 'dinh-muc',
-    label: 'Định mức nguyên vật liệu (BOM)',
+    label: 'Định mức (BOM)',
     path: '/production/boms',
     matchPrefixes: ['/production/boms'],
   },
   'lenh-sx': {
     key: 'lenh-sx',
-    label: 'Lệnh sản xuất (LSX)',
+    label: 'Lệnh SX',
     path: '/production/work-orders',
     matchPrefixes: ['/production/work-orders'],
   },
@@ -270,11 +270,19 @@ export function stripWorkspaceBase(pathname: string, base: string): string {
 /**
  * Tab active: khớp prefix dài nhất (tránh /sales khớp mọi trang con).
  * Tổng quan /sales chỉ active khi path === /sales (không có đoạn con).
+ * Ngoại lệ: /sales/huong-dan thuộc Tổng quan.
  */
 export function resolveActiveTabKey(
   appPath: string,
   tabs: readonly HubTabDef[],
 ): string | null {
+  if (
+    (appPath === '/sales/huong-dan' || appPath.startsWith('/sales/huong-dan/')) &&
+    tabs.some((t) => t.key === 'tong-quan')
+  ) {
+    return 'tong-quan';
+  }
+
   let best: { key: string; len: number } | null = null;
   for (const tab of tabs) {
     for (const prefix of tab.matchPrefixes) {
