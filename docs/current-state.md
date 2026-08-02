@@ -248,7 +248,7 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 2. Ngữ cảnh hiện tại
 
-- Sidebar: thu/mở desktop (icon rail), drawer phone/tablet; bỏ diễn giải dưới tiêu đề danh mục; bỏ HubTabBar; menu phân hệ không sổ xuống.
+- Sidebar: thu/mở desktop (icon rail), drawer phone/tablet; bỏ diễn giải dưới tiêu đề danh mục; bỏ HubTabBar; phân hệ có nút sổ + mục con.
 - Login: vòng giữa màn; Optimake giữa đỉnh & mép ngoài vòng; tên CT sát mép trong trên; form đẩy xuống dưới.
 - AI = module catalog `ai` (+ `ai.kinh-doanh.*`): superadmin cấp trên HĐ; admin công ty cấu hình key + cờ; runtime hỏi đáp / đánh giá BG·ĐH.
 - **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.

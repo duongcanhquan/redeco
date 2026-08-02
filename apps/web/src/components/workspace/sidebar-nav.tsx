@@ -3,6 +3,7 @@
 import {
   Boxes,
   Calculator,
+  ChevronDown,
   Factory,
   LayoutDashboard,
   Settings,
@@ -11,10 +12,13 @@ import {
   UserRound,
   Warehouse,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from '@/components/platform/nav-link';
 import { SignOutButton } from '@/components/platform/sign-out-button';
+import { hubTabIcon } from '@/lib/hub-nav-icons';
 import type { HubTabDef } from '@/lib/workspace-nav';
+import { stripWorkspaceBase } from '@/lib/workspace-nav';
 
 export interface SidebarModuleItem {
   key: string;
@@ -42,6 +46,15 @@ function ModuleBlock({
   base: string;
   collapsed: boolean;
 }) {
+  const pathname = usePathname() ?? '';
+  const appPath = stripWorkspaceBase(pathname, base);
+  const inModule = appPath === item.href || appPath.startsWith(`${item.href}/`);
+  const [open, setOpen] = useState(inModule);
+
+  useEffect(() => {
+    if (inModule) setOpen(true);
+  }, [inModule]);
+
   if (item.comingSoonHint) {
     return (
       <span
@@ -56,13 +69,59 @@ function ModuleBlock({
     );
   }
 
+  const subTabs = item.tabs.filter((t) => t.key !== 'tong-quan');
+
+  if (collapsed) {
+    return (
+      <NavLink
+        href={`${base}${item.href}`}
+        label={item.label}
+        icon={MODULE_ICONS[item.icon]}
+        iconOnly
+      />
+    );
+  }
+
   return (
-    <NavLink
-      href={`${base}${item.href}`}
-      label={item.label}
-      icon={MODULE_ICONS[item.icon]}
-      iconOnly={collapsed}
-    />
+    <div className="space-y-0.5">
+      <div className="flex items-stretch gap-0.5">
+        <div className="min-w-0 flex-1">
+          <NavLink
+            href={`${base}${item.href}`}
+            label={item.label}
+            icon={MODULE_ICONS[item.icon]}
+          />
+        </div>
+        {subTabs.length > 0 && (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={open ? `Thu gọn ${item.label}` : `Mở rộng ${item.label}`}
+            onClick={() => setOpen((v) => !v)}
+            className="grid size-10 shrink-0 place-items-center rounded-xl text-ink-muted hover:text-accent hover:bg-glass-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <ChevronDown
+              size={18}
+              aria-hidden
+              className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            />
+          </button>
+        )}
+      </div>
+      {open && subTabs.length > 0 && (
+        <div className="ml-1 space-y-0.5 border-l border-panel/30 pl-1.5">
+          {subTabs.map((t) => (
+            <NavLink
+              key={t.key}
+              href={`${base}${t.path}`}
+              label={t.label}
+              icon={hubTabIcon(t.key, 15)}
+              nested
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -134,7 +193,7 @@ export function SidebarNav({
         iconOnly={collapsed}
       />
 
-      <div className={`mt-2 pt-2 border-t border-panel/40 ${collapsed ? '' : ''}`}>
+      <div className="mt-2 border-t border-panel/40 pt-2">
         {collapsed ? (
           <SignOutButton redirectTo={loginRedirect} iconOnly />
         ) : (
