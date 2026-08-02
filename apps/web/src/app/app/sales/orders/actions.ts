@@ -52,6 +52,30 @@ export async function createInvoiceFromOrderAction(
   orderId: string,
 ): Promise<ActionResult<{ id: string; code: string }>> {
   const result = await createInvoice(orderId);
-  if (result.ok) revalidateSales();
+  if (result.ok) {
+    const { processPendingAccountingOutbox } = await import(
+      '@/services/accounting.service'
+    );
+    await processPendingAccountingOutbox();
+    revalidateSales();
+  }
+  return result;
+}
+
+export async function createWorkOrdersFromOrderAction(
+  orderId: string,
+): Promise<
+  ActionResult<{ created: { code: string; productName: string; qty: number }[] }>
+> {
+  const { createWorkOrdersFromSalesOrder } = await import(
+    '@/services/production.service'
+  );
+  const result = await createWorkOrdersFromSalesOrder(orderId);
+  if (result.ok) {
+    revalidatePath('/app/sales/orders');
+    revalidatePath(`/app/sales/orders/${orderId}`);
+    revalidatePath('/app/production/work-orders');
+    revalidatePath('/app/production');
+  }
   return result;
 }

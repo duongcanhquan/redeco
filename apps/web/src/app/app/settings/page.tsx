@@ -3,11 +3,14 @@ import {
   Bot,
   Boxes,
   Building2,
+  Calculator,
   CalendarClock,
+  Factory,
   Plug,
   Settings,
   ShoppingCart,
   Users,
+  Warehouse,
 } from 'lucide-react';
 import { ModuleTreePicker } from '@/components/platform/module-tree-picker';
 import { TabBar } from '@/components/platform/tab-bar';
@@ -16,20 +19,34 @@ import { getSessionClaims } from '@/lib/supabase/server';
 import { getMyRootModules, getTenantContext } from '@/services/sales.service';
 import { getEntitledModuleTree, getSeatInfo } from '@/services/tenant-admin.service';
 import {
+  getAccountingSettings,
   getAiSettings,
   getIntegrationsSettings,
+  getInventorySettings,
   getNotificationsSettings,
+  getProductionSettings,
   getSalesSettings,
 } from '@/services/tenant-settings.service';
+import { AccountingSettingsForm } from './accounting-settings-form';
 import { AiSettingsForm } from './ai-settings-form';
 import { IntegrationsForm } from './integrations-form';
+import { InventorySettingsForm } from './inventory-settings-form';
 import { NotificationsForm } from './notifications-form';
+import { ProductionSettingsForm } from './production-settings-form';
 import { SalesSettingsForm } from './sales-settings-form';
 import { SettingsGroup } from './settings-group';
 
 export const dynamic = 'force-dynamic';
 
-type TabKey = 'overview' | 'ai' | 'sales' | 'integrations' | 'notifications';
+type TabKey =
+  | 'overview'
+  | 'ai'
+  | 'sales'
+  | 'inventory'
+  | 'production'
+  | 'accounting'
+  | 'integrations'
+  | 'notifications';
 
 export default async function TenantSettingsPage({
   searchParams,
@@ -50,10 +67,16 @@ export default async function TenantSettingsPage({
   ]);
   const info = tenant as { name: string; slug: string } | null;
   const hasSales = modules.some((m) => m.key === 'kinh-doanh');
+  const hasKho = modules.some((m) => m.key === 'kho');
+  const hasSx = modules.some((m) => m.key === 'san-xuat');
+  const hasKt = modules.some((m) => m.key === 'ke-toan');
 
   const tab: TabKey =
     rawTab === 'ai' ||
     rawTab === 'sales' ||
+    rawTab === 'inventory' ||
+    rawTab === 'production' ||
+    rawTab === 'accounting' ||
     rawTab === 'integrations' ||
     rawTab === 'notifications'
       ? rawTab
@@ -61,9 +84,11 @@ export default async function TenantSettingsPage({
 
   // Member chỉ xem Tổng quan; tab khác fallback overview
   const activeTab: TabKey = !isManager && tab !== 'overview' ? 'overview' : tab;
-  // Sales tab chỉ khi có module
-  const safeTab: TabKey =
-    activeTab === 'sales' && !hasSales ? 'overview' : activeTab;
+  let safeTab: TabKey = activeTab;
+  if (safeTab === 'sales' && !hasSales) safeTab = 'overview';
+  if (safeTab === 'inventory' && !hasKho) safeTab = 'overview';
+  if (safeTab === 'production' && !hasSx) safeTab = 'overview';
+  if (safeTab === 'accounting' && !hasKt) safeTab = 'overview';
 
   const tabs = [
     {
@@ -90,6 +115,36 @@ export default async function TenantSettingsPage({
                 },
               ]
             : []),
+          ...(hasKho
+            ? [
+                {
+                  key: 'inventory',
+                  label: 'Kho',
+                  icon: <Warehouse size={16} aria-hidden />,
+                  href: `${base}/settings?tab=inventory`,
+                },
+              ]
+            : []),
+          ...(hasSx
+            ? [
+                {
+                  key: 'production',
+                  label: 'Sản xuất',
+                  icon: <Factory size={16} aria-hidden />,
+                  href: `${base}/settings?tab=production`,
+                },
+              ]
+            : []),
+          ...(hasKt
+            ? [
+                {
+                  key: 'accounting',
+                  label: 'Kế toán',
+                  icon: <Calculator size={16} aria-hidden />,
+                  href: `${base}/settings?tab=accounting`,
+                },
+              ]
+            : []),
           {
             key: 'integrations',
             label: 'Tích hợp',
@@ -98,7 +153,7 @@ export default async function TenantSettingsPage({
           },
           {
             key: 'notifications',
-            label: 'Thông báo',
+            label: 'Email & SMS',
             icon: <Bell size={16} aria-hidden />,
             href: `${base}/settings?tab=notifications`,
           },
@@ -106,14 +161,17 @@ export default async function TenantSettingsPage({
       : []),
   ];
 
-  const [ai, sales, integrations, notifications] = isManager
+  const [ai, sales, inventory, production, accounting, integrations, notifications] = isManager
     ? await Promise.all([
         safeTab === 'ai' ? getAiSettings() : Promise.resolve(null),
         safeTab === 'sales' && hasSales ? getSalesSettings() : Promise.resolve(null),
+        safeTab === 'inventory' && hasKho ? getInventorySettings() : Promise.resolve(null),
+        safeTab === 'production' && hasSx ? getProductionSettings() : Promise.resolve(null),
+        safeTab === 'accounting' && hasKt ? getAccountingSettings() : Promise.resolve(null),
         safeTab === 'integrations' ? getIntegrationsSettings() : Promise.resolve(null),
         safeTab === 'notifications' ? getNotificationsSettings() : Promise.resolve(null),
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null, null, null];
 
   return (
     <div className="space-y-5">
@@ -122,10 +180,7 @@ export default async function TenantSettingsPage({
           <Settings className="text-accent" size={24} aria-hidden />
           Cài đặt công ty
         </h1>
-        <p className="text-sm text-ink-muted mt-1 max-w-2xl">
-          Cấu hình riêng của doanh nghiệp bạn: gói dịch vụ, API AI, tham số từng module và tích
-          hợp. Mỗi tab một nhóm việc — không trộn API với quy trình bán hàng.
-        </p>
+        <p className="text-sm text-ink-muted mt-1">Chọn tab bên dưới để chỉnh từng phần.</p>
       </header>
 
       <TabBar items={tabs} activeKey={safeTab} />
@@ -205,6 +260,13 @@ export default async function TenantSettingsPage({
       {safeTab === 'ai' && ai && <AiSettingsForm initial={ai} />}
       {safeTab === 'sales' && sales && (
         <SalesSettingsForm initial={sales} basePath={base} />
+      )}
+      {safeTab === 'inventory' && inventory && <InventorySettingsForm initial={inventory} />}
+      {safeTab === 'production' && production && (
+        <ProductionSettingsForm initial={production} />
+      )}
+      {safeTab === 'accounting' && accounting && (
+        <AccountingSettingsForm initial={accounting} />
       )}
       {safeTab === 'integrations' && integrations && (
         <IntegrationsForm initial={integrations} />

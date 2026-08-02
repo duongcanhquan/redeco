@@ -7,8 +7,8 @@
 ---
 
 **Project:** Optimake
-**Generated:** 2026-08-01 21:18:53
-**Category:** Smart Home/IoT Dashboard
+**Generated:** 2026-08-02 09:07:04
+**Category:** Creator Economy Platform
 
 ---
 
@@ -33,14 +33,14 @@
 
 ### Typography
 
-- **Heading Font:** Plus Jakarta Sans
-- **Body Font:** Plus Jakarta Sans
-- **Mood:** enterprise, saas, b2b, professional, indigo, modern, approachable, legible, ios dynamic type, android scaling
-- **Google Fonts:** [Plus Jakarta Sans + Plus Jakarta Sans](https://fonts.google.com/share?selection.family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400)
+- **Heading Font:** Noto Serif JP
+- **Body Font:** Noto Sans JP
+- **Mood:** japanese, elegant, traditional, modern, multilingual, readable
+- **Google Fonts:** [Noto Serif JP + Noto Sans JP](https://fonts.google.com/share?selection.family=Noto+Sans+JP:wght@300;400;500;700|Noto+Serif+JP:wght@400;500;600;700)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;500;600;700&display=swap');
 ```
 
 ### Spacing Variables
@@ -158,13 +158,13 @@
 
 ## Style Guidelines
 
-**Style:** Dark Mode (OLED)
+**Style:** Bento Box Grid
 
-**Keywords:** Dark theme, low light, high contrast, deep black, midnight blue, eye-friendly, OLED, night mode, power efficient
+**Keywords:** Modular cards, asymmetric grid, varied sizes, Apple-style, dashboard tiles, negative space, clean hierarchy, cards
 
-**Best For:** Night-mode apps, coding platforms, entertainment, eye-strain prevention, OLED devices, low-light
+**Best For:** Dashboards, product pages, portfolios, Apple-style marketing, feature showcases, SaaS
 
-**Key Effects:** Minimal glow (text-shadow: 0 0 10px), dark-to-light transitions, low white emission, high readability, visible focus
+**Key Effects:** grid-template with varied spans, rounded-xl (16px), subtle shadows, hover scale (1.02), smooth transitions
 
 ### Page Pattern
 
@@ -178,8 +178,8 @@
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Slow updates
-- ❌ No automation
+- ❌ Generic layout
+- ❌ Hidden earnings
 
 ### Additional Forbidden Patterns
 

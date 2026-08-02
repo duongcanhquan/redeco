@@ -106,3 +106,32 @@ Quy tắc: ADR đã ghi không bị sửa/xóa. Nếu quyết định thay đổ
   - ✅ Vẫn giữ phân lớp: Server Action (controller) → `services/platform-admin.service.ts` (business logic + validation + rollback) → Supabase client (data access). Mọi action gọi `assertPlatformAdmin()` kiểm tra JWT server-side trước khi chạy.
   - ✅ Package `server-only` chặn import nhầm admin client vào client bundle ngay lúc build.
   - ⚠️ Đánh đổi: logic platform tạm nằm ở apps/web thay vì apps/api; khi NestJS API sẵn sàng (JWKS guard, cron nhắc hạn), các nghiệp vụ phức tạp/cron sẽ chuyển dần sang API — service đã tách riêng nên di chuyển ít tốn kém.
+
+## ADR-010
+
+- **Ngày**: 2026-08-02
+- **Quyết định**: Mọi module nghiệp vụ (Sales, Kho, Sản xuất, Kế toán…) phải **cá nhân hóa theo từng công ty (tenant)** và cho phép **setup quy trình linh hoạt** — không hard-code một quy trình cố định cho mọi khách.
+- **Ngữ cảnh**: Công ty sản xuất khác nhau về ca SX, kho mặc định, cho phép thiếu NVL khi release LSX, lead time CTP, duyệt báo giá N cấp, chiết khấu… Người dùng yêu cầu rõ: thay đổi / cá nhân hóa theo từng công ty; quy trình setup được.
+- **Cơ chế bắt buộc**:
+  1. **Static cột + JSONB `attributes`** trên aggregate (theo `database.mdc`) cho field riêng DN.
+  2. **`tenant_settings`** theo namespace module (`sales` | `inventory` | `production` | …) cho tham số vận hành và cờ quy trình.
+  3. **Bảng cấu hình quy trình** khi cần N bước / điều kiện (ví dụ `approval_workflows`; sau này `production_process_profiles`).
+  4. **UI metadata (R2)** dài hạn cho form/grid khác nhau từng tenant — không hard-code field list trong React theo từng khách.
+- **Hậu quả/Kết quả**:
+  - ✅ Mỗi tenant tự chỉnh tham số trong Cài đặt + trang cấu hình module.
+  - ✅ Domain enforce invariant chung; phần linh hoạt nằm ở settings/workflow tables + `attributes`.
+  - ⚠️ Đánh đổi: nhiều đường cấu hình hơn — bắt buộc document default trên UI; không để cờ settings chết (không wire).
+
+## ADR-011
+
+- **Ngày**: 2026-08-02
+- **Quyết định**: Module nghiệp vụ là **composable**: công ty có thể không dùng / dùng một phần / ghép công đoạn. Lộ trình Kho → SX → KT là thứ tự *xây dựng*, không bắt buộc *bật hết*.
+- **Ngữ cảnh**: Không phải DN nào cũng cần full MES; có công ty chỉ Sales, chỉ Sales+KT, Sales+Kho không SX… Hard-wire chuỗi sẽ phá O2C khi thiếu module.
+- **Ba lớp**:
+  1. **Entitlement** (hợp đồng): có quyền module gốc (`kho`, `san-xuat`, `ke-toan`…).
+  2. **Capability** (`tenant_settings.<module>`): bật/tắt công đoạn trong module (vd `accounting.ar_enabled`, `accounting.cogs_enabled`).
+  3. **Optional adapter**: gọi liên module luôn fail-soft (skip / fallback đã định nghĩa) — không throw làm đứt luồng chính.
+- **Hậu quả/Kết quả**:
+  - ✅ Sales chạy không cần Kho/SX/KT; KT chỉ AR khi tắt COGS; COGS chỉ khi entitle Kho + `cogs_enabled`.
+  - ✅ UI/menu theo entitlement + capability.
+  - ⚠️ Cần catalog capability có default + mô tả trên Cài đặt; tránh cờ chết.

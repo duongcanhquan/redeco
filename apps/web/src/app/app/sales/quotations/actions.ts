@@ -6,6 +6,7 @@ import {
   convertQuotationToOrder,
   createQuotation,
   setQuotationStatus,
+  updateQuotation,
   type ActionResult,
   type QuotationInput,
 } from '@/services/sales.service';
@@ -15,6 +16,18 @@ export async function createQuotationAction(
 ): Promise<ActionResult<{ id: string; code: string; appliedRuleId: string | null }>> {
   const result = await createQuotation(input);
   if (result.ok) revalidatePath('/app/sales/quotations');
+  return result;
+}
+
+export async function updateQuotationAction(
+  quotationId: string,
+  input: QuotationInput,
+): Promise<ActionResult<{ id: string; code: string; appliedRuleId: string | null }>> {
+  const result = await updateQuotation(quotationId, input);
+  if (result.ok) {
+    revalidatePath('/app/sales/quotations');
+    revalidatePath(`/app/sales/quotations/${quotationId}`);
+  }
   return result;
 }
 

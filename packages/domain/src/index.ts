@@ -41,3 +41,18 @@ export {
   canActOnApprovalStep,
   buildPromiseCheck,
 } from './sales/types';
+
+export type {
+  WarehouseKind,
+  ItemType,
+  InventoryTxnType,
+  InventoryTxnStatus,
+  ReservationStatus,
+} from './inventory/types';
+export { computeAtp, canIssue } from './inventory/types';
+
+export type { BomStatus, WorkOrderStatus } from './production/types';
+export { canReleaseWorkOrder, maxReceiptQty, addLeadDays } from './production/types';
+
+export type { ArInvoiceStatus } from './accounting/types';
+export { addPaymentTermsDays, daysPastDue } from './accounting/types';

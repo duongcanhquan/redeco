@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, FilePlus2 } from 'lucide-react';
+import { AlertCircle, FilePlus2, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Field, Modal, inputClass } from '@/components/platform/modal';
@@ -12,26 +12,71 @@ import {
   type EditableItem,
   type ProductOption,
 } from '@/components/sales/items-editor';
-import { createQuotationAction } from './actions';
+import { createQuotationAction, updateQuotationAction } from './actions';
+
+function defaultValidDate(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + Math.max(1, days));
+  return d.toISOString().slice(0, 10);
+}
+
+export type QuotationEditSeed = {
+  id: string;
+  customerId: string;
+  validUntil: string | null;
+  discountPct: number;
+  notes: string | null;
+  items: EditableItem[];
+};
 
 export function QuotationDialog({
   customers,
   products,
+  defaultValidDays = 30,
+  edit = null,
 }: {
   customers: { id: string; code: string; name: string }[];
   products: ProductOption[];
+  defaultValidDays?: number;
+  /** null = tạo mới; có giá trị = sửa nháp */
+  edit?: QuotationEditSeed | null;
 }) {
   const router = useRouter();
+  const isEdit = Boolean(edit);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [customerId, setCustomerId] = useState('');
-  const [validUntil, setValidUntil] = useState('');
+  const [validUntil, setValidUntil] = useState(() => defaultValidDate(defaultValidDays));
   const [discountPct, setDiscountPct] = useState('0');
   const [autoRule, setAutoRule] = useState(true);
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<EditableItem[]>([emptyItem()]);
+
+  const resetCreate = (): void => {
+    setCustomerId('');
+    setValidUntil(defaultValidDate(defaultValidDays));
+    setDiscountPct('0');
+    setAutoRule(true);
+    setNotes('');
+    setRows([emptyItem()]);
+  };
+
+  const openDialog = (): void => {
+    setError(null);
+    if (edit) {
+      setCustomerId(edit.customerId);
+      setValidUntil(edit.validUntil ?? defaultValidDate(defaultValidDays));
+      setDiscountPct(String(edit.discountPct));
+      setAutoRule(false);
+      setNotes(edit.notes ?? '');
+      setRows(edit.items.length > 0 ? edit.items : [emptyItem()]);
+    } else {
+      resetCreate();
+    }
+    setOpen(true);
+  };
 
   const submit = async (): Promise<void> => {
     setError(null);
@@ -46,40 +91,59 @@ export function QuotationDialog({
       return;
     }
     setSaving(true);
-    const result = await createQuotationAction({
+    const payload = {
       customerId,
       validUntil: validUntil || null,
       discountPct: autoRule ? null : docDiscount,
       autoApplyDiscountRule: autoRule,
       notes,
       items: parsed.items,
-    });
+    };
+    const result = isEdit && edit
+      ? await updateQuotationAction(edit.id, payload)
+      : await createQuotationAction(payload);
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
     setOpen(false);
-    setRows([emptyItem()]);
-    setCustomerId('');
-    setNotes('');
+    if (!isEdit) resetCreate();
     router.refresh();
   };
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-semibold text-app text-sm cursor-pointer transition-shadow hover:shadow-[0_0_18px_rgba(0,238,255,0.4)]"
-      >
-        <FilePlus2 size={17} aria-hidden />
-        Tạo báo giá
-      </button>
+      {isEdit ? (
+        <button
+          type="button"
+          onClick={openDialog}
+          className="inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border border-panel/50 px-2.5 text-xs font-medium text-ink-muted hover:text-ink hover:bg-glass-strong transition-colors cursor-pointer"
+          aria-label="Sửa báo giá nháp"
+        >
+          <Pencil size={13} aria-hidden />
+          Sửa
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openDialog}
+          className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-semibold text-app text-sm cursor-pointer transition-shadow hover:shadow-[0_0_18px_rgba(0,238,255,0.4)]"
+        >
+          <FilePlus2 size={17} aria-hidden />
+          Tạo báo giá
+        </button>
+      )}
 
       <Modal
-        title="Tạo báo giá"
-        icon={<FilePlus2 size={18} className="text-accent" aria-hidden />}
+        title={isEdit ? 'Sửa báo giá (nháp)' : 'Tạo báo giá'}
+        icon={
+          isEdit ? (
+            <Pencil size={18} className="text-accent" aria-hidden />
+          ) : (
+            <FilePlus2 size={18} className="text-accent" aria-hidden />
+          )
+        }
         open={open}
         onClose={() => setOpen(false)}
         wide
@@ -123,8 +187,7 @@ export function QuotationDialog({
 
           <div>
             <p className="text-sm text-ink-muted mb-2">
-              Dòng sản phẩm <span className="text-danger">*</span>{' '}
-              <span className="text-xs">(đơn giá tự điền từ bảng giá chuẩn, có thể sửa)</span>
+              Dòng sản phẩm <span className="text-danger">*</span>
             </p>
             <ItemsEditor products={products} rows={rows} onChange={setRows} />
           </div>
@@ -188,7 +251,7 @@ export function QuotationDialog({
               disabled={saving}
               className="h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-app cursor-pointer transition-shadow hover:shadow-[0_0_18px_rgba(0,238,255,0.4)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {saving ? 'Đang lưu…' : 'Tạo báo giá (nháp)'}
+              {saving ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Tạo báo giá (nháp)'}
             </button>
           </div>
         </form>

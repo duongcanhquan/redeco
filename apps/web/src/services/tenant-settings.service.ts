@@ -6,7 +6,15 @@ import {
   type TenantContext,
 } from '@/services/sales-context';
 
-export type SettingsNamespace = 'ai' | 'sales' | 'integrations' | 'notifications' | 'company';
+export type SettingsNamespace =
+  | 'ai'
+  | 'sales'
+  | 'integrations'
+  | 'notifications'
+  | 'company'
+  | 'inventory'
+  | 'production'
+  | 'accounting';
 
 export interface AiSettingsPublic {
   provider: 'openai' | 'azure' | 'anthropic' | 'custom';
@@ -33,11 +41,44 @@ export interface SalesSettings {
 export interface IntegrationsSettings {
   webhookUrl: string;
   webhookEnabled: boolean;
+  webhookSecret: string;
 }
 
 export interface NotificationsSettings {
   emailApprovalReminder: boolean;
   emailDebtReminder: boolean;
+  emailFrom: string;
+  smsEnabled: boolean;
+  smsProvider: 'twilio' | 'viettel' | 'custom' | 'none';
+  smsSenderId: string;
+  smsApprovalReminder: boolean;
+  smsDebtReminder: boolean;
+}
+
+/** ADR-010 — tham số Kho theo công ty. */
+export interface InventorySettings {
+  defaultFgWarehouseCode: string;
+  defaultRmWarehouseCode: string;
+  lowStockThreshold: number;
+  reserveOnSoConfirm: boolean;
+}
+
+/** ADR-010 — tham số / cờ quy trình Sản xuất theo công ty. */
+export interface ProductionSettings {
+  defaultFgWarehouseCode: string;
+  defaultRmWarehouseCode: string;
+  defaultLeadTimeDays: number;
+  allowReleaseWithoutRm: boolean;
+  overReceiptPct: number;
+  autoCreateWoOnSoShortfall: boolean;
+}
+
+/** ADR-010/011 — capability Kế toán (bật từng công đoạn). */
+export interface AccountingSettings {
+  arEnabled: boolean;
+  cogsEnabled: boolean;
+  apEnabled: boolean;
+  defaultPaymentTermsDays: number;
 }
 
 const AI_DEFAULTS: AiSettingsPublic = {
@@ -64,11 +105,41 @@ const SALES_DEFAULTS: SalesSettings = {
 const INTEGRATIONS_DEFAULTS: IntegrationsSettings = {
   webhookUrl: '',
   webhookEnabled: false,
+  webhookSecret: '',
 };
 
 const NOTIFICATIONS_DEFAULTS: NotificationsSettings = {
   emailApprovalReminder: true,
   emailDebtReminder: true,
+  emailFrom: '',
+  smsEnabled: false,
+  smsProvider: 'none',
+  smsSenderId: '',
+  smsApprovalReminder: false,
+  smsDebtReminder: false,
+}
+
+const INVENTORY_DEFAULTS: InventorySettings = {
+  defaultFgWarehouseCode: 'KHO-TP',
+  defaultRmWarehouseCode: 'KHO-NVL',
+  lowStockThreshold: 5,
+  reserveOnSoConfirm: false,
+};
+
+const PRODUCTION_DEFAULTS: ProductionSettings = {
+  defaultFgWarehouseCode: 'KHO-TP',
+  defaultRmWarehouseCode: 'KHO-NVL',
+  defaultLeadTimeDays: 7,
+  allowReleaseWithoutRm: false,
+  overReceiptPct: 0,
+  autoCreateWoOnSoShortfall: false,
+};
+
+const ACCOUNTING_DEFAULTS: AccountingSettings = {
+  arEnabled: true,
+  cogsEnabled: false,
+  apEnabled: false,
+  defaultPaymentTermsDays: 30,
 };
 
 function maskSecret(raw: string | null | undefined): string | null {
@@ -226,6 +297,7 @@ export async function getIntegrationsSettings(): Promise<IntegrationsSettings> {
   return {
     webhookUrl: asString(map.get('webhook_url'), INTEGRATIONS_DEFAULTS.webhookUrl),
     webhookEnabled: asBool(map.get('webhook_enabled'), INTEGRATIONS_DEFAULTS.webhookEnabled),
+    webhookSecret: asString(map.get('webhook_secret'), INTEGRATIONS_DEFAULTS.webhookSecret),
   };
 }
 
@@ -247,6 +319,7 @@ export async function saveIntegrationsSettings(
   try {
     await upsertSetting(ctx, 'integrations', 'webhook_url', input.webhookUrl.trim());
     await upsertSetting(ctx, 'integrations', 'webhook_enabled', input.webhookEnabled);
+    await upsertSetting(ctx, 'integrations', 'webhook_secret', input.webhookSecret.trim());
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
@@ -257,6 +330,12 @@ export async function getNotificationsSettings(): Promise<NotificationsSettings>
   const ctx = await getTenantContext();
   requireManager(ctx);
   const map = await loadNamespaceMap(ctx, 'notifications');
+  const providerRaw = asString(map.get('sms_provider'), NOTIFICATIONS_DEFAULTS.smsProvider);
+  const smsProvider = (
+    ['twilio', 'viettel', 'custom', 'none'] as const
+  ).includes(providerRaw as NotificationsSettings['smsProvider'])
+    ? (providerRaw as NotificationsSettings['smsProvider'])
+    : 'none';
   return {
     emailApprovalReminder: asBool(
       map.get('email_approval_reminder'),
@@ -266,6 +345,18 @@ export async function getNotificationsSettings(): Promise<NotificationsSettings>
       map.get('email_debt_reminder'),
       NOTIFICATIONS_DEFAULTS.emailDebtReminder,
     ),
+    emailFrom: asString(map.get('email_from'), NOTIFICATIONS_DEFAULTS.emailFrom),
+    smsEnabled: asBool(map.get('sms_enabled'), NOTIFICATIONS_DEFAULTS.smsEnabled),
+    smsProvider,
+    smsSenderId: asString(map.get('sms_sender_id'), NOTIFICATIONS_DEFAULTS.smsSenderId),
+    smsApprovalReminder: asBool(
+      map.get('sms_approval_reminder'),
+      NOTIFICATIONS_DEFAULTS.smsApprovalReminder,
+    ),
+    smsDebtReminder: asBool(
+      map.get('sms_debt_reminder'),
+      NOTIFICATIONS_DEFAULTS.smsDebtReminder,
+    ),
   };
 }
 
@@ -274,9 +365,182 @@ export async function saveNotificationsSettings(
 ): Promise<ActionResult> {
   const ctx = await getTenantContext();
   requireManager(ctx);
+  if (input.emailFrom.trim()) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.emailFrom.trim())) {
+      return { ok: false, error: 'Email gửi đi không hợp lệ.' };
+    }
+  }
   try {
     await upsertSetting(ctx, 'notifications', 'email_approval_reminder', input.emailApprovalReminder);
     await upsertSetting(ctx, 'notifications', 'email_debt_reminder', input.emailDebtReminder);
+    await upsertSetting(ctx, 'notifications', 'email_from', input.emailFrom.trim());
+    await upsertSetting(ctx, 'notifications', 'sms_enabled', input.smsEnabled);
+    await upsertSetting(ctx, 'notifications', 'sms_provider', input.smsProvider);
+    await upsertSetting(ctx, 'notifications', 'sms_sender_id', input.smsSenderId.trim());
+    await upsertSetting(ctx, 'notifications', 'sms_approval_reminder', input.smsApprovalReminder);
+    await upsertSetting(ctx, 'notifications', 'sms_debt_reminder', input.smsDebtReminder);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+export async function getInventorySettings(): Promise<InventorySettings> {
+  const ctx = await getTenantContext();
+  const map = await loadNamespaceMap(ctx, 'inventory');
+  return {
+    defaultFgWarehouseCode: asString(
+      map.get('default_fg_warehouse_code'),
+      INVENTORY_DEFAULTS.defaultFgWarehouseCode,
+    ),
+    defaultRmWarehouseCode: asString(
+      map.get('default_rm_warehouse_code'),
+      INVENTORY_DEFAULTS.defaultRmWarehouseCode,
+    ),
+    lowStockThreshold: asNumber(
+      map.get('low_stock_threshold'),
+      INVENTORY_DEFAULTS.lowStockThreshold,
+    ),
+    reserveOnSoConfirm: asBool(
+      map.get('reserve_on_so_confirm'),
+      INVENTORY_DEFAULTS.reserveOnSoConfirm,
+    ),
+  };
+}
+
+export async function saveInventorySettings(input: InventorySettings): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  if (!input.defaultFgWarehouseCode.trim() || !input.defaultRmWarehouseCode.trim()) {
+    return { ok: false, error: 'Mã kho TP và NVL không được để trống.' };
+  }
+  if (input.lowStockThreshold < 0 || input.lowStockThreshold > 1_000_000) {
+    return { ok: false, error: 'Ngưỡng tồn thấp phải trong 0–1.000.000.' };
+  }
+  try {
+    await upsertSetting(
+      ctx,
+      'inventory',
+      'default_fg_warehouse_code',
+      input.defaultFgWarehouseCode.trim().toUpperCase(),
+    );
+    await upsertSetting(
+      ctx,
+      'inventory',
+      'default_rm_warehouse_code',
+      input.defaultRmWarehouseCode.trim().toUpperCase(),
+    );
+    await upsertSetting(ctx, 'inventory', 'low_stock_threshold', input.lowStockThreshold);
+    await upsertSetting(ctx, 'inventory', 'reserve_on_so_confirm', input.reserveOnSoConfirm);
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+export async function getProductionSettings(): Promise<ProductionSettings> {
+  const ctx = await getTenantContext();
+  const map = await loadNamespaceMap(ctx, 'production');
+  return {
+    defaultFgWarehouseCode: asString(
+      map.get('default_fg_warehouse_code'),
+      PRODUCTION_DEFAULTS.defaultFgWarehouseCode,
+    ),
+    defaultRmWarehouseCode: asString(
+      map.get('default_rm_warehouse_code'),
+      PRODUCTION_DEFAULTS.defaultRmWarehouseCode,
+    ),
+    defaultLeadTimeDays: asNumber(
+      map.get('default_lead_time_days'),
+      PRODUCTION_DEFAULTS.defaultLeadTimeDays,
+    ),
+    allowReleaseWithoutRm: asBool(
+      map.get('allow_release_without_rm'),
+      PRODUCTION_DEFAULTS.allowReleaseWithoutRm,
+    ),
+    overReceiptPct: asNumber(map.get('over_receipt_pct'), PRODUCTION_DEFAULTS.overReceiptPct),
+    autoCreateWoOnSoShortfall: asBool(
+      map.get('auto_create_wo_on_so_shortfall'),
+      PRODUCTION_DEFAULTS.autoCreateWoOnSoShortfall,
+    ),
+  };
+}
+
+export async function saveProductionSettings(input: ProductionSettings): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  if (!input.defaultFgWarehouseCode.trim() || !input.defaultRmWarehouseCode.trim()) {
+    return { ok: false, error: 'Mã kho TP và NVL không được để trống.' };
+  }
+  if (input.defaultLeadTimeDays < 0 || input.defaultLeadTimeDays > 365) {
+    return { ok: false, error: 'Lead time CTP phải trong 0–365 ngày.' };
+  }
+  if (input.overReceiptPct < 0 || input.overReceiptPct > 100) {
+    return { ok: false, error: '% nhập TP vượt kế hoạch phải trong 0–100.' };
+  }
+  try {
+    await upsertSetting(
+      ctx,
+      'production',
+      'default_fg_warehouse_code',
+      input.defaultFgWarehouseCode.trim().toUpperCase(),
+    );
+    await upsertSetting(
+      ctx,
+      'production',
+      'default_rm_warehouse_code',
+      input.defaultRmWarehouseCode.trim().toUpperCase(),
+    );
+    await upsertSetting(ctx, 'production', 'default_lead_time_days', input.defaultLeadTimeDays);
+    await upsertSetting(
+      ctx,
+      'production',
+      'allow_release_without_rm',
+      input.allowReleaseWithoutRm,
+    );
+    await upsertSetting(ctx, 'production', 'over_receipt_pct', input.overReceiptPct);
+    await upsertSetting(
+      ctx,
+      'production',
+      'auto_create_wo_on_so_shortfall',
+      input.autoCreateWoOnSoShortfall,
+    );
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };
+  }
+}
+
+export async function getAccountingSettings(): Promise<AccountingSettings> {
+  const ctx = await getTenantContext();
+  const map = await loadNamespaceMap(ctx, 'accounting');
+  return {
+    arEnabled: asBool(map.get('ar_enabled'), ACCOUNTING_DEFAULTS.arEnabled),
+    cogsEnabled: asBool(map.get('cogs_enabled'), ACCOUNTING_DEFAULTS.cogsEnabled),
+    apEnabled: asBool(map.get('ap_enabled'), ACCOUNTING_DEFAULTS.apEnabled),
+    defaultPaymentTermsDays: asNumber(
+      map.get('default_payment_terms_days'),
+      ACCOUNTING_DEFAULTS.defaultPaymentTermsDays,
+    ),
+  };
+}
+
+export async function saveAccountingSettings(input: AccountingSettings): Promise<ActionResult> {
+  const ctx = await getTenantContext();
+  requireManager(ctx);
+  if (input.defaultPaymentTermsDays < 0 || input.defaultPaymentTermsDays > 365) {
+    return { ok: false, error: 'Số ngày công nợ phải trong 0–365.' };
+  }
+  try {
+    await upsertSetting(ctx, 'accounting', 'ar_enabled', input.arEnabled);
+    await upsertSetting(ctx, 'accounting', 'cogs_enabled', input.cogsEnabled);
+    await upsertSetting(ctx, 'accounting', 'ap_enabled', input.apEnabled);
+    await upsertSetting(
+      ctx,
+      'accounting',
+      'default_payment_terms_days',
+      input.defaultPaymentTermsDays,
+    );
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Lưu thất bại.' };

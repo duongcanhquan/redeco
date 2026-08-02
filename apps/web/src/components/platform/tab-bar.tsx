@@ -27,7 +27,7 @@ export function TabBar({ items, activeKey }: { items: TabItem[]; activeKey: stri
             key={item.key}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors ${
+            className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors ${
               active
                 ? 'bg-accent-soft text-accent font-semibold border border-accent/30'
                 : 'text-ink-muted hover:text-ink hover:bg-glass-strong border border-transparent'

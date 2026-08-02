@@ -113,8 +113,8 @@ export function SalesSettingsForm({
             </Field>
             <Field
               id="sales-debt"
-              label="Cảnh báo công nợ trước hạn (ngày)"
-              hint="Đánh dấu hóa đơn sắp đến hạn trên dashboard."
+              label="Cảnh báo tuổi nợ (ngày kể từ phát hành)"
+              hint="Hóa đơn unpaid ≥ N ngày được gắn «quá hạn cảnh báo» trên danh sách & hub. 0 = tắt."
             >
               <input
                 id="sales-debt"

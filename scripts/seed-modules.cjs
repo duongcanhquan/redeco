@@ -7,15 +7,24 @@ const { Client } = require('pg');
 const MODULES = [
   // 6 module gốc
   ['kinh-doanh', 'Kinh doanh', 'module', 'Báo giá, đơn hàng, khách hàng'],
+  ['kho', 'Kho', 'module', 'Tồn kho, phiếu nhập/xuất, ATP nhà máy'],
   ['san-xuat', 'Sản xuất', 'module', 'Lệnh sản xuất, BOM, tiến độ (MES)'],
   ['ke-toan', 'Kế toán', 'module', 'Thu chi, công nợ, sổ sách'],
   ['nhan-su', 'Nhân sự', 'module', 'Hồ sơ nhân viên, chấm công'],
   ['hanh-chinh', 'Hành chính', 'module', 'Văn bản, tài sản, lịch họp'],
   ['thiet-bi', 'Thiết bị', 'module', 'Quản lý máy móc, bảo trì'],
-  // Cây con của Kinh doanh (module nghiệp vụ đầu tiên)
-  ['kinh-doanh.khach-hang', 'Khách hàng', 'module', 'Danh bạ khách hàng, liên hệ, phân loại'],
-  ['kinh-doanh.bao-gia', 'Báo giá', 'module', 'Tạo và quản lý báo giá'],
-  ['kinh-doanh.don-hang', 'Đơn hàng', 'module', 'Đơn hàng bán, theo dõi trạng thái'],
+  // Cây Kho Phase K1
+  ['kho.ton-kho', 'Tồn kho', 'module', 'Xem tồn theo kho / ATP'],
+  ['kho.phieu-kho', 'Phiếu kho', 'module', 'Nhập / xuất thành phẩm & NVL'],
+  // Cây con của Kinh doanh — khớp UI Core O2C
+  ['kinh-doanh.khach-hang', 'Khách hàng', 'module', 'CRM, công nợ, timeline'],
+  ['kinh-doanh.san-pham', 'Sản phẩm & kho', 'module', 'Danh mục SP, tồn ATP (tạm trong Sales)'],
+  ['kinh-doanh.bao-gia', 'Báo giá', 'module', 'Tạo, sửa nháp, duyệt N cấp, chuyển đơn'],
+  ['kinh-doanh.don-hang', 'Đơn hàng', 'module', 'Credit, ATP/CTP stub, theo dõi trạng thái'],
+  ['kinh-doanh.giao-hang', 'Giao hàng', 'module', 'Lệnh giao, xuất kho trừ tồn'],
+  ['kinh-doanh.hoa-don', 'Hóa đơn', 'module', 'Công nợ phải thu, thu tiền'],
+  ['kinh-doanh.chiet-khau', 'Chiết khấu / KM', 'module', 'Quy tắc ưu tiên, tự áp báo giá'],
+  ['kinh-doanh.duyet', 'Quy trình duyệt', 'module', 'Workflow N cấp cho báo giá'],
   ['kinh-doanh.bao-gia.tao-bao-gia', 'Tạo báo giá', 'feature', ''],
   ['kinh-doanh.bao-gia.duyet-bao-gia', 'Duyệt báo giá', 'feature', ''],
   ['kinh-doanh.don-hang.tao-don-hang', 'Tạo đơn hàng', 'feature', ''],

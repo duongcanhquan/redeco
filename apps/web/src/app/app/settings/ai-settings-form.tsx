@@ -4,6 +4,7 @@ import { Bot, KeyRound, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Field, inputClass } from '@/components/platform/modal';
+import { HelpTip } from '@/components/ui/help-tip';
 import type { AiSettingsPublic } from '@/services/tenant-settings.service';
 import { saveAiSettingsAction } from './actions';
 import { SettingsGroup } from './settings-group';
@@ -34,36 +35,25 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
       setMsg({ type: 'error', text: result.error });
       return;
     }
-    setMsg({ type: 'ok', text: 'Đã lưu cấu hình AI.' });
+    setMsg({ type: 'ok', text: 'Đã lưu.' });
     router.refresh();
   };
-
-  const featureToggle = (
-    key: keyof AiSettingsPublic['features'],
-    label: string,
-    hint: string,
-  ) => (
-    <label className="flex items-start gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11">
-      <input
-        type="checkbox"
-        className="mt-1 size-4 accent-accent shrink-0"
-        checked={features[key]}
-        onChange={(e) => setFeatures({ ...features, [key]: e.target.checked })}
-      />
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-ink-muted mt-0.5">{hint}</span>
-      </span>
-    </label>
-  );
 
   return (
     <form onSubmit={(e) => void submit(e)} className="space-y-5">
       <SettingsGroup
-        title="Kết nối API AI"
-        description="Chìa khóa và model dùng cho Copilot, dự báo, bóc tách đơn… Chỉ quản trị công ty được sửa. Key không bao giờ hiển thị đầy đủ sau khi lưu."
+        title="Kết nối AI"
         icon={<KeyRound size={18} className="text-accent" aria-hidden />}
       >
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs rounded-lg px-2 py-1 bg-warning/15 text-warning font-medium">
+            Đang lưu cấu hình
+          </span>
+          <HelpTip title="Trạng thái AI">
+            <p>Điền nhà cung cấp + key trước. Các tính năng chat / dự báo sẽ chạy khi bật runtime (bước sau).</p>
+            <p>Key đã lưu không hiện đủ — chỉ thấy dạng ••••.</p>
+          </HelpTip>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field id="ai-provider" label="Nhà cung cấp" required>
             <select
@@ -75,7 +65,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
               <option value="openai">OpenAI</option>
               <option value="azure">Azure OpenAI</option>
               <option value="anthropic">Anthropic</option>
-              <option value="custom">Custom (OpenAI-compatible)</option>
+              <option value="custom">Tùy chỉnh</option>
             </select>
           </Field>
           <Field id="ai-model" label="Model" required>
@@ -88,15 +78,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
               placeholder="gpt-4o-mini"
             />
           </Field>
-          <Field
-            id="ai-key"
-            label="API Key"
-            hint={
-              initial.hasApiKey
-                ? 'Đã lưu key. Để giữ nguyên thì không sửa ô này; nhập key mới để thay thế.'
-                : 'Dán API key từ nhà cung cấp. Lưu ý bảo mật — chỉ admin công ty thấy.'
-            }
-          >
+          <Field id="ai-key" label="API Key">
             <input
               id="ai-key"
               type="password"
@@ -107,7 +89,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
               placeholder={initial.hasApiKey ? '••••••••' : 'sk-…'}
             />
           </Field>
-          <Field id="ai-base" label="Base URL (tuỳ chọn)" hint="Bắt buộc với Azure / custom endpoint.">
+          <Field id="ai-base" label="Địa chỉ API (nếu cần)">
             <input
               id="ai-base"
               className={inputClass}
@@ -120,46 +102,46 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsPublic }) {
       </SettingsGroup>
 
       <SettingsGroup
-        title="Tính năng AI bật cho công ty"
-        description="Bật từng khả năng khi đã sẵn sàng vận hành. Tắt = ẩn/không gọi API (tiết kiệm chi phí)."
+        title="Tính năng muốn dùng"
         icon={<Sparkles size={18} className="text-accent" aria-hidden />}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {featureToggle('copilot', 'ERP Copilot', 'Chat hỏi đáp dữ liệu kinh doanh bằng ngôn ngữ tự nhiên.')}
-          {featureToggle(
-            'demandForecast',
-            'Dự báo nhu cầu',
-            'Phân tích mùa vụ / lịch sử để gợi ý kế hoạch.',
-          )}
-          {featureToggle(
-            'nlpOrderParsing',
-            'Bóc tách đơn từ email/PDF',
-            'LLM + OCR map vào đơn hàng (sắp dùng đầy đủ).',
-          )}
-          {featureToggle(
-            'churnScoring',
-            'Chấm điểm / cảnh báo rời bỏ',
-            'Cờ đỏ khách hàng theo hành vi mua & công nợ.',
-          )}
+          {(
+            [
+              ['copilot', 'Trợ lý hỏi đáp'],
+              ['demandForecast', 'Dự báo nhu cầu'],
+              ['nlpOrderParsing', 'Đọc đơn từ email/PDF'],
+              ['churnScoring', 'Cảnh báo khách rời bỏ'],
+            ] as const
+          ).map(([key, label]) => (
+            <label
+              key={key}
+              className="flex items-center gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11"
+            >
+              <input
+                type="checkbox"
+                className="size-4 accent-accent"
+                checked={features[key]}
+                onChange={(e) => setFeatures({ ...features, [key]: e.target.checked })}
+              />
+              <span className="text-sm font-medium flex-1">{label}</span>
+            </label>
+          ))}
         </div>
       </SettingsGroup>
 
       {msg && (
-        <p
-          role="alert"
-          className={`text-sm ${msg.type === 'ok' ? 'text-success' : 'text-danger'}`}
-        >
+        <p role="alert" className={`text-sm ${msg.type === 'ok' ? 'text-success' : 'text-danger'}`}>
           {msg.text}
         </p>
       )}
-
       <button
         type="submit"
         disabled={busy}
-        className="inline-flex h-12 min-w-44 items-center justify-center gap-2 rounded-xl bg-accent px-6 font-semibold text-app cursor-pointer disabled:opacity-60"
+        className="inline-flex h-12 min-w-40 items-center justify-center gap-2 rounded-xl bg-accent px-6 font-semibold text-app disabled:opacity-60"
       >
         <Bot size={18} aria-hidden />
-        {busy ? 'Đang lưu…' : 'Lưu cấu hình AI'}
+        {busy ? 'Đang lưu…' : 'Lưu'}
       </button>
     </form>
   );

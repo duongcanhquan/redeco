@@ -2,13 +2,13 @@
 
 import { ArrowRightCircle, CheckCircle2, Send, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { QuotationStatus } from '@optimake/domain';
 import type { QuotationApprovalActionRow } from '@/services/sales.service';
 import { convertQuotationAction, setQuotationStatusAction } from './actions';
 
 const btn =
-  'inline-flex items-center gap-1.5 h-8 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 
 export function QuotationRowActions({
   quotationId,
@@ -16,12 +16,15 @@ export function QuotationRowActions({
   role,
   currentStepOrder,
   actions,
+  editSlot,
 }: {
   quotationId: string;
   status: QuotationStatus;
   role: 'owner' | 'admin' | 'member';
   currentStepOrder: number | null;
   actions: QuotationApprovalActionRow[];
+  /** Nút Sửa (chỉ draft) — truyền từ page để gắn QuotationDialog */
+  editSlot?: ReactNode;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -55,15 +58,18 @@ export function QuotationRowActions({
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center justify-end gap-1.5 flex-wrap">
         {status === 'draft' && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(() => setQuotationStatusAction(quotationId, 'sent'))}
-            className={`${btn} border-accent/40 text-accent hover:bg-accent-soft`}
-          >
-            <Send size={13} aria-hidden />
-            Gửi duyệt
-          </button>
+          <>
+            {editSlot}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void run(() => setQuotationStatusAction(quotationId, 'sent'))}
+              className={`${btn} border-accent/40 text-accent hover:bg-accent-soft`}
+            >
+              <Send size={13} aria-hidden />
+              Gửi duyệt
+            </button>
+          </>
         )}
         {status === 'sent' && (
           <>

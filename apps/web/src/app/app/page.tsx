@@ -1,19 +1,24 @@
 import {
   AlertTriangle,
+  ArrowRight,
   FileText,
   ScrollText,
+  ShoppingCart,
   Users,
   Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { BentoBarChart, BentoStackBars } from '@/components/sales/bento-charts';
 import { formatMoney } from '@/lib/format';
+import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
+import { getSalesDashboardData } from '@/services/sales-analytics.service';
 import { getMyRootModules } from '@/services/sales.service';
 
 export const dynamic = 'force-dynamic';
 
 export default async function WorkspaceDashboard() {
-  const supabase = await createServerSupabase();
+  const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
+  const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
   const modules = await getMyRootModules(supabase);
   const hasSales = modules.some((m) => m.key === 'kinh-doanh');
 
@@ -29,57 +34,98 @@ export default async function WorkspaceDashboard() {
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [customers, quotesPending, ordersActive, unpaidInvoices] = await Promise.all([
-    supabase.from('customers').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('quotations').select('id', { count: 'exact', head: true }).in('status', ['draft', 'sent']),
-    supabase
-      .from('sales_orders')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['confirmed', 'delivering']),
-    supabase.from('invoices').select('total').eq('status', 'unpaid'),
-  ]);
-  const unpaidTotal = ((unpaidInvoices.data ?? []) as { total: number }[]).reduce(
-    (s, r) => s + Number(r.total),
-    0,
-  );
-
-  const stats = [
-    { label: 'Khách hàng đang hoạt động', value: String(customers.count ?? 0), icon: Users, href: '/app/sales/customers' },
-    { label: 'Báo giá chờ xử lý', value: String(quotesPending.count ?? 0), icon: FileText, href: '/app/sales/quotations' },
-    { label: 'Đơn hàng đang chạy', value: String(ordersActive.count ?? 0), icon: ScrollText, href: '/app/sales/orders' },
-    { label: 'Công nợ phải thu', value: formatMoney(unpaidTotal), icon: Wallet, href: '/app/sales/invoices', warn: unpaidTotal > 0 },
-  ];
+  const data = await getSalesDashboardData(supabase, base);
+  const revenueSum = data.revenue14d.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold">Tổng quan</h1>
-        <p className="text-sm text-ink-muted mt-1">
-          Bức tranh Order-to-Cash của công ty bạn hôm nay ({new Date(today).toLocaleDateString('vi-VN')}).
-        </p>
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Tổng quan</h1>
+          <p className="text-sm text-ink-muted mt-1">
+            Bức tranh vận hành hôm nay — nhấn vào từng ô để đi sâu.
+          </p>
+        </div>
+        <Link
+          href={`${base}/sales`}
+          className="inline-flex h-11 items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent hover:bg-accent/20 transition-colors"
+        >
+          <ShoppingCart size={16} aria-hidden />
+          Hub Kinh doanh
+          <ArrowRight size={14} aria-hidden />
+        </Link>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, href, warn }) => (
-          <Link key={label} href={href} className="glass glass-hover rounded-2xl p-5 flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="text-sm text-ink-muted">{label}</p>
-              <p className={`mt-2 text-2xl font-bold break-words ${warn ? 'text-warning' : 'text-ink'}`}>
-                {value}
-              </p>
-            </div>
-            <span
-              className={`grid size-11 shrink-0 place-items-center rounded-xl border ${
-                warn
-                  ? 'bg-warning/10 border-warning/30 text-warning'
-                  : 'bg-accent-soft border-accent/25 text-accent'
-              }`}
-            >
-              <Icon size={20} aria-hidden />
+      <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">
+        <Link
+          href={`${base}/sales/customers`}
+          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
+        >
+          <p className="text-xs text-ink-muted flex items-center gap-1.5">
+            <Users size={14} aria-hidden /> Khách hàng
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums">{data.kpis.activeCustomers}</p>
+        </Link>
+        <Link
+          href={`${base}/sales/quotations`}
+          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
+        >
+          <p className="text-xs text-ink-muted flex items-center gap-1.5">
+            <FileText size={14} aria-hidden /> Báo giá chờ
+          </p>
+          <p
+            className={`mt-2 text-2xl font-bold tabular-nums ${
+              data.kpis.quotesPending > 0 ? 'text-warning' : ''
+            }`}
+          >
+            {data.kpis.quotesPending}
+          </p>
+        </Link>
+        <Link
+          href={`${base}/sales/orders`}
+          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
+        >
+          <p className="text-xs text-ink-muted flex items-center gap-1.5">
+            <ScrollText size={14} aria-hidden /> Đơn đang chạy
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums">{data.kpis.ordersActive}</p>
+        </Link>
+        <Link
+          href={`${base}/sales/invoices`}
+          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
+        >
+          <p className="text-xs text-ink-muted flex items-center gap-1.5">
+            <Wallet size={14} aria-hidden /> Công nợ
+          </p>
+          <p
+            className={`mt-2 text-xl sm:text-2xl font-bold tabular-nums break-words ${
+              data.kpis.unpaidTotal > 0 ? 'text-warning' : ''
+            }`}
+          >
+            {formatMoney(data.kpis.unpaidTotal)}
+          </p>
+          {data.kpis.overdueCount > 0 && (
+            <p className="text-[11px] text-danger mt-0.5">{data.kpis.overdueCount} quá hạn</p>
+          )}
+        </Link>
+
+        <section className="col-span-2 lg:col-span-7 glass rounded-2xl p-4 sm:p-5">
+          <div className="flex justify-between gap-2 mb-2">
+            <h2 className="font-semibold text-sm">Hóa đơn 14 ngày</h2>
+            <span className="text-sm font-bold text-accent tabular-nums">
+              {formatMoney(revenueSum)}
             </span>
-          </Link>
-        ))}
+          </div>
+          <BentoBarChart
+            points={data.revenue14d.map((p) => ({ label: p.label, amount: p.amount }))}
+            ariaLabel="Biểu đồ hóa đơn 14 ngày"
+          />
+        </section>
+
+        <section className="col-span-2 lg:col-span-5 glass rounded-2xl p-4 sm:p-5">
+          <h2 className="font-semibold text-sm mb-3">Pipeline đơn</h2>
+          <BentoStackBars slices={data.pipeline} ariaLabel="Pipeline đơn hàng" />
+        </section>
       </div>
     </div>
   );

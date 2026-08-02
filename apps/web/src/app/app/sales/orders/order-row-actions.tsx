@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { SalesOrderStatus } from '@optimake/domain';
 import { Modal } from '@/components/platform/modal';
+import { formatMoney } from '@/lib/format';
 import type { ConfirmOrderOutput } from '@/services/sales.service';
 import {
   cancelSalesOrderAction,
@@ -20,8 +21,15 @@ import {
   createInvoiceFromOrderAction,
 } from './actions';
 
+const CTP_LABEL: Record<string, string> = {
+  not_needed: 'Đủ tồn — không cần CTP',
+  estimated: 'Ước CTP (LSX / lead time)',
+  available: 'Có thể hẹn giao (CTP)',
+  unavailable: 'Chưa tính được CTP',
+};
+
 const btn =
-  'inline-flex items-center gap-1.5 h-8 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border px-2.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 
 export function OrderRowActions({
   orderId,
@@ -109,7 +117,8 @@ export function OrderRowActions({
             </button>
           </>
         )}
-        {(status === 'delivering' || status === 'completed') && !hasInvoice && (
+        {(status === 'confirmed' || status === 'delivering' || status === 'completed') &&
+          !hasInvoice && (
           <button
             type="button"
             disabled={busy}
@@ -151,7 +160,7 @@ export function OrderRowActions({
             </div>
 
             <div>
-              <p className="text-sm font-medium mb-2">ATP / CTP từng dòng</p>
+              <p className="text-sm font-medium mb-2">Tồn khả dụng (ATP)</p>
               <ul className="space-y-1.5">
                 {atpResult.atp.map((line, idx) => {
                   const promise = atpResult.promise.lines[idx];
@@ -172,12 +181,12 @@ export function OrderRowActions({
                         )}
                         <span className="truncate">{line.productName}</span>
                       </span>
-                      <span className="text-xs text-ink-muted text-right">
+                      <span className="text-xs text-ink-muted text-right max-w-[14rem]">
                         cần {line.requested} / ATP {line.available}
                         {!line.enough && promise && (
                           <>
                             <br />
-                            CTP: {promise.ctpStatus}
+                            {CTP_LABEL[promise.ctpStatus] ?? promise.ctpStatus}
                             {promise.reason ? ` — ${promise.reason}` : ''}
                           </>
                         )}
@@ -186,6 +195,15 @@ export function OrderRowActions({
                   );
                 })}
               </ul>
+              {!atpResult.promise.allCovered && (
+                <p
+                  role="note"
+                  className="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-xs text-warning"
+                >
+                  Thiếu hàng: đơn vẫn xác nhận (giao sau) nếu Cài đặt cho phép. Ngày hẹn giao
+                  theo năng lực nhà máy (CTP) sẽ có khi bật module Sản xuất + Kho.
+                </p>
+              )}
             </div>
 
             <button
@@ -203,5 +221,5 @@ export function OrderRowActions({
 }
 
 function fmt(n: number): string {
-  return new Intl.NumberFormat('vi-VN').format(n) + ' đ';
+  return formatMoney(n);
 }

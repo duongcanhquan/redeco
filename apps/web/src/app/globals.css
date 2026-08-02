@@ -631,3 +631,64 @@ body {
     transition: opacity 0.2s ease-out;
   }
 }
+
+/* ---------- In chứng từ ---------- */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  .print-sheet {
+    border: none !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+  }
+
+  .print-sheet * {
+    color: inherit !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .print-accent {
+    color: #0f172a !important;
+  }
+}
+
+.print-sheet {
+  background: #fff;
+  color: #0f172a;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1.5rem;
+}
+
+.print-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.print-sheet th,
+.print-sheet td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.5rem 0.25rem;
+  text-align: left;
+}
+
+.print-sheet th {
+  color: #64748b;
+  font-weight: 600;
+}

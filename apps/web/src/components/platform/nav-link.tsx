@@ -17,10 +17,10 @@ export function NavLink({
   exact?: boolean;
 }) {
   const pathname = usePathname();
-  const active =
-    exact || href === '/platform' || href === '/app'
-      ? pathname === href
-      : pathname.startsWith(href);
+  // Workspace gốc /{slug} cũng chỉ active khi khớp exact (tránh highlight cả cây /{slug}/…).
+  const isRootWorkspace =
+    href === '/platform' || href === '/app' || /^\/[a-z0-9-]+$/i.test(href);
+  const active = exact || isRootWorkspace ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link

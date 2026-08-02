@@ -166,8 +166,14 @@ export interface PromiseLineInput {
   productId: string;
   qty: number;
   atpQty: number;
-  /** Lệnh SX đang chạy — Phase 2 stub = 0 cho đến khi có MES. */
+  /** Lệnh SX đang chạy (released/in_progress). */
   openWoQty: number;
+  /** Ngày kết thúc LSX sớm nhất che shortfall (YYYY-MM-DD), optional. */
+  openWoEarliestEnd?: string | null;
+  /** Lead time CTP từ tenant_settings.production khi vẫn thiếu sau open WO. */
+  leadTimeDays?: number | null;
+  /** Ngày gốc tính lead (mặc định hôm nay UTC). */
+  asOfDate?: string | null;
 }
 
 export interface PromiseLineResult {
@@ -181,6 +187,12 @@ export interface PromiseLineResult {
   reason: string | null;
 }
 
+function addUtcDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + Math.max(0, Math.floor(days)));
+  return d.toISOString().slice(0, 10);
+}
+
 export function buildPromiseCheck(lines: PromiseLineInput[]): {
   lines: PromiseLineResult[];
   allCovered: boolean;
@@ -189,18 +201,32 @@ export function buildPromiseCheck(lines: PromiseLineInput[]): {
     const available = l.atpQty + l.openWoQty;
     const shortfall = Math.max(0, round3(l.qty - available));
     if (shortfall <= 0) {
+      const coveredByWo = l.qty > l.atpQty && l.openWoQty > 0;
       return {
         productId: l.productId,
         qty: l.qty,
         atpQty: l.atpQty,
         openWoQty: l.openWoQty,
         shortfall: 0,
-        ctpStatus: 'not_needed',
-        earliestDate: null,
-        reason: null,
+        ctpStatus: coveredByWo ? 'estimated' : 'not_needed',
+        earliestDate: coveredByWo ? (l.openWoEarliestEnd ?? null) : null,
+        reason: coveredByWo ? 'Phủ bởi lệnh SX đang mở.' : null,
       };
     }
-    // CTP stub — chờ adapter module Sản xuất
+    const lead = l.leadTimeDays;
+    if (typeof lead === 'number' && lead >= 0) {
+      const asOf = l.asOfDate ?? new Date().toISOString().slice(0, 10);
+      return {
+        productId: l.productId,
+        qty: l.qty,
+        atpQty: l.atpQty,
+        openWoQty: l.openWoQty,
+        shortfall,
+        ctpStatus: 'estimated',
+        earliestDate: addUtcDays(asOf, lead),
+        reason: `Ước CTP theo lead time ${lead} ngày (cài đặt công ty).`,
+      };
+    }
     return {
       productId: l.productId,
       qty: l.qty,
@@ -209,7 +235,7 @@ export function buildPromiseCheck(lines: PromiseLineInput[]): {
       shortfall,
       ctpStatus: 'unavailable',
       earliestDate: null,
-      reason: 'Chưa kết nối module Sản xuất để tính CTP.',
+      reason: 'Thiếu hàng và chưa có cấu hình lead time / LSX mở để tính CTP.',
     };
   });
   return { lines: results, allCovered: results.every((r) => r.shortfall <= 0) };

@@ -28,7 +28,7 @@ export function ShipDeliveryButton({ deliveryId }: { deliveryId: string }) {
         type="button"
         disabled={busy}
         onClick={() => void ship()}
-        className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-success/40 px-2.5 text-xs font-medium text-success hover:bg-success/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border border-success/40 px-2.5 text-xs font-medium text-success hover:bg-success/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <PackageCheck size={13} aria-hidden />
         {busy ? 'Đang xuất kho…' : 'Xuất kho'}

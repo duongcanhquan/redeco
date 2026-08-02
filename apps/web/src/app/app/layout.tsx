@@ -1,7 +1,11 @@
 import {
   Boxes,
+  Calculator,
+  ClipboardList,
+  Factory,
   FileText,
   GitBranch,
+  Layers,
   LayoutDashboard,
   Package,
   Percent,
@@ -11,6 +15,7 @@ import {
   UserCog,
   UserRound,
   Users,
+  Warehouse,
 } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { LogoMark } from '@/components/brand/logo';
@@ -21,6 +26,7 @@ import { getMyRootModules } from '@/services/sales.service';
 
 // Route UI đã có cho từng module key (các module khác hiện "sắp ra mắt")
 const SALES_LINKS = [
+  { path: '/sales', label: 'Tổng quan KD', icon: LayoutDashboard, exact: true },
   { path: '/sales/customers', label: 'Khách hàng', icon: Users },
   { path: '/sales/products', label: 'Sản phẩm & kho', icon: Package },
   { path: '/sales/quotations', label: 'Báo giá', icon: FileText },
@@ -33,6 +39,26 @@ const SALES_CONFIG_LINKS = [
   { path: '/sales/discount-rules', label: 'Chiết khấu / KM', icon: Percent },
   { path: '/sales/approvals', label: 'Quy trình duyệt', icon: GitBranch },
 ] as const;
+
+const INVENTORY_LINKS = [
+  { path: '/inventory', label: 'Tổng quan Kho', icon: Warehouse, exact: true },
+  { path: '/inventory/stock', label: 'Tồn / ATP', icon: Package },
+  { path: '/inventory/transactions', label: 'Phiếu kho', icon: ClipboardList },
+  { path: '/inventory/warehouses', label: 'Danh mục kho', icon: Warehouse },
+] as const;
+
+const PRODUCTION_LINKS = [
+  { path: '/production', label: 'Sản xuất', icon: Factory, exact: true },
+  { path: '/production/boms', label: 'Định mức', icon: Layers },
+  { path: '/production/work-orders', label: 'Lệnh SX', icon: ClipboardList },
+] as const;
+
+/** Gợi ý nghiệp vụ nhà máy — module chưa có UI */
+const MODULE_COMING_SOON: Record<string, string> = {
+  'nhan-su': 'Hồ sơ · chấm công',
+  'hanh-chinh': 'Văn bản · tài sản',
+  'thiet-bi': 'Máy móc · bảo trì',
+};
 
 export default async function WorkspaceLayout({
   children,
@@ -50,7 +76,16 @@ export default async function WorkspaceLayout({
   const role = (profile as { role?: string } | null)?.role ?? 'member';
   const isManager = role === 'owner' || role === 'admin';
   const hasSales = modules.some((m) => m.key === 'kinh-doanh');
-  const otherModules = modules.filter((m) => m.key !== 'kinh-doanh');
+  const hasKho = modules.some((m) => m.key === 'kho');
+  const hasSx = modules.some((m) => m.key === 'san-xuat');
+  const hasKt = modules.some((m) => m.key === 'ke-toan');
+  const otherModules = modules.filter(
+    (m) =>
+      m.key !== 'kinh-doanh' &&
+      m.key !== 'kho' &&
+      m.key !== 'san-xuat' &&
+      m.key !== 'ke-toan',
+  );
 
   // Mọi URL workspace nằm dưới tên miền công ty: /{slug}/...
   const slug = claims.tenantSlug ?? (tenant as { slug?: string } | null)?.slug ?? null;
@@ -82,11 +117,12 @@ export default async function WorkspaceLayout({
               <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 Kinh doanh
               </p>
-              {SALES_LINKS.map(({ path, label, icon: Icon }) => (
+              {SALES_LINKS.map(({ path, label, icon: Icon, ...rest }) => (
                 <NavLink
                   key={path}
                   href={`${base}${path}`}
                   label={label}
+                  exact={'exact' in rest && rest.exact === true}
                   icon={<Icon size={18} aria-hidden />}
                 />
               ))}
@@ -102,21 +138,75 @@ export default async function WorkspaceLayout({
             </>
           )}
 
+          {hasKho && (
+            <>
+              <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                Kho
+              </p>
+              {INVENTORY_LINKS.map(({ path, label, icon: Icon, ...rest }) => (
+                <NavLink
+                  key={path}
+                  href={`${base}${path}`}
+                  label={label}
+                  exact={'exact' in rest && rest.exact === true}
+                  icon={<Icon size={18} aria-hidden />}
+                />
+              ))}
+            </>
+          )}
+
+          {hasSx && (
+            <>
+              <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                Sản xuất
+              </p>
+              {PRODUCTION_LINKS.map(({ path, label, icon: Icon, ...rest }) => (
+                <NavLink
+                  key={path}
+                  href={`${base}${path}`}
+                  label={label}
+                  exact={'exact' in rest && rest.exact === true}
+                  icon={<Icon size={18} aria-hidden />}
+                />
+              ))}
+            </>
+          )}
+
+          {hasKt && (
+            <>
+              <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                Kế toán
+              </p>
+              <NavLink
+                href={`${base}/accounting`}
+                label="Kế toán"
+                exact
+                icon={<Calculator size={18} aria-hidden />}
+              />
+            </>
+          )}
+
           {otherModules.length > 0 && (
             <>
               <p className="hidden lg:block px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                Module khác
+                Module nhà máy
               </p>
-              {otherModules.map((m) => (
-                <span
-                  key={m.id}
-                  title="Sắp ra mắt"
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-muted/60 whitespace-nowrap cursor-not-allowed"
-                >
-                  <Boxes size={18} aria-hidden />
-                  <span>{m.name}</span>
-                </span>
-              ))}
+              {otherModules.map((m) => {
+                const hint = MODULE_COMING_SOON[m.key] ?? 'Đang thiết kế Blueprint';
+                return (
+                  <span
+                    key={m.id}
+                    title={hint}
+                    className="flex flex-col gap-0.5 rounded-xl px-3 py-2.5 text-sm text-ink-muted/60 whitespace-nowrap cursor-not-allowed"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Boxes size={18} aria-hidden />
+                      <span>{m.name}</span>
+                    </span>
+                    <span className="pl-8 text-[11px] text-ink-muted/45 truncate">{hint}</span>
+                  </span>
+                );
+              })}
             </>
           )}
 

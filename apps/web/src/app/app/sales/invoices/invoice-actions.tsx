@@ -28,7 +28,7 @@ export function MarkPaidButton({ invoiceId }: { invoiceId: string }) {
         type="button"
         disabled={busy}
         onClick={() => void markPaid()}
-        className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-success/40 px-2.5 text-xs font-medium text-success hover:bg-success/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1.5 h-11 min-h-11 rounded-lg border border-success/40 px-2.5 text-xs font-medium text-success hover:bg-success/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <BadgeDollarSign size={13} aria-hidden />
         {busy ? 'Đang ghi nhận…' : 'Đã thu tiền'}

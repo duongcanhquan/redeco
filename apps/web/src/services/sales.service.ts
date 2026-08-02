@@ -27,7 +27,13 @@ import {
   type TenantContext,
 } from '@/services/sales-context';
 import { ensureDefaultQuotationWorkflow } from '@/services/sales-config.service';
-import { getSalesSettings } from '@/services/tenant-settings.service';
+import { getProductionSettings, getSalesSettings } from '@/services/tenant-settings.service';
+import { getOpenWoByProductIds } from '@/services/production.service';
+import {
+  getAtpByProductIds,
+  hasKhoAccess,
+  issueFinishedGoodsForDelivery,
+} from '@/services/inventory.service';
 
 export type { ActionResult, TenantContext };
 export { getTenantContext, requireManager };
@@ -500,13 +506,21 @@ export async function createQuotation(
   const total = computeDocTotal(lineTotals, discountPct);
   const code = await nextCode(ctx.supabase, 'quotations', 'BG');
 
+  let validUntil = input.validUntil;
+  if (!validUntil) {
+    const salesSettings = await getSalesSettings();
+    const d = new Date();
+    d.setDate(d.getDate() + salesSettings.defaultQuotationValidDays);
+    validUntil = d.toISOString().slice(0, 10);
+  }
+
   const { data, error } = await ctx.supabase
     .from('quotations')
     .insert({
       tenant_id: ctx.tenantId,
       code,
       customer_id: input.customerId,
-      valid_until: input.validUntil,
+      valid_until: validUntil,
       discount_pct: discountPct,
       total,
       notes: input.notes.trim() || null,
@@ -536,6 +550,181 @@ export async function createQuotation(
     return { ok: false, error: `Lưu dòng báo giá thất bại: ${itemsError.message}` };
   }
   return { ok: true, data: { id: quotationId, code, appliedRuleId } };
+}
+
+/** Chỉ sửa báo giá ở trạng thái nháp — thay toàn bộ dòng hàng. */
+export async function updateQuotation(
+  quotationId: string,
+  input: QuotationInput,
+): Promise<ActionResult<{ id: string; code: string; appliedRuleId: string | null }>> {
+  const ctx = await getTenantContext();
+  if (!input.customerId) return { ok: false, error: 'Hãy chọn khách hàng.' };
+  const itemError = validateItems(input.items);
+  if (itemError) return { ok: false, error: itemError };
+
+  const { data: existing } = await ctx.supabase
+    .from('quotations')
+    .select('id, code, status')
+    .eq('id', quotationId)
+    .maybeSingle();
+  const q = existing as { id: string; code: string; status: QuotationStatus } | null;
+  if (!q) return { ok: false, error: 'Không tìm thấy báo giá.' };
+  if (q.status !== 'draft') {
+    return { ok: false, error: 'Chỉ sửa được báo giá ở trạng thái nháp.' };
+  }
+
+  const lineTotals = input.items.map((it) =>
+    computeLineTotal({ qty: it.qty, unitPrice: it.unitPrice, discountPct: it.discountPct }),
+  );
+  const subtotal = lineTotals.reduce((s, t) => s + t, 0);
+
+  let discountPct = input.discountPct ?? 0;
+  let appliedRuleId: string | null = null;
+  if (input.autoApplyDiscountRule !== false) {
+    const { data: customer } = await ctx.supabase
+      .from('customers')
+      .select('id, kind')
+      .eq('id', input.customerId)
+      .single();
+    const { data: rules } = await ctx.supabase
+      .from('discount_rules')
+      .select('id, priority, is_active, valid_from, valid_until, discount_pct, conditions');
+    const candidates: DiscountRuleCandidate[] = (
+      (rules ?? []) as {
+        id: string;
+        priority: number;
+        is_active: boolean;
+        valid_from: string | null;
+        valid_until: string | null;
+        discount_pct: number;
+        conditions: DiscountRuleCandidate['conditions'];
+      }[]
+    ).map((r) => ({
+      id: r.id,
+      priority: r.priority,
+      isActive: r.is_active,
+      validFrom: r.valid_from,
+      validUntil: r.valid_until,
+      discountPct: Number(r.discount_pct),
+      conditions: r.conditions ?? {},
+    }));
+    const today = new Date().toISOString().slice(0, 10);
+    const winner = pickWinningDiscountRule(candidates, {
+      customerId: input.customerId,
+      customerKind: ((customer as { kind?: CustomerKind } | null)?.kind ?? 'b2b') as CustomerKind,
+      docSubtotal: subtotal,
+      productIds: input.items.map((i) => i.productId),
+      onDate: today,
+    });
+    if (winner && (input.discountPct === null || input.discountPct === undefined)) {
+      discountPct = winner.discountPct;
+      appliedRuleId = winner.id;
+    } else if (winner && input.discountPct === winner.discountPct) {
+      appliedRuleId = winner.id;
+    }
+  }
+
+  const total = computeDocTotal(lineTotals, discountPct);
+  let validUntil = input.validUntil;
+  if (!validUntil) {
+    const salesSettings = await getSalesSettings();
+    const d = new Date();
+    d.setDate(d.getDate() + salesSettings.defaultQuotationValidDays);
+    validUntil = d.toISOString().slice(0, 10);
+  }
+
+  const { error } = await ctx.supabase
+    .from('quotations')
+    .update({
+      customer_id: input.customerId,
+      valid_until: validUntil,
+      discount_pct: discountPct,
+      total,
+      notes: input.notes.trim() || null,
+      applied_discount_rule_id: appliedRuleId,
+    })
+    .eq('id', quotationId)
+    .eq('status', 'draft');
+  if (error) return { ok: false, error: `Cập nhật báo giá thất bại: ${error.message}` };
+
+  await ctx.supabase.from('quotation_items').delete().eq('quotation_id', quotationId);
+  const { error: itemsError } = await ctx.supabase.from('quotation_items').insert(
+    input.items.map((it, i) => ({
+      tenant_id: ctx.tenantId,
+      quotation_id: quotationId,
+      product_id: it.productId,
+      product_name: it.productName,
+      qty: it.qty,
+      unit_price: it.unitPrice,
+      discount_pct: it.discountPct,
+      line_total: lineTotals[i],
+      sort_order: i,
+    })),
+  );
+  if (itemsError) {
+    return { ok: false, error: `Lưu dòng báo giá thất bại: ${itemsError.message}` };
+  }
+  return { ok: true, data: { id: quotationId, code: q.code, appliedRuleId } };
+}
+
+export async function getQuotationById(
+  supabase: SupabaseClient,
+  quotationId: string,
+): Promise<QuotationRow | null> {
+  const { data, error } = await supabase
+    .from('quotations')
+    .select(
+      'id, code, customer_id, status, valid_until, discount_pct, total, notes, created_at, approval_workflow_id, current_step_order, applied_discount_rule_id, customers(name), quotation_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total), quotation_approval_actions(id, step_order, step_name, status, acted_by, acted_at, comment)',
+    )
+    .eq('id', quotationId)
+    .maybeSingle();
+  if (error) throw new Error(`Không tải được báo giá: ${error.message}`);
+  return (data as unknown as QuotationRow) ?? null;
+}
+
+export async function getSalesOrderById(
+  supabase: SupabaseClient,
+  orderId: string,
+): Promise<SalesOrderRow | null> {
+  const { data, error } = await supabase
+    .from('sales_orders')
+    .select(
+      'id, code, customer_id, quotation_id, status, expected_delivery_date, discount_pct, total, credit_check, promise_check, notes, created_at, customers(name), sales_order_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total, atp_qty), invoices(id)',
+    )
+    .eq('id', orderId)
+    .maybeSingle();
+  if (error) throw new Error(`Không tải được đơn hàng: ${error.message}`);
+  return (data as unknown as SalesOrderRow) ?? null;
+}
+
+export async function getInvoiceById(
+  supabase: SupabaseClient,
+  invoiceId: string,
+): Promise<InvoiceRow | null> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(
+      'id, code, sales_order_id, customer_id, total, status, issued_on, paid_at, customers(name), sales_orders(code)',
+    )
+    .eq('id', invoiceId)
+    .maybeSingle();
+  if (error) throw new Error(`Không tải được hóa đơn: ${error.message}`);
+  return (data as unknown as InvoiceRow) ?? null;
+}
+
+export async function getDeliveryById(
+  supabase: SupabaseClient,
+  deliveryId: string,
+): Promise<DeliveryRow | null> {
+  const { data, error } = await supabase
+    .from('delivery_notes')
+    .select(
+      'id, code, sales_order_id, status, shipped_at, notes, created_at, sales_orders(code, customers(name))',
+    )
+    .eq('id', deliveryId)
+    .maybeSingle();
+  if (error) throw new Error(`Không tải được phiếu giao: ${error.message}`);
+  return (data as unknown as DeliveryRow) ?? null;
 }
 
 /**
@@ -903,25 +1092,27 @@ export async function confirmSalesOrder(
   }
 
   const productIds = order.sales_order_items.map((it) => it.product_id);
-  const { data: stocks } = await ctx.supabase
-    .from('product_stock')
-    .select('product_id, qty_on_hand')
-    .in('product_id', productIds);
-  const stockMap = new Map(
-    ((stocks ?? []) as { product_id: string; qty_on_hand: number }[]).map((s) => [
-      s.product_id,
-      Number(s.qty_on_hand),
-    ]),
-  );
+  // Ưu tiên ATP module Kho; fallback product_stock nếu chưa sync
+  const [stockMap, openWoMap, productionSettings] = await Promise.all([
+    getAtpByProductIds(ctx.supabase, productIds),
+    getOpenWoByProductIds(ctx.supabase, productIds),
+    getProductionSettings(),
+  ]);
 
-  // open_wo_qty = 0 cho đến khi module Sản xuất cung cấp adapter
+  const asOf = new Date().toISOString().slice(0, 10);
   const promise = buildPromiseCheck(
-    order.sales_order_items.map((it) => ({
-      productId: it.product_id,
-      qty: Number(it.qty),
-      atpQty: stockMap.get(it.product_id) ?? 0,
-      openWoQty: 0,
-    })),
+    order.sales_order_items.map((it) => {
+      const open = openWoMap.get(it.product_id) ?? { qty: 0, earliestEnd: null };
+      return {
+        productId: it.product_id,
+        qty: Number(it.qty),
+        atpQty: stockMap.get(it.product_id) ?? 0,
+        openWoQty: open.qty,
+        openWoEarliestEnd: open.earliestEnd,
+        leadTimeDays: productionSettings.defaultLeadTimeDays,
+        asOfDate: asOf,
+      };
+    }),
   );
 
   const atp = order.sales_order_items.map((it) => {
@@ -950,15 +1141,24 @@ export async function confirmSalesOrder(
       .update({ atp_qty: stockMap.get(it.product_id) ?? 0 })
       .eq('id', it.id);
   }
-  const { error } = await ctx.supabase
+  const { data: updated, error } = await ctx.supabase
     .from('sales_orders')
     .update({
       status: 'confirmed',
       credit_check: { ...credit, checked_at: new Date().toISOString() },
       promise_check: { ...promise, checked_at: new Date().toISOString() },
     })
-    .eq('id', orderId);
+    .eq('id', orderId)
+    .eq('status', 'draft')
+    .select('id')
+    .maybeSingle();
   if (error) return { ok: false, error: `Xác nhận đơn thất bại: ${error.message}` };
+  if (!updated) {
+    return {
+      ok: false,
+      error: 'Đơn đã được xác nhận hoặc không còn ở trạng thái nháp.',
+    };
+  }
 
   return { ok: true, data: { credit, atp, promise } };
 }
@@ -1009,6 +1209,18 @@ export async function createDeliveryNote(
     return { ok: false, error: 'Chỉ tạo lệnh giao cho đơn đã xác nhận.' };
   }
 
+  const { data: existingDeliveries } = await ctx.supabase
+    .from('delivery_notes')
+    .select('id')
+    .eq('sales_order_id', salesOrderId)
+    .limit(1);
+  if ((existingDeliveries ?? []).length > 0) {
+    return {
+      ok: false,
+      error: 'Đơn đã có lệnh giao hàng. Mỗi đơn chỉ tạo một lệnh giao (MVP).',
+    };
+  }
+
   const code = await nextCode(ctx.supabase, 'delivery_notes', 'GH');
   const { data, error } = await ctx.supabase
     .from('delivery_notes')
@@ -1043,24 +1255,45 @@ export async function shipDelivery(deliveryId: string): Promise<ActionResult> {
     .eq('sales_order_id', delivery.sales_order_id);
   const lines = (items ?? []) as { product_id: string; product_name: string; qty: number }[];
 
-  // Kiểm tra đủ tồn trước, rồi trừ nguyên tử từng dòng (decrement_stock chống âm kho)
-  const decremented: { product_id: string; qty: number }[] = [];
-  for (const line of lines) {
-    const { data: okDec, error } = await ctx.supabase.rpc('decrement_stock', {
-      p_product_id: line.product_id,
-      p_qty: line.qty,
-    });
-    if (error || okDec !== true) {
-      // Hoàn kho các dòng đã trừ
-      for (const done of decremented) {
-        await ctx.supabase.rpc('decrement_stock', { p_product_id: done.product_id, p_qty: -done.qty });
-      }
+  // Ưu tiên xuất qua module Kho (phiếu XK + sync product_stock); fallback decrement_stock
+  if (await hasKhoAccess(ctx.supabase)) {
+    const issued = await issueFinishedGoodsForDelivery(
+      lines.map((l) => ({
+        productId: l.product_id,
+        productName: l.product_name,
+        qty: Number(l.qty),
+      })),
+      `Xuất giao hàng — đơn ${delivery.sales_order_id}`,
+    );
+    if (!issued.ok) {
       return {
         ok: false,
-        error: `Không đủ tồn kho cho "${line.product_name}" (cần ${line.qty}). Nhập thêm hàng hoặc chờ sản xuất.`,
+        error: issued.error === 'NO_KHO'
+          ? 'Lỗi quyền Kho.'
+          : issued.error,
       };
     }
-    decremented.push({ product_id: line.product_id, qty: line.qty });
+  } else {
+    const decremented: { product_id: string; qty: number }[] = [];
+    for (const line of lines) {
+      const { data: okDec, error } = await ctx.supabase.rpc('decrement_stock', {
+        p_product_id: line.product_id,
+        p_qty: line.qty,
+      });
+      if (error || okDec !== true) {
+        for (const done of decremented) {
+          await ctx.supabase.rpc('decrement_stock', {
+            p_product_id: done.product_id,
+            p_qty: -done.qty,
+          });
+        }
+        return {
+          ok: false,
+          error: `Không đủ tồn kho cho "${line.product_name}" (cần ${line.qty}). Nhập thêm hàng hoặc chờ sản xuất.`,
+        };
+      }
+      decremented.push({ product_id: line.product_id, qty: line.qty });
+    }
   }
 
   const { error: shipError } = await ctx.supabase
@@ -1095,8 +1328,24 @@ export async function createInvoice(
     | { id: string; status: SalesOrderStatus; total: number; customer_id: string }
     | null;
   if (!order) return { ok: false, error: 'Không tìm thấy đơn hàng.' };
-  if (order.status !== 'delivering' && order.status !== 'completed') {
-    return { ok: false, error: 'Chỉ xuất hóa đơn cho đơn đã giao hàng.' };
+  if (
+    order.status !== 'confirmed' &&
+    order.status !== 'delivering' &&
+    order.status !== 'completed'
+  ) {
+    return {
+      ok: false,
+      error: 'Chỉ xuất hóa đơn cho đơn đã xác nhận, đang giao hoặc hoàn thành.',
+    };
+  }
+
+  const { data: existingInvoices } = await ctx.supabase
+    .from('invoices')
+    .select('id')
+    .eq('sales_order_id', salesOrderId)
+    .limit(1);
+  if ((existingInvoices ?? []).length > 0) {
+    return { ok: false, error: 'Đơn đã có hóa đơn.' };
   }
 
   const code = await nextCode(ctx.supabase, 'invoices', 'HD');

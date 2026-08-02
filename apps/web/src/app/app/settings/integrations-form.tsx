@@ -4,6 +4,7 @@ import { Webhook } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Field, inputClass } from '@/components/platform/modal';
+import { HelpTip } from '@/components/ui/help-tip';
 import type { IntegrationsSettings } from '@/services/tenant-settings.service';
 import { saveIntegrationsSettingsAction } from './actions';
 import { SettingsGroup } from './settings-group';
@@ -16,6 +17,10 @@ export function IntegrationsForm({ initial }: { initial: IntegrationsSettings })
 
   const submit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
+    if (form.webhookEnabled && !form.webhookUrl.trim()) {
+      setMsg({ type: 'error', text: 'Bật webhook cần nhập địa chỉ URL.' });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     const result = await saveIntegrationsSettingsAction(form);
@@ -24,50 +29,56 @@ export function IntegrationsForm({ initial }: { initial: IntegrationsSettings })
       setMsg({ type: 'error', text: result.error });
       return;
     }
-    setMsg({ type: 'ok', text: 'Đã lưu tích hợp.' });
+    setMsg({ type: 'ok', text: 'Đã lưu.' });
     router.refresh();
   };
 
   return (
     <form onSubmit={(e) => void submit(e)} className="space-y-5">
       <SettingsGroup
-        title="Webhook sự kiện (n8n / hệ thống ngoài)"
-        description="Khi bật, Optimake có thể đẩy các sự kiện trong sales_outbox (giao hàng, hóa đơn…) tới URL của bạn. Dùng HTTPS ở môi trường production."
+        title="Webhook"
         icon={<Webhook size={18} className="text-accent" aria-hidden />}
       >
-        <Field id="wh-url" label="Webhook URL">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs rounded-lg px-2 py-1 bg-warning/15 text-warning font-medium">
+            Đang lưu cấu hình
+          </span>
+          <HelpTip title="Webhook là gì?">
+            <p>Khi giao hàng / xuất hóa đơn / thu tiền, hệ thống ghi sự kiện sẵn.</p>
+            <p>Điền URL (vd n8n) để sau này tự đẩy sang hệ thống ngoài. Hiện chưa gửi HTTP thật.</p>
+          </HelpTip>
+        </div>
+
+        <Field id="wh-url" label="Địa chỉ nhận sự kiện">
           <input
             id="wh-url"
             type="url"
             className={inputClass}
             value={form.webhookUrl}
             onChange={(e) => setForm({ ...form, webhookUrl: e.target.value })}
-            placeholder="https://n8n.congty.com/webhook/optimake"
+            placeholder="https://…"
           />
         </Field>
-        <label className="flex items-start gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11">
+        <Field id="wh-secret" label="Mã bí mật (tuỳ chọn)">
+          <input
+            id="wh-secret"
+            type="password"
+            autoComplete="off"
+            className={`${inputClass} font-mono`}
+            value={form.webhookSecret}
+            onChange={(e) => setForm({ ...form, webhookSecret: e.target.value })}
+            placeholder="Dùng ký chữ ký khi bật gửi thật"
+          />
+        </Field>
+        <label className="flex items-center gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11">
           <input
             type="checkbox"
-            className="mt-1 size-4 accent-accent"
+            className="size-4 accent-accent"
             checked={form.webhookEnabled}
             onChange={(e) => setForm({ ...form, webhookEnabled: e.target.checked })}
           />
-          <span>
-            <span className="block text-sm font-medium">Bật đẩy sự kiện ra ngoài</span>
-            <span className="block text-xs text-ink-muted mt-0.5">
-              Worker đẩy outbox sẽ tôn trọng cờ này (triển khai consumer ở bước sau).
-            </span>
-          </span>
+          <span className="text-sm font-medium">Bật đẩy sự kiện (khi có worker)</span>
         </label>
-      </SettingsGroup>
-
-      <SettingsGroup
-        title="EDI / cổng B2B"
-        description="Nhận đơn tự động từ ERP đối tác — cấu hình chi tiết thuộc nhóm Advanced (B2B Portal). Tab này giữ chỗ để không trộn với AI API."
-      >
-        <p className="text-sm text-ink-muted rounded-xl border border-dashed border-panel/50 px-4 py-6 text-center">
-          Sắp mở: mapping EDI, tài khoản đại lý B2B, theo dõi đơn realtime.
-        </p>
       </SettingsGroup>
 
       {msg && (
@@ -78,9 +89,9 @@ export function IntegrationsForm({ initial }: { initial: IntegrationsSettings })
       <button
         type="submit"
         disabled={busy}
-        className="h-12 min-w-44 rounded-xl bg-accent px-6 font-semibold text-app cursor-pointer disabled:opacity-60"
+        className="h-12 min-w-40 rounded-xl bg-accent px-6 font-semibold text-app disabled:opacity-60"
       >
-        {busy ? 'Đang lưu…' : 'Lưu tích hợp'}
+        {busy ? 'Đang lưu…' : 'Lưu'}
       </button>
     </form>
   );

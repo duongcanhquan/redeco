@@ -4,7 +4,7 @@
 
 **Dự án**: Optimake — Multi-tenant SaaS ERP/MES (rebrand từ REDECO, 2026-08-01)
 **Tech stack**: TypeScript · Next.js 16 (App Router, Turbopack) · NestJS 11 · Supabase (PostgreSQL + RLS) · Cloudflare R2 · pnpm monorepo
-**Cập nhật lần cuối**: 2026-08-01
+**Cập nhật lần cuối**: 2026-08-02
 
 ---
 
@@ -81,14 +81,46 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
 - Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
 
+### ✅ Module Kho — Phase K1 (2026-08-02)
+
+Blueprint đã duyệt (thứ tự nhà máy). Plan: `docs/superpowers/plans/2026-08-02-inventory-k1.md`.
+
+- **Migration** `20260802120000_inventory_module_k1.sql`: warehouses, inventory_items, stock_balances, reservations, phiếu kho + lines; RLS `kho` (đọc tồn cho phép `kinh-doanh`); RPC `inventory_get_atp`, `inventory_ensure_defaults`, `inventory_apply_line`, `inventory_sync_product_stock`.
+- **Service** `inventory.service.ts`; Sales confirm đọc ATP Kho; ship → phiếu XK KHO-TP (fallback `decrement_stock` nếu chưa có kho).
+- **UI** `/{slug}/inventory` (+ stock, transactions, warehouses); catalog module `kho`.
+- **Demo**: `scripts/entitle-demo-kho.cjs`.
+
+### ✅ Sales Hub bento + analytics (2026-08-02)
+
+- **`/{slug}/sales`** — hub Kinh doanh kiểu bento Nhật: KPI, cột hóa đơn 14 ngày, pipeline đơn, phễu báo giá, hàng đợi (duyệt BG / xuất kho / công nợ), tồn thấp, lối tắt chức năng.
+- **Service** `sales-analytics.service.ts` + **charts** SVG/CSS thuần (`bento-charts.tsx`) — không thêm lib chart.
+- Workspace dashboard `/{slug}` dùng chung analytics; sidebar thêm **Tổng quan KD** (`exact` match).
+- Báo giá: `defaultQuotationValidDays` từ tenant settings → prefill form + fallback khi tạo nếu để trống.
+- **Polish**: lọc `?status=` trên BG/ĐH/GH/HĐ; chip filter + drill-down từ pipeline/phễu; danh sách **card trên phone / table desktop** (`responsive-doc-list`); seed `scripts/seed-demo-sales-data.cjs` (chứng từ đa trạng thái + HĐ 14 ngày).
+
+### ✅ Sales Core đóng vòng (2026-08-02) — hoàn thiện lỗ hổng
+
+- **Sửa báo giá nháp** (`updateQuotation` + dialog); chi tiết BG `/sales/quotations/[id]`, ĐH `/sales/orders/[id]`.
+- **currencyLabel** dùng trong `formatMoney`; **debtWarningDays** → badge «quá hạn cảnh báo» (tuổi nợ từ `issued_on`) trên HĐ + hub.
+- Settings AI / webhook / email: copy rõ «lưu cấu hình — chưa kích hoạt runtime».
+- Card phone KH + SP; catalog seed bổ sung `san-pham`, `giao-hang`, `hoa-don`, `chiet-khau`, `duyet`.
+- **5 module gốc khác** (SX, KT, NS, HC, TB): vẫn placeholder «sắp ra mắt» — cần Blueprint trước khi implement (theo `ddd-blueprint.mdc`).
+
 ### ✅ Cài đặt công ty — Settings Hub đa tab (2026-08-02)
 
 Spec: `docs/superpowers/specs/2026-08-02-tenant-settings-design.md`.
 
 - **Migration** `20260802110000_tenant_settings.sql` (ĐÃ apply): bảng `tenant_settings (tenant_id, namespace, key, value jsonb)` — namespace `ai|sales|integrations|notifications|company`, RLS theo tenant.
-- **UI `/settings?tab=`** (TabBar glass, responsive): **Tổng quan** (công ty/HĐ/seats/module) · **AI & API** (provider, key masked, model, bật Copilot/Forecast/NLP/Churn) · **Kinh doanh** (chỉ khi có module — link duyệt N cấp + chiết khấu + tham số chứng từ) · **Tích hợp** (webhook n8n) · **Thông báo**. Tab module chỉ hiện khi entitled; sửa chỉ owner/admin.
+- **UI `/settings?tab=`** (TabBar glass, responsive): **Tổng quan** · **AI & API** · **Kinh doanh** / Kho / SX / KT (khi entitled) · **Tích hợp** (webhook + secret) · **Email & SMS**. Tab module chỉ hiện khi entitled; sửa chỉ owner/admin.
 - **Service** `tenant-settings.service.ts`: mask API key; giữ key cũ nếu client gửi chuỗi mask; `allowConfirmWithoutAtp` được enforce trong `confirmSalesOrder`.
+- **Honesty**: badge «Đang lưu cấu hình» + HelpTip — AI / webhook / email / SMS chưa gửi thật (chưa có worker).
 - **Verify**: typecheck/lint/build sạch.
+
+### ✅ Sales — In chứng từ + gắn SX + setup AI/Webhook/Email/SMS (2026-08-02)
+
+- **In**: trang print BG / ĐH / GH / HĐ (`/sales/.../[id]/print`) + CSS `@media print`; nút In trên chi tiết/list.
+- **Gắn SX**: CTA «Tạo lệnh SX» trên đơn thiếu hàng (khi entitled `san-xuat`) → draft WO theo shortfall (`createWorkOrdersFromSalesOrder`).
+- **Settings UI**: form AI / Tích hợp / Email & SMS nhóm rõ, SMS provider (Twilio/Viettel/custom), secret webhook.
 
 ### ✅ Module Kinh doanh — Core Phase 2 (2026-08-02)
 
@@ -207,19 +239,18 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 2. Ngữ cảnh hiện tại
 
-- Monorepo build sạch; đã push lên GitHub `duongcanhquan/redeco` (main). Repo đang **PUBLIC** — đã khuyến nghị chuyển private, chờ người dùng quyết.
-- Supabase: migration 0001 ĐÃ áp dụng, history đồng bộ. Credentials đầy đủ trong `apps/api/.env`.
-- Người dùng đang deploy `apps/web` lên Vercel — gặp lỗi "No Output Directory named public" do Root Directory chưa trỏ `apps/web`; đã hướng dẫn sửa trên dashboard, chưa xác nhận kết quả. **Lưu ý**: Vercel cần thêm env `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- Chưa cấu hình R2 bucket.
+- **Sales + Kho K1 + SX1 + KT1** đã có UI cơ bản; in chứng từ + CTA tạo LSX từ đơn thiếu hàng.
+- **QA 2026-08-02**: đã chặn duplicate GH/HĐ; confirm optimistic-lock; LSX từ đơn idempotent; HĐ cho phép từ `confirmed` (trước giao); UI touch 44px + print trên card phone.
+- Settings AI / webhook / email / SMS: lưu cấu hình — **chưa** worker gửi thật. `reserveOnSoConfirm` / `autoCreateWoOnSoShortfall` **disabled UI** (chưa wire).
+- Demo: `demo@optimake.com` / `Demo@123` — `/demo/...`.
 
 ---
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **NestJS Platform API**: JWT guard (verify qua JWKS, URL đã có trong .env), `PlatformAdminGuard`, `TenantContext`, `ModuleAccessGuard` (dựa `my_module_ids()`); endpoints superadmin: CRUD công ty (tạo kèm admin user + gán app_metadata), CRUD hợp đồng + entitlements → sau đó mở khóa các nút "Tạo công ty"/"Lập hợp đồng" đang disabled trong console.
-4. **Xây Metadata Engine phía frontend**: zod schema cho UI metadata, Component Registry, FormRenderer/GridRenderer (tuân `ui-design.mdc` — responsive 3 thiết bị).
-5. **Cấu hình R2**: bucket + service backend đọc/ghi metadata JSON theo key convention `tenants/{tenant_id}/metadata/...`.
-6. **Module nghiệp vụ đầu tiên** (ví dụ WorkOrder): bắt đầu bằng Aggregate Design Blueprint theo `ddd-blueprint.mdc`.
+1. **Sales linh hoạt (đã brainstorm)**: Pricelist theo loại KH; Reservation thật khi confirm; GH/HĐ song song đầy đủ (partial ship, đặt cọc).
+2. Worker webhook/email/SMS khi cần.
+3. KT2 AP/Vendor; Metadata Engine + R2.
 
 ---
 
@@ -241,3 +272,14 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-01 | Hoàn thiện console: tạm dừng/kích hoạt công ty, reset mật khẩu admin, gia hạn HĐ, badge module đã bán, quản lý danh mục module (thêm/sửa/bật-tắt), sửa tham số hệ thống |
 | 2026-08-01 | **Module Kinh doanh Phase 1 (O2C)**: blueprint DDD; migration 0004 (9 bảng + RLS module-aware + decrement_stock); workspace `/app` menu động; 6 trang sales (CRM, sản phẩm/kho, báo giá duyệt, đơn hàng credit+ATP, giao hàng trừ tồn, hóa đơn công nợ); smoke test 9 bước pass; seed công ty demo |
 | 2026-08-01 | **Gán module theo công ty + thành viên tenant**: catalog module chỉ đọc; picker cây module nhóm-nút-sổ dùng chung; gán module tại trang Công ty (+ chọn module khi tạo công ty); `/app/members` (tạo user theo chức năng, phân công module, seat limit) + `/app/settings` (cây module đã cài); migration 0005 has_module_access nhận node con; test 5 bước pass |
+| 2026-08-02 | Sales Core Phase 2 + Tenant Settings Hub + domain path `/{slug}` |
+| 2026-08-02 | **Sales Hub bento**: analytics service, SVG charts, `/{slug}/sales`, dashboard workspace, default hiệu lực BG từ settings |
+| 2026-08-02 | Sales polish: filter status + card phone, drill-down chart, seed chứng từ demo analytics |
+| 2026-08-02 | Đóng Sales Core: sửa BG nháp, detail BG/ĐH, currency+debt warn, catalog seed, honesty settings |
+| 2026-08-02 | Fix search + CTP copy; Blueprint lộ trình nhà máy (Kho/SX/KT) chờ duyệt |
+| 2026-08-02 | **Kho K1**: migration, service, UI `/inventory`, ATP+XK bridge Sales, entitle demo |
+| 2026-08-02 | **ADR-010** cá nhân hóa tenant; settings `inventory`/`production`; **SX1** BOM/LSX/CTP + entitle demo |
+| 2026-08-02 | **ADR-011** composable modules; **KT1** AR/COGS optional + settings + `/accounting` |
+| 2026-08-02 | UI hubs: HelpTip `?`, FlowSteps, biểu đồ, copy đơn giản; BOM nhiều dòng NVL |
+| 2026-08-02 | Sales: in chứng từ BG/ĐH/GH/HĐ; CTA tạo LSX từ đơn thiếu hàng; redesign settings AI/webhook/email/SMS |
+| 2026-08-02 | QA parallel: fix idempotency O2C (GH/HĐ/LSX), HĐ từ confirmed, UI touch/print mobile; dead settings disabled |
