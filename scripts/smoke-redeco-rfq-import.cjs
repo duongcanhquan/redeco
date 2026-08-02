@@ -9,7 +9,7 @@ const XLSX = require('../apps/web/node_modules/xlsx');
 const {
   parseRedecoRfqWorkbook,
   tagRowsForDuplicates,
-  REDECO_RFQ_PACK_KEY,
+  REDECO_PACK_KEY,
 } = require('../apps/web/src/lib/customiz/redeco-rfq-parse.ts');
 
 function loadEnv(file) {
@@ -120,7 +120,7 @@ async function main() {
       .from('customiz_rfq_batches')
       .insert({
         tenant_id: tenantId,
-        pack_key: REDECO_RFQ_PACK_KEY,
+        pack_key: REDECO_PACK_KEY,
         file_name: 'smoke-redeco-rfq.xlsx',
         row_total: 3,
         row_imported: 3,
@@ -133,7 +133,7 @@ async function main() {
 
     const rows = tagged.map((t) => ({
       tenant_id: tenantId,
-      pack_key: REDECO_RFQ_PACK_KEY,
+      pack_key: REDECO_PACK_KEY,
       batch_id: batch.id,
       external_quote_no: t.externalQuoteNo,
       tags: t.tags,
@@ -162,7 +162,7 @@ async function main() {
     const live = await pg.query(
       `select count(*)::int as n from public.customiz_rfq_requests
        where tenant_id = $1 and pack_key = $2 and external_quote_no = 'SMOKE-002' and deleted_at is null`,
-      [tenantId, REDECO_RFQ_PACK_KEY],
+      [tenantId, REDECO_PACK_KEY],
     );
     assert.strictEqual(live.rows[0].n, 0);
 

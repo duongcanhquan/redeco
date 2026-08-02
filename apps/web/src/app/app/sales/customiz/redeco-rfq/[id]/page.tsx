@@ -55,10 +55,10 @@ export default async function RedecoRfqDetailPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
-            href={`${base}/sales/customiz/redeco-rfq`}
+            href={`${base}/sales/redeco?tab=proposals`}
             className="text-sm text-accent hover:underline"
           >
-            ← Yêu cầu BG · REDECO
+            ← Kinh doanh.REDECO
           </Link>
           <h1 className="mt-2 text-xl font-bold text-ink sm:text-2xl">
             {row.external_quote_no}

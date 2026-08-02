@@ -251,7 +251,7 @@ Ghi chú kỹ thuật quan trọng:
 - Sidebar: rộng hơn (w-64/72); scrollbar `.nav-scroll`; phân hệ sổ + mục con.
 - Login: Optimake ngoài vòng; tên CT + form gọn trong vòng.
 - AI module + Hỏi AI KD (modal chia đôi).
-- **Customiz REDECO:** P1–P2 xong. **C3–C4 chờ user viết chi tiết** — ghi nhận tại `docs/superpowers/specs/2026-08-02-customiz-quote-calc-catalog-notes.md` (danh mục tính toán BG theo DN, sửa được → tạo BG chuẩn).
+- **Kinh doanh.REDECO hub (H1–H3):** catalog `kinh-doanh.redeco`, menu option B, hub `/sales/redeco` 4 tab (đề xuất/tính/đã xong/cài đặt), stub calc + sync BG Optimake. Spec: `docs/superpowers/specs/2026-08-02-kinh-doanh-redeco-hub-design.md`. **H4 công thức** chờ user.
 - **A Giữ chỗ (K2)** đã wire.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
@@ -263,10 +263,9 @@ Ghi chú kỹ thuật quan trọng:
 
 | # | Việc | Trạng thái |
 |---|---|---|
-| P1 | Import Excel + trùng + inbox | **Xong** |
-| P2 | Bộ lọc nếu–thì → tag phân loại | **Xong** |
-| C3 | Danh mục tính toán BG theo DN (công thức/quy tắc sửa được) + chi phí trên RFQ | **Placeholder — chờ user viết** |
-| C4 | «Tạo báo giá» từ RFQ + áp dụng danh mục C3 | Sau C3 |
+| P1–P2 | RFQ import + bộ lọc (code hiện tại) | **Xong** — sẽ gộp vào tab «Đề xuất BG» |
+| Hub H1–H3 | Shell + profile/tính stub + sync BG | **Xong** 2026-08-02 |
+| H4 | Công thức tính REDECO | Chờ user viết chi tiết |
 
 ### Roadmap Kinh doanh / nền tảng (song song)
 
@@ -316,3 +315,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Ghi backlog Customiz P2–P4 + ops (Excel có data) vào current-state / spec |
 | 2026-08-02 | **Customiz REDECO P2**: bộ lọc nếu–thì + tag phân loại; ghi C3–C4 danh mục tính toán BG |
 | 2026-08-02 | Placeholder C3–C4 (danh mục tính toán BG theo DN) — chờ user viết chi tiết |
+| 2026-08-02 | **Hub Kinh doanh.REDECO H1–H3**: catalog `kinh-doanh.redeco`, 4 tab, stub calc, sync BG Optimake |

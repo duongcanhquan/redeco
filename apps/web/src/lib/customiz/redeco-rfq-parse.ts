@@ -5,7 +5,16 @@
 
 import * as XLSX from 'xlsx';
 
-export const REDECO_RFQ_PACK_KEY = 'customiz.kinh-doanh.redeco-rfq' as const;
+/** Pack hub Kinh doanh.REDECO (ghi mới). */
+export const REDECO_PACK_KEY = 'kinh-doanh.redeco' as const;
+/** Alias legacy P1–P2 — vẫn đọc được sau migrate. */
+export const REDECO_PACK_KEY_LEGACY = 'customiz.kinh-doanh.redeco-rfq' as const;
+export const REDECO_PACK_KEYS: readonly string[] = [
+  REDECO_PACK_KEY,
+  REDECO_PACK_KEY_LEGACY,
+];
+/** @deprecated Dùng REDECO_PACK_KEY — giữ tên cũ cho import hiện có. */
+export const REDECO_RFQ_PACK_KEY = REDECO_PACK_KEY;
 
 /** 0-based index của dòng header (dòng 5 Excel). */
 export const HEADER_ROW_INDEX = 4;

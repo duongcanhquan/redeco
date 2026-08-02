@@ -29,7 +29,7 @@ export function RedecoRfqDeleteButton({
       return;
     }
     if (redirectToList) {
-      router.push(`${basePath}/sales/customiz/redeco-rfq`);
+      router.push(`${basePath}/sales/redeco?tab=proposals`);
       router.refresh();
       return;
     }

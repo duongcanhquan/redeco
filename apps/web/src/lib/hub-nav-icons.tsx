@@ -27,6 +27,7 @@ export function hubTabIcon(key: string, size = 16): ReactNode {
       return <Package size={size} aria-hidden />;
     case 'bao-gia':
       return <FileText size={size} aria-hidden />;
+    case 'kinh-doanh-redeco':
     case 'customiz-redeco-rfq':
       return <FileSpreadsheet size={size} aria-hidden />;
     case 'don-hang':

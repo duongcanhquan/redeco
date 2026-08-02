@@ -24,14 +24,20 @@ const MODULES = [
   ['customiz.kinh-doanh', 'Customiz Kinh doanh', 'module', 'Customiz gắn phân hệ Kinh doanh'],
   [
     'customiz.kinh-doanh.redeco-rfq',
-    'Yêu cầu BG · REDECO',
+    'Yêu cầu BG · REDECO (legacy)',
     'feature',
-    'Import Excel yêu cầu báo giá REDECO, phát hiện trùng',
+    'Alias cũ — dùng kinh-doanh.redeco',
   ],
   // Cây Kho Phase K1
   ['kho.ton-kho', 'Tồn kho', 'module', 'Xem tồn theo kho / ATP'],
   ['kho.phieu-kho', 'Phiếu kho', 'module', 'Nhập / xuất thành phẩm & NVL'],
   // Cây con của Kinh doanh — khớp UI Core O2C
+  [
+    'kinh-doanh.redeco',
+    'Kinh doanh.REDECO',
+    'module',
+    'Hub đề xuất / tính / báo giá đã xong / cài đặt tính BG (REDECO)',
+  ],
   ['kinh-doanh.khach-hang', 'Khách hàng', 'module', 'CRM, công nợ, timeline'],
   ['kinh-doanh.san-pham', 'Sản phẩm & kho', 'module', 'Danh mục SP, tồn ATP (tạm trong Sales)'],
   ['kinh-doanh.bao-gia', 'Báo giá', 'module', 'Tạo, sửa nháp, duyệt N cấp, chuyển đơn'],

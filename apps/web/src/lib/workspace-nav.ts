@@ -13,7 +13,7 @@ export type SalesTabKey =
   | 'hoa-don'
   | 'chiet-khau'
   | 'duyet'
-  | 'customiz-redeco-rfq';
+  | 'kinh-doanh-redeco';
 
 export type InventoryTabKey = 'tong-quan' | 'ton-kho' | 'phieu-kho' | 'danh-muc-kho';
 export type ProductionTabKey = 'tong-quan' | 'dinh-muc' | 'lenh-sx';
@@ -41,6 +41,16 @@ export function hasExactModuleKey(keys: readonly string[], target: string): bool
 /** Có quyền phân hệ (root hoặc bất kỳ con). */
 export function hasModuleBranch(keys: readonly string[], root: string): boolean {
   return hasModuleKey(keys, root);
+}
+
+/** Hub Kinh doanh.REDECO (+ alias Customiz cũ). */
+export function hasRedecoHubAccess(moduleKeys: readonly string[]): boolean {
+  return (
+    hasModuleKey(moduleKeys, 'kinh-doanh.redeco') ||
+    hasModuleKey(moduleKeys, 'customiz.kinh-doanh.redeco-rfq') ||
+    hasModuleKey(moduleKeys, 'customiz.kinh-doanh') ||
+    hasExactModuleKey(moduleKeys, 'customiz')
+  );
 }
 
 const SALES_TAB_DEFS: Record<SalesTabKey, HubTabDef> = {
@@ -98,11 +108,11 @@ const SALES_TAB_DEFS: Record<SalesTabKey, HubTabDef> = {
     path: '/sales/approvals',
     matchPrefixes: ['/sales/approvals'],
   },
-  'customiz-redeco-rfq': {
-    key: 'customiz-redeco-rfq',
-    label: 'Yêu cầu BG · REDECO',
-    path: '/sales/customiz/redeco-rfq',
-    matchPrefixes: ['/sales/customiz/redeco-rfq'],
+  'kinh-doanh-redeco': {
+    key: 'kinh-doanh-redeco',
+    label: 'Kinh doanh.REDECO',
+    path: '/sales/redeco',
+    matchPrefixes: ['/sales/redeco', '/sales/customiz/redeco-rfq'],
   },
 };
 
@@ -112,7 +122,7 @@ const SALES_TAB_ORDER: SalesTabKey[] = [
   'khach-hang',
   'san-pham',
   'bao-gia',
-  'customiz-redeco-rfq',
+  'kinh-doanh-redeco',
   'don-hang',
   'giao-hang',
   'hoa-don',
@@ -120,37 +130,34 @@ const SALES_TAB_ORDER: SalesTabKey[] = [
   'duyet',
 ];
 
+function withRedecoHub(
+  keys: SalesTabKey[],
+  moduleKeys: readonly string[],
+): HubTabDef[] {
+  const list = [...keys];
+  if (hasRedecoHubAccess(moduleKeys) && !list.includes('kinh-doanh-redeco')) {
+    const baoGiaIdx = list.indexOf('bao-gia');
+    if (baoGiaIdx >= 0) list.splice(baoGiaIdx + 1, 0, 'kinh-doanh-redeco');
+    else list.push('kinh-doanh-redeco');
+  }
+  return list.map((k) => SALES_TAB_DEFS[k]);
+}
+
 /**
- * Tab Kinh doanh theo quyền.
- * Quản trị: đủ tab nếu có nhánh kinh-doanh.
- * Nhân viên: node con + phụ thuộc đọc (R2).
+ * Tab Kinh doanh theo entitlement hợp đồng (không mở hết tab vì là admin).
+ * Chỉ entitle `kinh-doanh.redeco` → chỉ hiện hub REDECO (+ tong-quan nếu có root KD).
  */
 export function resolveSalesTabs(
   moduleKeys: readonly string[],
   isManager: boolean,
 ): HubTabDef[] {
-  if (!hasModuleBranch(moduleKeys, 'kinh-doanh')) return [];
+  const hasKd =
+    hasModuleBranch(moduleKeys, 'kinh-doanh') || hasRedecoHubAccess(moduleKeys);
+  if (!hasKd) return [];
 
-  // Quản trị hoặc được giao ĐÚNG root kinh-doanh → đủ tab
-  // (hasModuleKey('kinh-doanh') cũng khớp node con — KHÔNG dùng ở đây, nếu không R2 chết)
-  const withCustomiz = (keys: SalesTabKey[]): HubTabDef[] => {
-    const list = [...keys];
-    // Customiz pack — chỉ hiện khi được cấp (kể cả quản trị)
-    if (
-      hasModuleKey(moduleKeys, 'customiz.kinh-doanh.redeco-rfq') ||
-      hasModuleKey(moduleKeys, 'customiz.kinh-doanh') ||
-      hasExactModuleKey(moduleKeys, 'customiz')
-    ) {
-      if (!list.includes('customiz-redeco-rfq')) {
-        const baoGiaIdx = list.indexOf('bao-gia');
-        if (baoGiaIdx >= 0) list.splice(baoGiaIdx + 1, 0, 'customiz-redeco-rfq');
-        else list.push('customiz-redeco-rfq');
-      }
-    }
-    return list.map((k) => SALES_TAB_DEFS[k]);
-  };
+  const hasFullRoot = hasExactModuleKey(moduleKeys, 'kinh-doanh');
 
-  if (isManager || hasExactModuleKey(moduleKeys, 'kinh-doanh')) {
+  if (hasFullRoot) {
     const keys: SalesTabKey[] = [
       'tong-quan',
       'khach-hang',
@@ -163,10 +170,25 @@ export function resolveSalesTabs(
     if (isManager) {
       keys.push('chiet-khau', 'duyet');
     }
-    return withCustomiz(keys);
+    return withRedecoHub(keys, moduleKeys);
   }
 
-  const allowed = new Set<SalesTabKey>(['tong-quan']);
+  const allowed = new Set<SalesTabKey>();
+
+  // Có nhánh KD chuẩn (không chỉ redeco) → thêm tổng quan
+  const hasStandardChild =
+    hasModuleKey(moduleKeys, 'kinh-doanh.khach-hang') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.san-pham') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.bao-gia') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.don-hang') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.giao-hang') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.hoa-don') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.chiet-khau') ||
+    hasModuleKey(moduleKeys, 'kinh-doanh.duyet');
+
+  if (hasStandardChild) {
+    allowed.add('tong-quan');
+  }
 
   if (hasModuleKey(moduleKeys, 'kinh-doanh.khach-hang')) allowed.add('khach-hang');
   if (hasModuleKey(moduleKeys, 'kinh-doanh.san-pham')) allowed.add('san-pham');
@@ -191,7 +213,8 @@ export function resolveSalesTabs(
   if (hasModuleKey(moduleKeys, 'kinh-doanh.chiet-khau')) allowed.add('chiet-khau');
   if (hasModuleKey(moduleKeys, 'kinh-doanh.duyet')) allowed.add('duyet');
 
-  return withCustomiz(SALES_TAB_ORDER.filter((k) => allowed.has(k)));
+  const ordered = SALES_TAB_ORDER.filter((k) => allowed.has(k));
+  return withRedecoHub(ordered, moduleKeys);
 }
 
 const INVENTORY_DEFS: Record<InventoryTabKey, HubTabDef> = {
@@ -237,7 +260,6 @@ export function resolveInventoryTabs(
   const allowed = new Set<InventoryTabKey>(['tong-quan']);
   if (hasModuleKey(moduleKeys, 'kho.ton-kho')) allowed.add('ton-kho');
   if (hasModuleKey(moduleKeys, 'kho.phieu-kho')) allowed.add('phieu-kho');
-  // Không có node riêng cho danh mục kho → chỉ khi có root hoặc quản trị
   const order: InventoryTabKey[] = ['tong-quan', 'ton-kho', 'phieu-kho', 'danh-muc-kho'];
   return order.filter((k) => allowed.has(k)).map((k) => INVENTORY_DEFS[k]);
 }
@@ -265,7 +287,6 @@ const PRODUCTION_DEFS: Record<ProductionTabKey, HubTabDef> = {
 
 export function resolveProductionTabs(moduleKeys: readonly string[]): HubTabDef[] {
   if (!hasModuleBranch(moduleKeys, 'san-xuat')) return [];
-  // Chưa có node con trong catalog → đủ tab khi có nhánh
   return [
     PRODUCTION_DEFS['tong-quan'],
     PRODUCTION_DEFS['dinh-muc'],
@@ -334,6 +355,5 @@ export function firstAllowedPath(tabs: readonly HubTabDef[]): string | null {
 export function isAppPathAllowed(appPath: string, tabs: readonly HubTabDef[]): boolean {
   if (tabs.length === 0) return false;
   if (resolveActiveTabKey(appPath, tabs) !== null) return true;
-  // Cho phép đứng đúng hub gốc nếu có tab tong-quan
   return tabs.some((t) => t.key === 'tong-quan' && appPath === t.path);
 }

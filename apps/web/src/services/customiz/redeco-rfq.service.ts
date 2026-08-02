@@ -3,8 +3,11 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseRedecoRfqWorkbook,
-  REDECO_RFQ_PACK_KEY,
+  REDECO_PACK_KEY,
+  REDECO_PACK_KEYS,
   tagRowsForDuplicates,
+  ATTR_KEYS,
+  type RedecoRfqAttrKey,
 } from '@/lib/customiz/redeco-rfq-parse';
 import {
   classifyWithRules,
@@ -93,7 +96,7 @@ export async function listRedecoRfqRequests(opts?: {
       'id, pack_key, batch_id, external_quote_no, tags, attributes, source_row, created_at, deleted_at',
     )
     .eq('tenant_id', ctx.tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .order('created_at', { ascending: false })
     .limit(500);
 
@@ -120,7 +123,7 @@ export async function getRedecoRfqRequest(id: string): Promise<RedecoRfqRequest 
       'id, pack_key, batch_id, external_quote_no, tags, attributes, source_row, created_at, deleted_at',
     )
     .eq('tenant_id', ctx.tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -139,7 +142,7 @@ export async function listDuplicatesForQuoteNo(
       'id, pack_key, batch_id, external_quote_no, tags, attributes, source_row, created_at, deleted_at',
     )
     .eq('tenant_id', ctx.tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .eq('external_quote_no', quoteNo)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -156,7 +159,7 @@ export async function softDeleteRedecoRfqRequest(id: string): Promise<void> {
     .from('customiz_rfq_requests')
     .update({ deleted_at: new Date().toISOString() })
     .eq('tenant_id', ctx.tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .eq('id', id)
     .is('deleted_at', null);
   if (error) throw new Error(error.message);
@@ -189,7 +192,7 @@ export async function importRedecoRfqExcel(
       .from('customiz_rfq_requests')
       .select('external_quote_no')
       .eq('tenant_id', ctx.tenantId)
-      .eq('pack_key', REDECO_RFQ_PACK_KEY)
+      .in('pack_key', [...REDECO_PACK_KEYS])
       .is('deleted_at', null)
       .in('external_quote_no', quoteNos);
     if (exErr) throw new Error(exErr.message);
@@ -222,7 +225,7 @@ export async function importRedecoRfqExcel(
     .from('customiz_rfq_batches')
     .insert({
       tenant_id: ctx.tenantId,
-      pack_key: REDECO_RFQ_PACK_KEY,
+      pack_key: REDECO_PACK_KEY,
       file_name: file.name,
       row_total: parsed.rows.length + parsed.errors.length,
       row_imported: classified.length,
@@ -239,7 +242,7 @@ export async function importRedecoRfqExcel(
   if (classified.length > 0) {
     const insertRows = classified.map((t) => ({
       tenant_id: ctx.tenantId,
-      pack_key: REDECO_RFQ_PACK_KEY,
+      pack_key: REDECO_PACK_KEY,
       batch_id: batchId,
       external_quote_no: t.externalQuoteNo,
       tags: t.tags,
@@ -266,7 +269,7 @@ async function loadActiveFilterRules(
     .from('customiz_rfq_filter_profiles')
     .select('rules')
     .eq('tenant_id', tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -290,7 +293,7 @@ export async function getOrCreateFilterProfile(): Promise<FilterProfile> {
     .from('customiz_rfq_filter_profiles')
     .select('id, name, is_active, rules, updated_at')
     .eq('tenant_id', ctx.tenantId)
-    .eq('pack_key', REDECO_RFQ_PACK_KEY)
+    .in('pack_key', [...REDECO_PACK_KEYS])
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -309,7 +312,7 @@ export async function getOrCreateFilterProfile(): Promise<FilterProfile> {
     .from('customiz_rfq_filter_profiles')
     .insert({
       tenant_id: ctx.tenantId,
-      pack_key: REDECO_RFQ_PACK_KEY,
+      pack_key: REDECO_PACK_KEY,
       name: 'Mặc định',
       is_active: true,
       rules: [],
@@ -365,3 +368,50 @@ export async function reclassifyAllRedeecoRfq(): Promise<{ updated: number }> {
   }
   return { updated };
 }
+
+export type ManualRedecoRfqInput = {
+  externalQuoteNo: string;
+  attributes: Partial<Record<RedecoRfqAttrKey, string>>;
+};
+
+/** Thêm đề xuất bằng tay (không batch). */
+export async function createManualRedecoRfqRequest(
+  input: ManualRedecoRfqInput,
+): Promise<RedecoRfqRequest> {
+  const ctx = await getTenantContext();
+  const quoteNo = input.externalQuoteNo.trim();
+  if (!quoteNo) throw new Error('Nhập số báo giá / mã đề xuất.');
+
+  const attributes: Record<string, string> = {};
+  for (const k of ATTR_KEYS) {
+    attributes[k] = (input.attributes[k] ?? '').trim();
+  }
+
+  const existing = await listDuplicatesForQuoteNo(quoteNo);
+  let tags: string[] = existing.length > 0 ? ['trung'] : [];
+  const rules = await loadActiveFilterRules(ctx.tenantId, ctx.supabase);
+  const cls = classifyWithRules(
+    { externalQuoteNo: quoteNo, attributes },
+    rules,
+  );
+  tags = mergeClassificationTags(tags, cls);
+
+  const { data, error } = await ctx.supabase
+    .from('customiz_rfq_requests')
+    .insert({
+      tenant_id: ctx.tenantId,
+      pack_key: REDECO_PACK_KEY,
+      batch_id: null,
+      external_quote_no: quoteNo,
+      tags,
+      attributes,
+      source_row: null,
+    })
+    .select(
+      'id, pack_key, batch_id, external_quote_no, tags, attributes, source_row, created_at, deleted_at',
+    )
+    .single();
+  if (error) throw new Error(error.message);
+  return mapRequest(data as Record<string, unknown>);
+}
+
