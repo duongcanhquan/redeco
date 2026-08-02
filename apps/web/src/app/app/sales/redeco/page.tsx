@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { FileSpreadsheet, Search } from 'lucide-react';
 import Link from 'next/link';
-import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { hasRedecoHubAccess } from '@/lib/workspace-nav';
 import {
   CLASSIFICATION_LABELS,
@@ -10,9 +9,10 @@ import {
 } from '@/lib/customiz/redeco-rfq-filter';
 import { REDECO_PACK_KEY } from '@/lib/customiz/redeco-rfq-parse';
 import { formatDate } from '@/lib/format';
-import { getMyModuleKeys } from '@/services/module-access.service';
+import { getWorkspaceNavContext } from '@/services/module-access.service';
 import {
   getOrCreateFilterProfile,
+  listRedecoRfqChoices,
   listRedecoRfqRequests,
 } from '@/services/customiz/redeco-rfq.service';
 import {
@@ -30,6 +30,12 @@ import { ManualRfqForm } from './manual-rfq-form';
 import { CalcPanel } from './calc-panel';
 import { DonePanel } from './done-panel';
 import { SettingsPanel } from './settings-panel';
+import { RedecoHubTabs } from './hub-tabs';
+import { ProposalsFilterPanel } from './proposals-filter-panel';
+import {
+  SettingsSubTabs,
+  type SettingsSection,
+} from './settings-sub-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +53,10 @@ function resolveTab(raw: string | undefined): TabKey {
   if (raw === 'filters') return 'settings';
   if (TABS.some((t) => t.key === raw)) return raw as TabKey;
   return 'proposals';
+}
+
+function resolveSettingsSection(raw: string | undefined): SettingsSection {
+  return raw === 'calc' ? 'calc' : 'filters';
 }
 
 function classificationOf(tags: string[]): ClassificationTag | null {
@@ -119,10 +129,12 @@ export default async function KinhDoanhRedecoHubPage({
     from?: string;
     to?: string;
     month?: string;
+    section?: string;
   }>;
 }) {
   const sp = await searchParams;
   const tab = resolveTab(sp.tab);
+  const settingsSection = resolveSettingsSection(sp.section);
   const tag = sp.tag;
   const onlyDuplicates = tag === 'trung';
   const classification =
@@ -138,12 +150,8 @@ export default async function KinhDoanhRedecoHubPage({
   const to = sp.to || monthRange?.to;
   const q = sp.q?.trim() || undefined;
 
-  const claims = await getSessionClaims();
-  const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
-  await createServerSupabase();
-  const moduleKeys = await getMyModuleKeys();
-
-  if (!hasRedecoHubAccess(moduleKeys)) {
+  const nav = await getWorkspaceNavContext();
+  if (!nav || !hasRedecoHubAccess(nav.moduleKeys)) {
     return (
       <div className="glass rounded-2xl border border-warning/40 px-5 py-6 text-base text-ink">
         <p className="font-semibold text-warning">Chưa được cấp Kinh doanh.REDECO</p>
@@ -153,34 +161,40 @@ export default async function KinhDoanhRedecoHubPage({
       </div>
     );
   }
+  const { base } = nav;
+  const hubBase = `${base}/sales/redeco`;
 
-  const needRequests = tab === 'proposals' || tab === 'calc';
-  const needFilters = tab === 'settings';
-  const needCalcs = tab === 'done';
-  const needProfiles = tab === 'calc' || tab === 'settings';
-
-  const [rows, profile, calcProfiles, calculations] = await Promise.all([
-    needRequests
-      ? listRedecoRfqRequests(
-          tab === 'proposals'
-            ? { onlyDuplicates, classification, q, from, to }
-            : undefined,
-        )
-      : Promise.resolve([]),
-    needFilters ? getOrCreateFilterProfile() : Promise.resolve(null),
-    needProfiles
-      ? listCalcProfiles().then(async (list) => {
-          if (list.length === 0) {
+  const [proposalRows, calcChoices, profile, calcProfiles, calculations] =
+    await Promise.all([
+      tab === 'proposals'
+        ? listRedecoRfqRequests({
+            onlyDuplicates,
+            classification,
+            q,
+            from,
+            to,
+            limit: 100,
+          })
+        : Promise.resolve([]),
+      tab === 'calc' ? listRedecoRfqChoices(80) : Promise.resolve([]),
+      tab === 'settings' && settingsSection === 'filters'
+        ? getOrCreateFilterProfile()
+        : Promise.resolve(null),
+      tab === 'calc' || (tab === 'settings' && settingsSection === 'calc')
+        ? listCalcProfiles().then(async (list) => {
+            if (list.length > 0) return list;
             await getOrCreateDefaultProfile();
             return listCalcProfiles();
-          }
-          return list;
-        })
-      : Promise.resolve([]),
-    needCalcs ? listCalculations({ hubStatus }) : Promise.resolve([]),
-  ]);
+          })
+        : Promise.resolve([]),
+      tab === 'done' ? listCalculations({ hubStatus }) : Promise.resolve([]),
+    ]);
 
-  const hubBase = `${base}/sales/redeco`;
+  const tabItems = TABS.map((t) => ({
+    key: t.key,
+    label: t.label,
+    href: `${hubBase}?tab=${t.key}`,
+  }));
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -193,142 +207,27 @@ export default async function KinhDoanhRedecoHubPage({
         </h1>
       </header>
 
-      {/* Tab bar liền khối — tách biệt nội dung bên dưới */}
-      <nav
-        aria-label="Tab Kinh doanh.REDECO"
-        className="rounded-2xl border border-accent/25 bg-secondary/80 p-1 shadow-sm overflow-x-auto"
-      >
-        <div className="flex min-w-max gap-0.5" role="tablist">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            return (
-              <Link
-                key={t.key}
-                role="tab"
-                aria-selected={active}
-                href={`${hubBase}?tab=${t.key}`}
-                className={`inline-flex min-h-11 shrink-0 items-center rounded-xl px-3.5 text-sm font-semibold transition-colors duration-200 ${
-                  active
-                    ? 'bg-accent text-app shadow-sm'
-                    : 'text-ink-muted hover:bg-glass hover:text-ink'
-                }`}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      <RedecoHubTabs items={tabItems} activeKey={tab} />
 
       {tab === 'proposals' && (
         <div className="grid gap-4">
-          <BentoSection
-            title="Lọc & tìm kiếm"
-            description="Lọc danh sách đề xuất đã lưu theo tag, thời gian hoặc từ khóa."
-          >
-            <form
-              method="get"
-              action={hubBase}
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
-            >
-              <input type="hidden" name="tab" value="proposals" />
-              <div className="space-y-1.5 lg:col-span-2">
-                <label htmlFor="rfq-q" className="text-sm font-medium text-ink">
-                  Tìm kiếm
-                </label>
-                <input
-                  id="rfq-q"
-                  name="q"
-                  defaultValue={q ?? ''}
-                  placeholder="Số BG, khách, sản phẩm…"
-                  className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="rfq-tag" className="text-sm font-medium text-ink">
-                  Tag
-                </label>
-                <select
-                  id="rfq-tag"
-                  name="tag"
-                  defaultValue={tag ?? ''}
-                  className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-                >
-                  <option value="">Tất cả</option>
-                  <option value="trung">Trùng</option>
-                  {CLASSIFICATION_TAGS.map((t) => (
-                    <option key={t} value={t}>
-                      {CLASSIFICATION_LABELS[t]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="rfq-month" className="text-sm font-medium text-ink">
-                  Tháng
-                </label>
-                <input
-                  id="rfq-month"
-                  name="month"
-                  type="month"
-                  defaultValue={sp.month ?? ''}
-                  className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="rfq-from" className="text-sm font-medium text-ink">
-                  Từ ngày
-                </label>
-                <input
-                  id="rfq-from"
-                  name="from"
-                  type="date"
-                  defaultValue={sp.from ?? ''}
-                  className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="rfq-to" className="text-sm font-medium text-ink">
-                  Đến ngày
-                </label>
-                <input
-                  id="rfq-to"
-                  name="to"
-                  type="date"
-                  defaultValue={sp.to ?? ''}
-                  className="min-h-11 w-full rounded-xl border border-panel/40 bg-app px-3 text-base text-ink"
-                />
-              </div>
-              <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-6">
-                <button
-                  type="submit"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-app"
-                >
-                  <Search size={18} aria-hidden />
-                  Tìm kiếm
-                </button>
-                <Link
-                  href={`${hubBase}?tab=proposals`}
-                  className="inline-flex min-h-11 items-center rounded-xl border border-panel/40 px-4 text-sm font-medium text-ink-muted hover:text-ink"
-                >
-                  Xóa lọc
-                </Link>
-                <Link
-                  href={`${hubBase}?tab=import`}
-                  className="inline-flex min-h-11 items-center rounded-xl border border-accent/35 bg-accent-soft px-4 text-sm font-semibold text-accent ms-auto"
-                >
-                  Nhập đề xuất mới
-                </Link>
-              </div>
-            </form>
-          </BentoSection>
+          <ProposalsFilterPanel
+            hubBase={hubBase}
+            defaults={{
+              q,
+              tag,
+              month: sp.month,
+              from: sp.from,
+              to: sp.to,
+            }}
+          />
 
           <BentoSection
-            title={`Danh sách đề xuất (${rows.length})`}
-            description="Dữ liệu đã lưu trong hệ thống. Chọn «Tính» để sang bước tính báo giá."
+            title={`Danh sách đề xuất (${proposalRows.length})`}
+            description="Tối đa 100 dòng mới nhất theo bộ lọc. Mở lọc để tìm thêm."
           >
             <ResponsiveDocList
-              empty={rows.length === 0}
+              empty={proposalRows.length === 0}
               emptyState={
                 <div className="px-2 py-8 text-center space-y-2">
                   <p className="font-semibold text-ink">Không có đề xuất phù hợp</p>
@@ -351,7 +250,7 @@ export default async function KinhDoanhRedecoHubPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
+                    {proposalRows.map((r) => (
                       <tr key={r.id} className="border-b border-panel/20 hover:bg-glass">
                         <td className="px-4 py-3 font-semibold text-ink">
                           {r.external_quote_no}
@@ -375,6 +274,7 @@ export default async function KinhDoanhRedecoHubPage({
                           <div className="inline-flex flex-wrap gap-2 justify-end">
                             <Link
                               href={`${hubBase}?tab=calc&requestId=${r.id}`}
+                              prefetch
                               className="inline-flex min-h-11 items-center rounded-xl border border-accent/40 px-3 text-sm font-medium text-accent"
                             >
                               Tính
@@ -389,7 +289,7 @@ export default async function KinhDoanhRedecoHubPage({
               }
               cards={
                 <>
-                  {rows.map((r) => (
+                  {proposalRows.map((r) => (
                     <DocCard
                       key={r.id}
                       code={r.external_quote_no}
@@ -408,6 +308,7 @@ export default async function KinhDoanhRedecoHubPage({
                         <>
                           <Link
                             href={`${hubBase}?tab=calc&requestId=${r.id}`}
+                            prefetch
                             className="inline-flex min-h-11 items-center rounded-xl border border-accent/40 px-3 text-sm font-medium text-accent"
                           >
                             Tính
@@ -445,7 +346,7 @@ export default async function KinhDoanhRedecoHubPage({
         <BentoSection title="Tính báo giá" description="Chọn đề xuất và profile tính.">
           <CalcPanel
             basePath={base}
-            requests={rows}
+            requests={calcChoices}
             profiles={calcProfiles}
             selectedRequestId={sp.requestId}
           />
@@ -498,20 +399,25 @@ export default async function KinhDoanhRedecoHubPage({
         </div>
       )}
 
-      {tab === 'settings' && profile && (
+      {tab === 'settings' && (
         <div className="grid gap-4">
-          <BentoSection
-            title="1. Cài đặt bộ lọc báo giá"
-            description="Quy tắc nếu–thì gắn tag tiềm năng / cần cân nhắc / không tiềm năng khi import."
-          >
-            <FilterRulesPanel basePath={base} initialRules={profile.rules} />
-          </BentoSection>
-          <BentoSection
-            title="2. Cài đặt tính toán báo giá"
-            description="Profile công thức tính cost/giá (stub — công thức REDECO đầy đủ ở phase sau)."
-          >
-            <SettingsPanel basePath={base} profiles={calcProfiles} />
-          </BentoSection>
+          <SettingsSubTabs hubBase={hubBase} section={settingsSection} />
+          {settingsSection === 'filters' && profile && (
+            <BentoSection
+              title="Cài đặt bộ lọc báo giá"
+              description="Quy tắc nếu–thì gắn tag khi import / chạy lại lọc."
+            >
+              <FilterRulesPanel basePath={base} initialRules={profile.rules} />
+            </BentoSection>
+          )}
+          {settingsSection === 'calc' && (
+            <BentoSection
+              title="Cài đặt tính toán báo giá"
+              description="Profile công thức tính cost/giá (stub — công thức REDECO đầy đủ ở phase sau)."
+            >
+              <SettingsPanel basePath={base} profiles={calcProfiles} />
+            </BentoSection>
+          )}
         </div>
       )}
     </div>

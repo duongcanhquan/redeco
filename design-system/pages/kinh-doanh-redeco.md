@@ -2,8 +2,7 @@
 
 Overrides MASTER for `/sales/redeco`.
 
-- Tab bar: single segmented control (accent active), not scattered pill buttons
-- Content: bento sections (header strip + body), 4/8 spacing
-- Tabs: Đề xuất | Nhập đề xuất | Tính | Đã xong | **Cài đặt** (bộ lọc BG + tính toán BG)
-- Proposals = list + filter form only; Import separate
-- No flow subtitle under H1
+- Tab bar: segmented + prefetch + pending hint (cảm giác tức thì)
+- Settings: 2 sub-tab (bộ lọc | tính toán) — không xếp dài 1 trang
+- Proposals filter: collapsible
+- Data: limit list, light choices cho tab Tính; loading.tsx skeleton

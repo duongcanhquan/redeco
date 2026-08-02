@@ -106,6 +106,7 @@ export async function listCalcProfiles(): Promise<CalcProfile[]> {
   return (data ?? []).map((r) => mapProfile(r as Record<string, unknown>));
 }
 
+/** Lấy profile mặc định; chỉ INSERT khi chưa có (tránh double round-trip mỗi lần mở tab). */
 export async function getOrCreateDefaultProfile(): Promise<CalcProfile> {
   const list = await listCalcProfiles();
   const def = list.find((p) => p.is_default) ?? list[0];

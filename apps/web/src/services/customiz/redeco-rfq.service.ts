@@ -94,8 +94,11 @@ export async function listRedecoRfqRequests(opts?: {
   from?: string;
   /** ISO date YYYY-MM-DD inclusive end */
   to?: string;
+  /** Giới hạn dòng (mặc định 100 — tối ưu hub). */
+  limit?: number;
 }): Promise<RedecoRfqRequest[]> {
   const ctx = await getTenantContext();
+  const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500);
   let q = ctx.supabase
     .from('customiz_rfq_requests')
     .select(
@@ -104,7 +107,7 @@ export async function listRedecoRfqRequests(opts?: {
     .eq('tenant_id', ctx.tenantId)
     .in('pack_key', [...REDECO_PACK_KEYS])
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(limit);
 
   if (!opts?.includeDeleted) {
     q = q.is('deleted_at', null);
@@ -144,6 +147,41 @@ export async function listRedecoRfqRequests(opts?: {
   }
 
   return rows;
+}
+
+/** Danh sách gọn cho dropdown tab Tính (ít cột, limit thấp). */
+export async function listRedecoRfqChoices(limit = 80): Promise<
+  {
+    id: string;
+    external_quote_no: string;
+    end_customer: string;
+    product_name: string;
+    qty_expected: string;
+    uom: string;
+  }[]
+> {
+  const ctx = await getTenantContext();
+  const { data, error } = await ctx.supabase
+    .from('customiz_rfq_requests')
+    .select('id, external_quote_no, attributes')
+    .eq('tenant_id', ctx.tenantId)
+    .in('pack_key', [...REDECO_PACK_KEYS])
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200));
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((raw) => {
+    const row = raw as Record<string, unknown>;
+    const attrs = asAttrMap(row['attributes']);
+    return {
+      id: String(row['id']),
+      external_quote_no: String(row['external_quote_no'] ?? ''),
+      end_customer: attrs['end_customer'] ?? '',
+      product_name: attrs['product_name'] ?? '',
+      qty_expected: attrs['qty_expected'] ?? '',
+      uom: attrs['uom'] ?? '',
+    };
+  });
 }
 
 export async function getRedecoRfqRequest(id: string): Promise<RedecoRfqRequest | null> {
