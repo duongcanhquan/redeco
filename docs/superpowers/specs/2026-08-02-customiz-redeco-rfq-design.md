@@ -134,43 +134,48 @@ File mẫu Excel: người dùng sẽ cung cấp; fixture test gắn theo file �
     → soft-delete; confirm
 ```
 
-Giới hạn Phase 1 (cố định): file ≤ 5MB; ≤ 2000 dòng data; chỉ `.xlsx`.
+Giới hạn Phase 1 (cố định): file ≤ 5MB; ≤ 2000 dòng data; `.xls` và `.xlsx`.
 
 ---
 
 ## 5. UI (responsive)
 
-- Desktop/iPad: list bảng đầy đủ; drawer/modal upload + summary.  
+- Desktop/iPad: list bảng đầy đủ; form upload + summary.  
 - Phone: card list; touch ≥ 44px.  
 - Token design-system Optimake (glass, accent); không emoji-icon.  
 - Skill `ui-ux-pro-max` khi implement.
 
-Route gợi ý: `/{slug}/sales/customiz/redeco-rfq` (+ `/[id]`).
+Route: `/{slug}/sales/customiz/redeco-rfq` (+ `/[id]`).
 
-Service: `apps/web/src/services/customiz/redeco-rfq.service.ts` (không fetch trong component).
-
----
-
-## 6. Phase sau (không làm trong Phase 1)
-
-1. Rule builder kéo-thả → tag Tiềm năng / Cần cân nhắc / Không tiềm năng.  
-2. Bổ sung chi phí / kết nối SP nội bộ.  
-3. «Tạo báo giá» → quotation chuẩn Optimake.  
-4. Tái sử dụng gói cho tenant khác (chỉ entitlement) hoặc tách gói trung tính `excel-rfq-v1` nếu brand «REDECO» không còn phù hợp.
+Service: `apps/web/src/services/customiz/redeco-rfq.service.ts`.
 
 ---
 
-## 7. Kiểm thử
+## 6. Phase sau (chưa làm)
 
-- Unit/parse: map cột + skip dòng trống + duplicate trong batch.  
-- Integration: 2 upload cùng `external_quote_no` → bản sau có tag `trung`; xóa bản cũ → upload lại không tag (hoặc tag chỉ trong-file).  
-- Entitlement off → không menu / API reject.  
-- `tsc --noEmit` sạch.
+| Phase | Nội dung |
+|---|---|
+| **2** | Rule builder (kéo-thả / nếu–thì) → tag Tiềm năng / Cần cân nhắc / Không tiềm năng |
+| **3** | Bổ sung chi phí / kết nối SP nội bộ trên chi tiết yêu cầu |
+| **4** | «Tạo báo giá» → quotation chuẩn Optimake |
+| — | Tái dùng entitlement gói cho tenant khác; hoặc đổi tên gói trung tính nếu cần |
+
+### Việc còn lại ngay (ops / QA)
+
+1. Cung cấp Excel **có dòng data** từ dòng 6 → smoke upload trên UI demo.  
+2. (Tuỳ chọn) Entitle tenant REDECO thật (không chỉ `demo`) trên `/platform`.
 
 ---
 
-## 8. Việc cần từ người dùng trước implement
+## 7. Kiểm thử (đã chạy)
 
-1. **Duyệt spec này.**  
-2. **Gửi file Excel mẫu** (header dòng 5 đúng thực tế).  
-3. Xác nhận tenant nhận gói đầu (demo / slug REDECO thật).
+- `pnpm exec tsx scripts/test-redeco-rfq-parse.cjs` — PASS (fixture + sample header-only).  
+- `pnpm exec tsx scripts/smoke-redeco-rfq-import.cjs` — PASS (DB insert + soft-delete).  
+- `tsc --noEmit` web — sạch.
+
+---
+
+## 8. Việc cần từ người dùng
+
+1. File Excel đầy đủ data (hoặc xác nhận dùng fixture).  
+2. Báo muốn làm **Phase 2** (bộ lọc) hay chuyển sang hạng mục B/C Sales.

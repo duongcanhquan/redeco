@@ -248,21 +248,33 @@ Ghi chú kỹ thuật quan trọng:
 
 ## 2. Ngữ cảnh hiện tại
 
-- Sidebar: rộng hơn (w-64/72) để hết chữ; scrollbar mỏng màu navy/cyan (`.nav-scroll`); phân hệ sổ + mục con.
-- Login: vòng giữa màn; Optimake giữa đỉnh & mép ngoài vòng; tên CT sát mép trong trên; form đẩy xuống dưới.
-- AI = module catalog `ai` (+ `ai.kinh-doanh.*`): superadmin cấp trên HĐ; admin công ty cấu hình key + cờ; runtime hỏi đáp / đánh giá BG·ĐH.
-- Hỏi AI (KD): modal lớn desktop/iPad chia đôi — câu hỏi nhanh | chat; chữ to, lịch sử hội thoại.
-- **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.
-- Customiz REDECO RFQ Phase 1: import Excel inbox + tag trùng; menu «Yêu cầu BG · REDECO»; entitlement `customiz.kinh-doanh.redeco-rfq`.
+- Sidebar: rộng hơn (w-64/72); scrollbar `.nav-scroll`; phân hệ sổ + mục con.
+- Login: Optimake ngoài vòng; tên CT + form gọn trong vòng.
+- AI module + Hỏi AI KD (modal chia đôi).
+- **Customiz REDECO RFQ Phase 1 — ĐÃ XONG (code + DB + demo entitle):** import `.xls`/`.xlsx`, tag trùng, list/chi tiết/xóa; menu «Yêu cầu BG · REDECO».
+- File mẫu `TÀI LIỆU/REDECO_Infor báo giá.1.xls` hiện **chỉ header** — cần file có data để smoke UI thật.
+- **A Giữ chỗ (K2)** đã wire.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
 ---
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **Customiz REDECO RFQ Phase 1** — đã có migration/UI; test upload file có data; Phase 2: bộ lọc kéo-thả.
-2. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
-3. Worker webhook/email/SMS; Metadata Engine + R2.
+### Customiz REDECO (ưu tiên nếu tiếp tục gói này)
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| C1 | Smoke UI với Excel **có data** (dòng ≥6) | File mẫu hiện trống data |
+| C2 | **Phase 2** — bộ lọc kéo-thả / nếu–thì → tag Tiềm năng · Cần cân nhắc · Không tiềm năng | Spec §6 |
+| C3 | Phase 3 — bổ sung chi phí / kết nối SP nội bộ trên chi tiết yêu cầu | |
+| C4 | Phase 4 — «Tạo báo giá» → quotation chuẩn Optimake | |
+| C5 | (Tuỳ chọn) Logo công ty upload — brainstorm đã hỏi A/B/C storage, chưa chốt | |
+
+### Roadmap Kinh doanh / nền tảng (song song)
+
+1. **B** GH/HĐ linh hoạt + đặt cọc · **C** Bảng giá theo loại khách  
+2. Worker webhook / email / SMS  
+3. Metadata Engine + R2 (metadata UI + uploads)  
 
 ---
 
@@ -302,3 +314,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | HDSD Kinh doanh: trang /sales/huong-dan + nút HDSD trên tổng quan (luồng, mock UI, bảng) |
 | 2026-08-02 | Hub Setup KD: panel/checklist/preset/profile; icon menu hub+sidebar; contrast HDSD |
 | 2026-08-02 | **Customiz REDECO RFQ P1**: migration batches/requests, parse xls/xlsx, inbox UI, entitle demo |
+| 2026-08-02 | Ghi backlog Customiz P2–P4 + ops (Excel có data) vào current-state / spec |
