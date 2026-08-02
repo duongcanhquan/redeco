@@ -11,10 +11,12 @@ import {
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BentoBarChart, BentoStackBars } from '@/components/sales/bento-charts';
+import { SalesAiPanel } from '@/components/sales/sales-ai-panel';
 import { formatMoney } from '@/lib/format';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getSalesDashboardData } from '@/services/sales-analytics.service';
 import { getMyRootModules } from '@/services/sales.service';
+import { getAiAssistantAvailability } from '@/services/tenant-settings.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +38,10 @@ export default async function SalesHubPage() {
     );
   }
 
-  const data = await getSalesDashboardData(supabase, base);
+  const [data, aiAvail] = await Promise.all([
+    getSalesDashboardData(supabase, base),
+    getAiAssistantAvailability(),
+  ]);
   const { kpis, revenue14d, queues, lowStock } = data;
   const revenueSum = revenue14d.reduce((s, p) => s + p.amount, 0);
   const pipeline = data.pipeline.map((s) => ({
@@ -56,6 +61,12 @@ export default async function SalesHubPage() {
           <h1 className="text-xl sm:text-2xl font-bold">Kinh doanh</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <SalesAiPanel
+            basePath={base}
+            entitled={aiAvail.entitledHubChat}
+            configured={aiAvail.configured}
+            copilotEnabled={aiAvail.features.copilot}
+          />
           <Link
             href={`${base}/sales/huong-dan`}
             className="inline-flex h-11 min-h-11 items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 text-sm font-semibold text-accent hover:bg-accent-soft transition-colors active:scale-[0.98]"

@@ -94,11 +94,11 @@ export function WorkspaceShell({
       {/* Drawer mobile / tablet */}
       <aside
         id="workspace-mobile-nav"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-panel/40 bg-app-deep shadow-xl transition-transform duration-200 ease-out lg:hidden no-print ${
+        className={`fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep shadow-xl transition-transform duration-200 ease-out lg:hidden no-print ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex shrink-0 items-center gap-2.5 px-3 py-3.5 border-b border-panel/40">
+        <div className="flex items-center gap-2.5 px-3 py-3.5 border-b border-panel/40">
           <LogoMark size={32} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold">{companyName}</p>
@@ -124,14 +124,14 @@ export function WorkspaceShell({
         />
       </aside>
 
-      {/* Sidebar desktop */}
+      {/* Sidebar desktop — một cột cuộn liên tục; Đăng xuất cuối menu */}
       <aside
-        className={`glass sticky top-0 z-20 hidden h-dvh shrink-0 flex-col border-r border-panel/40 bg-app-deep/60 no-print lg:flex transition-[width] duration-200 ease-out ${
+        className={`glass sticky top-0 z-20 hidden h-dvh shrink-0 overflow-y-auto overscroll-contain border-r border-panel/40 bg-app-deep/60 no-print lg:block transition-[width] duration-200 ease-out ${
           collapsed ? 'w-[4.25rem]' : 'w-56 xl:w-60'
         }`}
       >
         <div
-          className={`flex shrink-0 items-center gap-2 border-b border-panel/30 ${
+          className={`flex items-center gap-2 border-b border-panel/30 ${
             collapsed ? 'flex-col px-1.5 py-3' : 'px-3 py-3.5'
           }`}
         >

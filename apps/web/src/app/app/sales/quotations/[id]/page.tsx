@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { DocAiReviewButton } from '@/components/sales/doc-ai-review-button';
 import { PrintButton } from '@/components/sales/print-button';
 import { formatDate, formatMoney } from '@/lib/format';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
@@ -10,7 +11,10 @@ import {
   listCustomers,
   listProducts,
 } from '@/services/sales.service';
-import { getSalesSettings } from '@/services/tenant-settings.service';
+import {
+  getAiAssistantAvailability,
+  getSalesSettings,
+} from '@/services/tenant-settings.service';
 import { QuotationDialog } from '../quotation-dialog';
 import { QuotationRowActions } from '../quotation-actions';
 
@@ -30,11 +34,12 @@ export default async function QuotationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [supabase, claims, ctx, salesSettings] = await Promise.all([
+  const [supabase, claims, ctx, salesSettings, aiAvail] = await Promise.all([
     createServerSupabase(),
     getSessionClaims(),
     getTenantContext(),
     getSalesSettings(),
+    getAiAssistantAvailability(),
   ]);
   const [q, customers, products] = await Promise.all([
     getQuotationById(supabase, id),
@@ -79,6 +84,14 @@ export default async function QuotationDetailPage({
             <p className="text-sm text-ink-muted mt-1">{q.customers?.name ?? '—'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <DocAiReviewButton
+              kind="quotation"
+              docId={q.id}
+              basePath={base}
+              entitled={aiAvail.entitledQuoteReview}
+              configured={aiAvail.configured}
+              enabled={aiAvail.features.salesQuoteReview}
+            />
             <PrintButton href={`${base}/sales/quotations/${q.id}/print`} />
             <span className={`inline-flex rounded-lg px-3 py-1 text-xs border ${badge.cls}`}>
               {badge.label}

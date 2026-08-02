@@ -139,73 +139,67 @@ export function SidebarNav({
   collapsed?: boolean;
 }) {
   return (
-    <>
-      <nav
-        aria-label="Điều hướng workspace"
-        className={`flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain pb-3 [scrollbar-gutter:stable] ${
-          collapsed ? 'px-1.5' : 'px-2.5'
-        }`}
-      >
+    <nav
+      aria-label="Điều hướng workspace"
+      className={`flex flex-col gap-0.5 pb-4 pt-1 ${collapsed ? 'px-1.5' : 'px-2.5'}`}
+    >
+      <NavLink
+        href={base}
+        exact
+        label="Tổng quan"
+        icon={<LayoutDashboard size={18} aria-hidden />}
+        iconOnly={collapsed}
+      />
+
+      {modules.length > 0 && (
+        <>
+          {!collapsed && (
+            <p className="px-2.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              Phân hệ
+            </p>
+          )}
+          {collapsed && <div className="my-1.5 h-px bg-panel/40 mx-2" aria-hidden />}
+          {modules.map((m) => (
+            <ModuleBlock key={m.key} item={m} base={base} collapsed={collapsed} />
+          ))}
+        </>
+      )}
+
+      {!collapsed ? (
+        <p className="px-2.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          Công ty
+        </p>
+      ) : (
+        <div className="my-1.5 h-px bg-panel/40 mx-2" aria-hidden />
+      )}
+      {isManager && (
         <NavLink
-          href={base}
-          exact
-          label="Tổng quan"
-          icon={<LayoutDashboard size={18} aria-hidden />}
+          href={`${base}/members`}
+          label="Thành viên"
+          icon={<UserCog size={18} aria-hidden />}
           iconOnly={collapsed}
         />
+      )}
+      <NavLink
+        href={`${base}/settings`}
+        label="Cài đặt"
+        icon={<Settings size={18} aria-hidden />}
+        iconOnly={collapsed}
+      />
+      <NavLink
+        href={`${base}/account`}
+        label="Tài khoản"
+        icon={<UserRound size={18} aria-hidden />}
+        iconOnly={collapsed}
+      />
 
-        {modules.length > 0 && (
-          <>
-            {!collapsed && (
-              <p className="px-2.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                Phân hệ
-              </p>
-            )}
-            {collapsed && <div className="my-1.5 h-px bg-panel/40 mx-2" aria-hidden />}
-            {modules.map((m) => (
-              <ModuleBlock key={m.key} item={m} base={base} collapsed={collapsed} />
-            ))}
-          </>
-        )}
-
-        {!collapsed ? (
-          <p className="px-2.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            Công ty
-          </p>
-        ) : (
-          <div className="my-1.5 h-px bg-panel/40 mx-2" aria-hidden />
-        )}
-        {isManager && (
-          <NavLink
-            href={`${base}/members`}
-            label="Thành viên"
-            icon={<UserCog size={18} aria-hidden />}
-            iconOnly={collapsed}
-          />
-        )}
-        <NavLink
-          href={`${base}/settings`}
-          label="Cài đặt"
-          icon={<Settings size={18} aria-hidden />}
-          iconOnly={collapsed}
-        />
-        <NavLink
-          href={`${base}/account`}
-          label="Tài khoản"
-          icon={<UserRound size={18} aria-hidden />}
-          iconOnly={collapsed}
-        />
-      </nav>
-
-      <div
-        className={`shrink-0 border-t border-panel/40 py-3 ${collapsed ? 'px-1.5' : 'px-2.5'}`}
-      >
+      <div className={`mt-2 pt-2 border-t border-panel/40 ${collapsed ? '' : ''}`}>
         {collapsed ? (
           <SignOutButton redirectTo={loginRedirect} iconOnly />
         ) : (
           <SignOutButton redirectTo={loginRedirect} />
         )}
       </div>
-    </>
+    </nav>
   );
 }

@@ -73,6 +73,7 @@ export default async function TenantSettingsPage({
   const hasKho = modules.some((m) => m.key === 'kho');
   const hasSx = modules.some((m) => m.key === 'san-xuat');
   const hasKt = modules.some((m) => m.key === 'ke-toan');
+  const hasAi = modules.some((m) => m.key === 'ai');
 
   const tab: TabKey =
     rawTab === 'ai' ||
@@ -88,6 +89,7 @@ export default async function TenantSettingsPage({
   // Member chỉ xem Tổng quan; tab khác fallback overview
   const activeTab: TabKey = !isManager && tab !== 'overview' ? 'overview' : tab;
   let safeTab: TabKey = activeTab;
+  if (safeTab === 'ai' && !hasAi) safeTab = 'overview';
   if (safeTab === 'sales' && !hasSales) safeTab = 'overview';
   if (safeTab === 'inventory' && !hasKho) safeTab = 'overview';
   if (safeTab === 'production' && !hasSx) safeTab = 'overview';
@@ -102,12 +104,16 @@ export default async function TenantSettingsPage({
     },
     ...(isManager
       ? [
-          {
-            key: 'ai',
-            label: 'AI & API',
-            icon: <Bot size={16} aria-hidden />,
-            href: `${base}/settings?tab=ai`,
-          },
+          ...(hasAi
+            ? [
+                {
+                  key: 'ai',
+                  label: 'AI & API',
+                  icon: <Bot size={16} aria-hidden />,
+                  href: `${base}/settings?tab=ai`,
+                },
+              ]
+            : []),
           ...(hasSales
             ? [
                 {
@@ -176,7 +182,9 @@ export default async function TenantSettingsPage({
     discountRules,
   ] = isManager
     ? await Promise.all([
-        safeTab === 'ai' ? getAiSettings() : Promise.resolve(null),
+        (safeTab === 'ai' && hasAi) || (safeTab === 'sales' && hasSales && hasAi)
+          ? getAiSettings()
+          : Promise.resolve(null),
         safeTab === 'sales' && hasSales ? getSalesSetupState() : Promise.resolve(null),
         safeTab === 'inventory' && hasKho ? getInventorySettings() : Promise.resolve(null),
         safeTab === 'production' && hasSx ? getProductionSettings() : Promise.resolve(null),
@@ -288,6 +296,8 @@ export default async function TenantSettingsPage({
           defaultWorkflowName={defaultWorkflow?.name ?? null}
           activeDiscountRuleCount={activeDiscountRuleCount}
           hasKhoModule={hasKho}
+          ai={hasAi ? ai : null}
+          hasAiModule={hasAi}
         />
       )}
       {safeTab === 'inventory' && inventory && <InventorySettingsForm initial={inventory} />}

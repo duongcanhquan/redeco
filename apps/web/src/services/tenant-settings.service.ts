@@ -1,4 +1,5 @@
 import 'server-only';
+import { isAiProviderId, parseAiProviderId, type AiProviderId } from '@/lib/ai-providers';
 import {
   DEFAULT_SETUP_FLAGS,
   SYSTEM_PRESETS,
@@ -24,19 +25,26 @@ export type SettingsNamespace =
   | 'production'
   | 'accounting';
 
+export interface AiFeatureFlags {
+  /** Hỏi đáp trên Tổng quan Kinh doanh */
+  copilot: boolean;
+  /** Đánh giá / nhận xét báo giá */
+  salesQuoteReview: boolean;
+  /** Đánh giá / nhận xét đơn hàng */
+  salesOrderReview: boolean;
+  demandForecast: boolean;
+  nlpOrderParsing: boolean;
+  churnScoring: boolean;
+}
+
 export interface AiSettingsPublic {
-  provider: 'openai' | 'azure' | 'anthropic' | 'custom';
+  provider: AiProviderId;
   model: string;
   /** Masked — không bao giờ trả plaintext. */
   apiKeyMasked: string | null;
   hasApiKey: boolean;
   baseUrl: string;
-  features: {
-    copilot: boolean;
-    demandForecast: boolean;
-    nlpOrderParsing: boolean;
-    churnScoring: boolean;
-  };
+  features: AiFeatureFlags;
 }
 
 export interface SalesSettings {
@@ -100,11 +108,25 @@ const AI_DEFAULTS: AiSettingsPublic = {
   baseUrl: '',
   features: {
     copilot: false,
+    salesQuoteReview: false,
+    salesOrderReview: false,
     demandForecast: false,
     nlpOrderParsing: false,
     churnScoring: false,
   },
 };
+
+function parseAiFeatures(raw: unknown): AiFeatureFlags {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    copilot: asBool(o['copilot'], AI_DEFAULTS.features.copilot),
+    salesQuoteReview: asBool(o['salesQuoteReview'], AI_DEFAULTS.features.salesQuoteReview),
+    salesOrderReview: asBool(o['salesOrderReview'], AI_DEFAULTS.features.salesOrderReview),
+    demandForecast: asBool(o['demandForecast'], AI_DEFAULTS.features.demandForecast),
+    nlpOrderParsing: asBool(o['nlpOrderParsing'], AI_DEFAULTS.features.nlpOrderParsing),
+    churnScoring: asBool(o['churnScoring'], AI_DEFAULTS.features.churnScoring),
+  };
+}
 
 const SALES_DEFAULTS: SalesSettings = {
   currencyLabel: 'VND',
@@ -215,19 +237,64 @@ export async function getAiSettings(): Promise<AiSettingsPublic> {
   requireManager(ctx);
   const map = await loadNamespaceMap(ctx, 'ai');
   const rawKey = asString(map.get('api_key'), '');
-  const featuresRaw = (map.get('features') ?? {}) as Record<string, unknown>;
   return {
-    provider: (asString(map.get('provider'), AI_DEFAULTS.provider) as AiSettingsPublic['provider']),
+    provider: parseAiProviderId(asString(map.get('provider'), AI_DEFAULTS.provider)),
     model: asString(map.get('model'), AI_DEFAULTS.model),
     apiKeyMasked: rawKey ? maskSecret(rawKey) : null,
     hasApiKey: rawKey.length > 0,
     baseUrl: asString(map.get('base_url'), ''),
-    features: {
-      copilot: asBool(featuresRaw['copilot'], false),
-      demandForecast: asBool(featuresRaw['demandForecast'], false),
-      nlpOrderParsing: asBool(featuresRaw['nlpOrderParsing'], false),
-      churnScoring: asBool(featuresRaw['churnScoring'], false),
-    },
+    features: parseAiFeatures(map.get('features')),
+  };
+}
+
+/** Trạng thái AI KD — mọi user đăng nhập trong tenant (không lộ key). */
+export async function getAiAssistantAvailability(): Promise<{
+  /** Superadmin đã cấp module `ai` (hoặc con) cho công ty/user */
+  entitled: boolean;
+  entitledHubChat: boolean;
+  entitledQuoteReview: boolean;
+  entitledOrderReview: boolean;
+  configured: boolean;
+  features: AiFeatureFlags;
+}> {
+  const ctx = await getTenantContext();
+  const { getMyModuleKeys } = await import('@/services/module-access.service');
+  const {
+    AI_FEATURE_KEYS,
+    hasAiFeature,
+    hasAiModule,
+  } = await import('@/lib/ai-access');
+  const moduleKeys = await getMyModuleKeys();
+  const map = await loadNamespaceMap(ctx, 'ai');
+  const rawKey = asString(map.get('api_key'), '');
+  return {
+    entitled: hasAiModule(moduleKeys),
+    entitledHubChat: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.hubChat),
+    entitledQuoteReview: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.quoteReview),
+    entitledOrderReview: hasAiFeature(moduleKeys, AI_FEATURE_KEYS.orderReview),
+    configured: rawKey.length > 0,
+    features: parseAiFeatures(map.get('features')),
+  };
+}
+
+/** Chỉ dùng server khi gọi LLM — có plaintext key. */
+export async function getAiRuntimeSecret(): Promise<{
+  provider: AiProviderId;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  features: AiFeatureFlags;
+} | null> {
+  const ctx = await getTenantContext();
+  const map = await loadNamespaceMap(ctx, 'ai');
+  const apiKey = asString(map.get('api_key'), '').trim();
+  if (!apiKey) return null;
+  return {
+    provider: parseAiProviderId(asString(map.get('provider'), AI_DEFAULTS.provider)),
+    model: asString(map.get('model'), AI_DEFAULTS.model),
+    baseUrl: asString(map.get('base_url'), ''),
+    apiKey,
+    features: parseAiFeatures(map.get('features')),
   };
 }
 
@@ -243,10 +310,17 @@ export interface AiSettingsInput {
 export async function saveAiSettings(input: AiSettingsInput): Promise<ActionResult> {
   const ctx = await getTenantContext();
   requireManager(ctx);
+  if (!isAiProviderId(input.provider)) {
+    return { ok: false, error: 'Nhà cung cấp AI không hợp lệ.' };
+  }
+  const provider = input.provider;
   if (!input.model.trim()) return { ok: false, error: 'Model AI không được để trống.' };
+  if (provider === 'custom' && !input.baseUrl.trim()) {
+    return { ok: false, error: 'Tùy chỉnh bắt buộc điền địa chỉ API.' };
+  }
 
   try {
-    await upsertSetting(ctx, 'ai', 'provider', input.provider);
+    await upsertSetting(ctx, 'ai', 'provider', provider);
     await upsertSetting(ctx, 'ai', 'model', input.model.trim());
     await upsertSetting(ctx, 'ai', 'base_url', input.baseUrl.trim());
     await upsertSetting(ctx, 'ai', 'features', input.features);

@@ -249,6 +249,7 @@ Ghi chú kỹ thuật quan trọng:
 ## 2. Ngữ cảnh hiện tại
 
 - Sidebar: thu/mở desktop (icon rail), drawer phone/tablet; bỏ diễn giải dưới tiêu đề danh mục; bỏ HubTabBar.
+- AI = module catalog `ai` (+ `ai.kinh-doanh.*`): superadmin cấp trên HĐ; admin công ty cấu hình key + cờ; runtime hỏi đáp / đánh giá BG·ĐH.
 - **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
@@ -297,3 +298,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Perf UX: loading từng phân hệ, useLinkStatus, cache nav, thanh tiến trình, nút spinner tức thì |
 | 2026-08-02 | HDSD Kinh doanh: trang /sales/huong-dan + nút HDSD trên tổng quan (luồng, mock UI, bảng) |
 | 2026-08-02 | Hub Setup KD: panel/checklist/preset/profile; icon menu hub+sidebar; contrast HDSD |
+| 2026-08-02 | **Module Trợ lý AI**: catalog `ai` + `ai.kinh-doanh.*`; superadmin cấp HĐ; admin cấu hình key/cờ; entitle demo |

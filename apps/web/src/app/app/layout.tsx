@@ -62,7 +62,8 @@ export default async function WorkspaceLayout({
   }
 
   for (const m of rootModules) {
-    if (['kinh-doanh', 'kho', 'san-xuat', 'ke-toan'].includes(m.key)) continue;
+    // `ai` cấu hình qua Cài đặt — không hiện sidebar «sắp ra mắt»
+    if (['kinh-doanh', 'kho', 'san-xuat', 'ke-toan', 'ai'].includes(m.key)) continue;
     const hint = MODULE_COMING_SOON[m.key];
     if (hint) {
       modules.push({

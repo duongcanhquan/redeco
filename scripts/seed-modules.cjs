@@ -13,6 +13,12 @@ const MODULES = [
   ['nhan-su', 'Nhân sự', 'module', 'Hồ sơ nhân viên, chấm công'],
   ['hanh-chinh', 'Hành chính', 'module', 'Văn bản, tài sản, lịch họp'],
   ['thiet-bi', 'Thiết bị', 'module', 'Quản lý máy móc, bảo trì'],
+  // Trợ lý AI — module tích hợp; superadmin cấp trên HĐ, admin công ty cấu hình key/cờ
+  ['ai', 'Trợ lý AI', 'module', 'Tích hợp LLM: hỏi đáp, đánh giá chứng từ theo phân hệ'],
+  ['ai.kinh-doanh', 'AI Kinh doanh', 'module', 'Trợ lý trên module Kinh doanh'],
+  ['ai.kinh-doanh.hoi-dap', 'Hỏi đáp tổng quan', 'feature', 'Chat / tóm tắt KPI trên hub Kinh doanh'],
+  ['ai.kinh-doanh.danh-gia-bao-gia', 'Đánh giá báo giá', 'feature', 'AI nhận xét chi tiết báo giá'],
+  ['ai.kinh-doanh.danh-gia-don-hang', 'Đánh giá đơn hàng', 'feature', 'AI nhận xét chi tiết đơn hàng'],
   // Cây Kho Phase K1
   ['kho.ton-kho', 'Tồn kho', 'module', 'Xem tồn theo kho / ATP'],
   ['kho.phieu-kho', 'Phiếu kho', 'module', 'Nhập / xuất thành phẩm & NVL'],

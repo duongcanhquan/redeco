@@ -25,11 +25,12 @@ import {
   type SalesSetupPanel,
   SALES_SETUP_PANELS,
 } from '@/lib/sales-setup';
-import type { SalesSettings } from '@/services/tenant-settings.service';
+import type { AiSettingsPublic, SalesSettings } from '@/services/tenant-settings.service';
 import {
   applySalesCompanyProfileAction,
   applySalesPresetAction,
   deleteSalesCompanyProfileAction,
+  saveAiSettingsAction,
   saveSalesCompanyProfileAction,
   saveSalesDocsSettingsAction,
   saveSalesSetupFlagsAction,
@@ -52,6 +53,9 @@ export interface SalesSetupHubProps {
   defaultWorkflowName: string | null;
   activeDiscountRuleCount: number;
   hasKhoModule: boolean;
+  ai: AiSettingsPublic | null;
+  /** Superadmin đã cấp module Trợ lý AI trên hợp đồng */
+  hasAiModule: boolean;
 }
 
 export function SalesSetupHub(props: SalesSetupHubProps) {
@@ -67,6 +71,8 @@ export function SalesSetupHub(props: SalesSetupHubProps) {
     defaultWorkflowName,
     activeDiscountRuleCount,
     hasKhoModule,
+    ai,
+    hasAiModule,
   } = props;
 
   const review = {
@@ -158,9 +164,149 @@ export function SalesSetupHub(props: SalesSetupHubProps) {
       {panel === 'delivery' && (
         <DeliveryPanel ack={flags.ackDeliveryInvoice} basePath={basePath} />
       )}
+      {panel === 'ai' && (
+        <SalesAiSetupPanel basePath={basePath} ai={ai} hasAiModule={hasAiModule} />
+      )}
       {panel === 'profiles' && (
         <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} />
       )}
+    </div>
+  );
+}
+
+function SalesAiSetupPanel({
+  basePath,
+  ai,
+  hasAiModule,
+}: {
+  basePath: string;
+  ai: AiSettingsPublic | null;
+  hasAiModule: boolean;
+}) {
+  const router = useRouter();
+  const [features, setFeatures] = useState(ai?.features ?? null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+
+  if (!hasAiModule) {
+    return (
+      <SettingsGroup
+        title="AI Kinh doanh"
+        description="Module Trợ lý AI do Optimake (superadmin) cấp trên hợp đồng."
+      >
+        <p className="text-sm text-ink-muted leading-relaxed">
+          Công ty chưa được mở module <strong className="text-ink">Trợ lý AI</strong>. Liên hệ
+          Optimake để gắn module này vào hợp đồng — sau đó admin công ty mới cấu hình key và bật
+          từng chỗ dùng.
+        </p>
+      </SettingsGroup>
+    );
+  }
+
+  if (!ai || !features) {
+    return (
+      <SettingsGroup title="AI Kinh doanh" description="Không tải được cấu hình AI.">
+        <Link href={`${basePath}/settings?tab=ai`} className="text-sm font-semibold text-accent">
+          Mở tab AI & API →
+        </Link>
+      </SettingsGroup>
+    );
+  }
+
+  const save = async (): Promise<void> => {
+    setBusy(true);
+    setMsg(null);
+    const result = await saveAiSettingsAction({
+      provider: ai.provider,
+      model: ai.model,
+      apiKey: ai.apiKeyMasked ?? '',
+      baseUrl: ai.baseUrl,
+      features,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setMsg({ type: 'error', text: result.error });
+      return;
+    }
+    setMsg({ type: 'ok', text: 'Đã lưu chỗ áp dụng AI trong Kinh doanh.' });
+    router.refresh();
+  };
+
+  const rows = [
+    {
+      key: 'copilot' as const,
+      label: 'Hỏi đáp trên Tổng quan KD',
+      hint: 'Nút Hỏi AI — KPI, hàng đợi, công nợ.',
+    },
+    {
+      key: 'salesQuoteReview' as const,
+      label: 'Đánh giá báo giá',
+      hint: 'Nút AI đánh giá trên chi tiết báo giá.',
+    },
+    {
+      key: 'salesOrderReview' as const,
+      label: 'Đánh giá đơn hàng',
+      hint: 'Nút AI đánh giá trên chi tiết đơn hàng.',
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <SettingsGroup
+        title="AI trong Kinh doanh"
+        description="Bật/tắt từng chỗ dùng AI. API key & nhà cung cấp cấu hình ở tab AI & API."
+        icon={<Sparkles size={18} className="text-accent" aria-hidden />}
+      >
+        {!ai.hasApiKey && (
+          <p className="text-sm text-warning mb-3">
+            Chưa có API key —{' '}
+            <Link href={`${basePath}/settings?tab=ai`} className="font-semibold underline">
+              thêm key tại AI & API
+            </Link>
+            .
+          </p>
+        )}
+        <div className="space-y-3">
+          {rows.map((r) => (
+            <label
+              key={r.key}
+              className="flex items-start gap-3 rounded-xl border border-panel/40 bg-app/40 px-4 py-3 cursor-pointer min-h-11"
+            >
+              <input
+                type="checkbox"
+                className="mt-1 size-4 accent-accent"
+                checked={features[r.key]}
+                onChange={(e) => setFeatures({ ...features, [r.key]: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium">{r.label}</span>
+                <span className="block text-xs text-ink-muted mt-0.5">{r.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <Link
+          href={`${basePath}/settings?tab=ai`}
+          className="inline-flex min-h-11 items-center gap-1.5 mt-3 text-sm font-semibold text-accent"
+        >
+          Cấu hình nhà cung cấp / model
+          <ExternalLink size={14} aria-hidden />
+        </Link>
+      </SettingsGroup>
+      {msg && (
+        <p role="alert" className={`text-sm ${msg.type === 'ok' ? 'text-success' : 'text-danger'}`}>
+          {msg.text}
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void save()}
+        className="inline-flex h-12 min-w-44 items-center justify-center gap-2 rounded-xl bg-accent px-6 font-semibold text-app cursor-pointer disabled:opacity-60"
+      >
+        <Save size={16} aria-hidden />
+        {busy ? 'Đang lưu…' : 'Lưu AI Kinh doanh'}
+      </button>
     </div>
   );
 }

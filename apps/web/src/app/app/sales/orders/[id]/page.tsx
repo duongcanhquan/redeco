@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { ArrowLeft, ScrollText, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { DocAiReviewButton } from '@/components/sales/doc-ai-review-button';
 import { PrintButton } from '@/components/sales/print-button';
 import { formatDate, formatMoney } from '@/lib/format';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getSalesOrderWoQtyByProduct } from '@/services/production.service';
 import { getMyRootModules, getSalesOrderById } from '@/services/sales.service';
-import { getSalesSettings } from '@/services/tenant-settings.service';
+import {
+  getAiAssistantAvailability,
+  getSalesSettings,
+} from '@/services/tenant-settings.service';
 import { CreateWoFromOrderButton } from '../create-wo-from-order-button';
 import { OrderRowActions } from '../order-row-actions';
 
@@ -26,10 +30,11 @@ export default async function SalesOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [supabase, claims, salesSettings] = await Promise.all([
+  const [supabase, claims, salesSettings, aiAvail] = await Promise.all([
     createServerSupabase(),
     getSessionClaims(),
     getSalesSettings(),
+    getAiAssistantAvailability(),
   ]);
   const [o, modules] = await Promise.all([
     getSalesOrderById(supabase, id),
@@ -78,6 +83,14 @@ export default async function SalesOrderDetailPage({
             <p className="text-sm text-ink-muted mt-1">{o.customers?.name ?? '—'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <DocAiReviewButton
+              kind="order"
+              docId={o.id}
+              basePath={base}
+              entitled={aiAvail.entitledOrderReview}
+              configured={aiAvail.configured}
+              enabled={aiAvail.features.salesOrderReview}
+            />
             <PrintButton href={`${base}/sales/orders/${o.id}/print`} />
             <span className={`inline-flex rounded-lg px-3 py-1 text-xs border ${badge.cls}`}>
               {badge.label}

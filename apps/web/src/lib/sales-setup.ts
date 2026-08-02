@@ -10,6 +10,7 @@ export type SalesSetupPanel =
   | 'approval'
   | 'discount'
   | 'delivery'
+  | 'ai'
   | 'profiles';
 
 export const SALES_SETUP_PANELS: {
@@ -22,6 +23,7 @@ export const SALES_SETUP_PANELS: {
   { key: 'approval', label: 'Duyệt báo giá' },
   { key: 'discount', label: 'Chiết khấu' },
   { key: 'delivery', label: 'Giao & hóa đơn' },
+  { key: 'ai', label: 'AI Kinh doanh' },
   { key: 'profiles', label: 'Profile' },
 ];
 
