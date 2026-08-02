@@ -249,7 +249,7 @@ Ghi chú kỹ thuật quan trọng:
 ## 2. Ngữ cảnh hiện tại
 
 - Sidebar: thu/mở desktop (icon rail), drawer phone/tablet; bỏ diễn giải dưới tiêu đề danh mục; bỏ HubTabBar; menu phân hệ không sổ xuống.
-- Login: Optimake ngoài vòng tròn; tên CT + form gọn trong vòng; bỏ tiêu đề «Đăng nhập», Quên MK, Liên hệ quản trị.
+- Login: Optimake trên mép ngoài vòng neon; tên CT nâng cao trong vòng + form gọn; bỏ Quên MK / Liên hệ QT.
 - AI = module catalog `ai` (+ `ai.kinh-doanh.*`): superadmin cấp trên HĐ; admin công ty cấu hình key + cờ; runtime hỏi đáp / đánh giá BG·ĐH.
 - **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.
 - Demo: `demo@optimake.com` / `Demo@123`.

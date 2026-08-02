@@ -100,30 +100,32 @@ function LoginForm() {
     }
   };
 
+  const showCompany = typeof companyName === 'string' && companyName.length > 0;
+
   return (
-    <main className="min-h-dvh flex items-center justify-center overflow-hidden px-3 py-16 sm:py-20">
-      <div className="flex w-full max-w-md flex-col items-center gap-5 sm:gap-6">
-        {/* Brand Optimake — ngoài vòng tròn login */}
-        <Logo markSize={48} textClassName="text-3xl sm:text-4xl tracking-tight" />
+    <main className="min-h-dvh flex items-center justify-center overflow-x-hidden px-3 py-10 sm:py-14">
+      <div className="login-stack">
+        {/* Optimake trên cùng — ngoài / phía trên mép vòng neon */}
+        <div className="login-brand">
+          <Logo markSize={48} textClassName="text-3xl sm:text-4xl tracking-tight" />
+        </div>
 
         <div className="login-scene">
           {RING_SEGMENTS.map((i) => (
             <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden />
           ))}
 
-          <div className="login-box">
-            {companySlug && companyName !== null && (
-              <p className="mb-2 flex items-center justify-center gap-1.5 px-2 text-center">
+          <div className={`login-box${showCompany ? ' login-box--company' : ''}`}>
+            {showCompany && (
+              <p className="login-company">
                 <Building2 size={16} className="shrink-0 text-accent" aria-hidden />
-                <span className="text-sm font-semibold leading-snug text-ink tracking-tight sm:text-base">
-                  {companyName ?? companySlug}
-                </span>
+                <span>{companyName ?? companySlug}</span>
               </p>
             )}
             {companySlug && companyName === null && (
               <p
                 role="alert"
-                className="mb-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-center text-xs text-warning"
+                className="login-company-alert"
               >
                 Không tìm thấy công ty “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên hệ Optimake.
               </p>
