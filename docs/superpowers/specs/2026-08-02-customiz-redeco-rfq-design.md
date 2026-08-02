@@ -1,7 +1,7 @@
 # Design: Customiz · Kinh doanh · Gói REDECO RFQ (Phase 1)
 
 **Ngày:** 2026-08-02  
-**Trạng thái:** Chờ duyệt spec (brainstorm đã chốt A–C + 3 phần thiết kế)  
+**Trạng thái:** Phase 1 đã implement (2026-08-02) — chờ file Excel có data để smoke upload thật.  
 **Phạm vi:** Import Excel yêu cầu báo giá → inbox → phát hiện trùng → xóa.  
 **Ngoài phạm vi Phase 1:** Bộ lọc kéo-thả / tag tiềm năng; tính chi phí; tạo Báo giá chuẩn; logo R2.
 

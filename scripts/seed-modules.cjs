@@ -19,6 +19,15 @@ const MODULES = [
   ['ai.kinh-doanh.hoi-dap', 'Hỏi đáp tổng quan', 'feature', 'Chat / tóm tắt KPI trên hub Kinh doanh'],
   ['ai.kinh-doanh.danh-gia-bao-gia', 'Đánh giá báo giá', 'feature', 'AI nhận xét chi tiết báo giá'],
   ['ai.kinh-doanh.danh-gia-don-hang', 'Đánh giá đơn hàng', 'feature', 'AI nhận xét chi tiết đơn hàng'],
+  // Customiz — gói theo DN, gắn phân hệ (có thể cấp lại cho CT khác cùng nghiệp vụ)
+  ['customiz', 'Customiz', 'module', 'Gói nghiệp vụ tùy chỉnh theo doanh nghiệp'],
+  ['customiz.kinh-doanh', 'Customiz Kinh doanh', 'module', 'Customiz gắn phân hệ Kinh doanh'],
+  [
+    'customiz.kinh-doanh.redeco-rfq',
+    'Yêu cầu BG · REDECO',
+    'feature',
+    'Import Excel yêu cầu báo giá REDECO, phát hiện trùng',
+  ],
   // Cây Kho Phase K1
   ['kho.ton-kho', 'Tồn kho', 'module', 'Xem tồn theo kho / ATP'],
   ['kho.phieu-kho', 'Phiếu kho', 'module', 'Nhập / xuất thành phẩm & NVL'],

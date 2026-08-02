@@ -12,7 +12,8 @@ export type SalesTabKey =
   | 'giao-hang'
   | 'hoa-don'
   | 'chiet-khau'
-  | 'duyet';
+  | 'duyet'
+  | 'customiz-redeco-rfq';
 
 export type InventoryTabKey = 'tong-quan' | 'ton-kho' | 'phieu-kho' | 'danh-muc-kho';
 export type ProductionTabKey = 'tong-quan' | 'dinh-muc' | 'lenh-sx';
@@ -97,6 +98,12 @@ const SALES_TAB_DEFS: Record<SalesTabKey, HubTabDef> = {
     path: '/sales/approvals',
     matchPrefixes: ['/sales/approvals'],
   },
+  'customiz-redeco-rfq': {
+    key: 'customiz-redeco-rfq',
+    label: 'Yêu cầu BG · REDECO',
+    path: '/sales/customiz/redeco-rfq',
+    matchPrefixes: ['/sales/customiz/redeco-rfq'],
+  },
 };
 
 /** Thứ tự hiển thị tab Kinh doanh. */
@@ -105,6 +112,7 @@ const SALES_TAB_ORDER: SalesTabKey[] = [
   'khach-hang',
   'san-pham',
   'bao-gia',
+  'customiz-redeco-rfq',
   'don-hang',
   'giao-hang',
   'hoa-don',
@@ -125,6 +133,23 @@ export function resolveSalesTabs(
 
   // Quản trị hoặc được giao ĐÚNG root kinh-doanh → đủ tab
   // (hasModuleKey('kinh-doanh') cũng khớp node con — KHÔNG dùng ở đây, nếu không R2 chết)
+  const withCustomiz = (keys: SalesTabKey[]): HubTabDef[] => {
+    const list = [...keys];
+    // Customiz pack — chỉ hiện khi được cấp (kể cả quản trị)
+    if (
+      hasModuleKey(moduleKeys, 'customiz.kinh-doanh.redeco-rfq') ||
+      hasModuleKey(moduleKeys, 'customiz.kinh-doanh') ||
+      hasExactModuleKey(moduleKeys, 'customiz')
+    ) {
+      if (!list.includes('customiz-redeco-rfq')) {
+        const baoGiaIdx = list.indexOf('bao-gia');
+        if (baoGiaIdx >= 0) list.splice(baoGiaIdx + 1, 0, 'customiz-redeco-rfq');
+        else list.push('customiz-redeco-rfq');
+      }
+    }
+    return list.map((k) => SALES_TAB_DEFS[k]);
+  };
+
   if (isManager || hasExactModuleKey(moduleKeys, 'kinh-doanh')) {
     const keys: SalesTabKey[] = [
       'tong-quan',
@@ -138,7 +163,7 @@ export function resolveSalesTabs(
     if (isManager) {
       keys.push('chiet-khau', 'duyet');
     }
-    return keys.map((k) => SALES_TAB_DEFS[k]);
+    return withCustomiz(keys);
   }
 
   const allowed = new Set<SalesTabKey>(['tong-quan']);
@@ -166,7 +191,7 @@ export function resolveSalesTabs(
   if (hasModuleKey(moduleKeys, 'kinh-doanh.chiet-khau')) allowed.add('chiet-khau');
   if (hasModuleKey(moduleKeys, 'kinh-doanh.duyet')) allowed.add('duyet');
 
-  return SALES_TAB_ORDER.filter((k) => allowed.has(k)).map((k) => SALES_TAB_DEFS[k]);
+  return withCustomiz(SALES_TAB_ORDER.filter((k) => allowed.has(k)));
 }
 
 const INVENTORY_DEFS: Record<InventoryTabKey, HubTabDef> = {

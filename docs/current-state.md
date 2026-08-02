@@ -253,13 +253,14 @@ Ghi chú kỹ thuật quan trọng:
 - AI = module catalog `ai` (+ `ai.kinh-doanh.*`): superadmin cấp trên HĐ; admin công ty cấu hình key + cờ; runtime hỏi đáp / đánh giá BG·ĐH.
 - Hỏi AI (KD): modal lớn desktop/iPad chia đôi — câu hỏi nhanh | chat; chữ to, lịch sử hội thoại.
 - **A Giữ chỗ (K2)** đã wire; tiếp **B** GH/HĐ linh hoạt · **C** bảng giá.
+- Customiz REDECO RFQ Phase 1: import Excel inbox + tag trùng; menu «Yêu cầu BG · REDECO»; entitlement `customiz.kinh-doanh.redeco-rfq`.
 - Demo: `demo@optimake.com` / `Demo@123`.
 
 ---
 
 ## 3. Các bước tiếp theo (Next actions)
 
-1. **Customiz REDECO RFQ Phase 1** — duyệt spec `docs/superpowers/specs/2026-08-02-customiz-redeco-rfq-design.md` + file Excel mẫu → plan → implement.
+1. **Customiz REDECO RFQ Phase 1** — đã có migration/UI; test upload file có data; Phase 2: bộ lọc kéo-thả.
 2. **B** Hóa đơn / Giao hàng song song + đặt cọc; **C** Bảng giá theo loại khách.
 3. Worker webhook/email/SMS; Metadata Engine + R2.
 
@@ -300,4 +301,4 @@ Ghi chú kỹ thuật quan trọng:
 | 2026-08-02 | Perf UX: loading từng phân hệ, useLinkStatus, cache nav, thanh tiến trình, nút spinner tức thì |
 | 2026-08-02 | HDSD Kinh doanh: trang /sales/huong-dan + nút HDSD trên tổng quan (luồng, mock UI, bảng) |
 | 2026-08-02 | Hub Setup KD: panel/checklist/preset/profile; icon menu hub+sidebar; contrast HDSD |
-| 2026-08-02 | **Module Trợ lý AI**: catalog `ai` + `ai.kinh-doanh.*`; superadmin cấp HĐ; admin cấu hình key/cờ; entitle demo |
+| 2026-08-02 | **Customiz REDECO RFQ P1**: migration batches/requests, parse xls/xlsx, inbox UI, entitle demo |

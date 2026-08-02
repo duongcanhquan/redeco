@@ -2,6 +2,7 @@ import {
   Calculator,
   ClipboardList,
   Factory,
+  FileSpreadsheet,
   FileText,
   GitBranch,
   LayoutDashboard,
@@ -26,6 +27,8 @@ export function hubTabIcon(key: string, size = 16): ReactNode {
       return <Package size={size} aria-hidden />;
     case 'bao-gia':
       return <FileText size={size} aria-hidden />;
+    case 'customiz-redeco-rfq':
+      return <FileSpreadsheet size={size} aria-hidden />;
     case 'don-hang':
       return <ClipboardList size={size} aria-hidden />;
     case 'giao-hang':
