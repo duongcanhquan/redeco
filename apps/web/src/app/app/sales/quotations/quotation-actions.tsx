@@ -4,6 +4,7 @@ import { ArrowRightCircle, CheckCircle2, Send, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { QuotationStatus } from '@optimake/domain';
+import type { QuotationApprovalActionRow } from '@/services/sales.service';
 import { convertQuotationAction, setQuotationStatusAction } from './actions';
 
 const btn =
@@ -12,15 +13,31 @@ const btn =
 export function QuotationRowActions({
   quotationId,
   status,
-  canApprove,
+  role,
+  currentStepOrder,
+  actions,
 }: {
   quotationId: string;
   status: QuotationStatus;
-  canApprove: boolean;
+  role: 'owner' | 'admin' | 'member';
+  currentStepOrder: number | null;
+  actions: QuotationApprovalActionRow[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const pending = [...actions]
+    .filter((a) => a.status === 'pending')
+    .sort((a, b) => a.step_order - b.step_order);
+  const current = actions.find((a) => a.step_order === currentStepOrder) ?? pending[0];
+  const totalSteps = actions.length;
+  const doneSteps = actions.filter((a) => a.status === 'approved').length;
+
+  // UI hint: owner luôn thấy nút; admin/member dựa vào bước (server vẫn enforce)
+  const canAct =
+    status === 'sent' &&
+    (role === 'owner' || role === 'admin' || role === 'member');
 
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>): Promise<void> => {
     setBusy(true);
@@ -48,30 +65,37 @@ export function QuotationRowActions({
             Gửi duyệt
           </button>
         )}
-        {status === 'sent' && canApprove && (
+        {status === 'sent' && (
           <>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void run(() => setQuotationStatusAction(quotationId, 'approved'))}
-              className={`${btn} border-success/40 text-success hover:bg-success/10`}
-            >
-              <CheckCircle2 size={13} aria-hidden />
-              Duyệt
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void run(() => setQuotationStatusAction(quotationId, 'rejected'))}
-              className={`${btn} border-danger/40 text-danger hover:bg-danger/10`}
-            >
-              <XCircle size={13} aria-hidden />
-              Từ chối
-            </button>
+            {totalSteps > 0 && (
+              <span className="text-[11px] text-ink-muted mr-1">
+                Bước {Math.min(doneSteps + 1, totalSteps)}/{totalSteps}
+                {current ? `: ${current.step_name}` : ''}
+              </span>
+            )}
+            {canAct && (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => setQuotationStatusAction(quotationId, 'approved'))}
+                  className={`${btn} border-success/40 text-success hover:bg-success/10`}
+                >
+                  <CheckCircle2 size={13} aria-hidden />
+                  Duyệt bước
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => setQuotationStatusAction(quotationId, 'rejected'))}
+                  className={`${btn} border-danger/40 text-danger hover:bg-danger/10`}
+                >
+                  <XCircle size={13} aria-hidden />
+                  Từ chối
+                </button>
+              </>
+            )}
           </>
-        )}
-        {status === 'sent' && !canApprove && (
-          <span className="text-xs text-ink-muted">Chờ quản trị duyệt</span>
         )}
         {status === 'approved' && (
           <button

@@ -19,6 +19,15 @@ export type {
   InvoiceStatus,
   LineItemInput,
   CreditCheckResult,
+  ApprovalActionStatus,
+  AssigneeRole,
+  CtpStatus,
+  DiscountRuleConditions,
+  DiscountRuleMatchInput,
+  DiscountRuleCandidate,
+  ApprovalStepDef,
+  PromiseLineInput,
+  PromiseLineResult,
 } from './sales/types';
 export {
   computeLineTotal,
@@ -26,4 +35,9 @@ export {
   checkCredit,
   QUOTATION_TRANSITIONS,
   canTransitionQuotation,
+  discountRuleMatches,
+  pickWinningDiscountRule,
+  requiredApprovalSteps,
+  canActOnApprovalStep,
+  buildPromiseCheck,
 } from './sales/types';

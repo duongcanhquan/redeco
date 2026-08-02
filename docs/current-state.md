@@ -81,6 +81,19 @@ Spec đã duyệt: `docs/specs/2026-08-01-platform-core-design.md` (kèm ADR-008
 - Service mở rộng: `setTenantStatus`, `resetCompanyAdminPassword`, `extendContract`, `createModuleNode`, `updateModuleNode`, `setModuleActive`, `updatePlatformSetting` — tất cả qua `assertPlatformAdmin()`.
 - Đã verify: build/lint/typecheck sạch; truy vấn lồng PostgREST test OK (`scripts/test-nested-queries.cjs`).
 
+### ✅ Module Kinh doanh — Core Phase 2 (2026-08-02)
+
+Siết Must-have O2C theo brainstorming (hướng A + duyệt N cấp B). Spec: `docs/superpowers/specs/2026-08-02-sales-core-phase2-design.md` · Plan: `docs/superpowers/plans/2026-08-02-sales-core-phase2.md`.
+
+- **Migration** `20260802100000_sales_core_phase2.sql` (ĐÃ apply): `discount_rules`, `approval_workflows` + `approval_workflow_steps`, `quotation_approval_actions`, `sales_outbox`; quotations thêm workflow/step/rule; orders thêm `promise_check`. RLS InitPlan + `has_module_access('kinh-doanh')`.
+- **Domain**: `pickWinningDiscountRule`, `requiredApprovalSteps`, `canActOnApprovalStep`, `buildPromiseCheck` (CTP stub).
+- **CRM**: `/sales/customers/[id]` timeline BG/ĐH/GH/HĐ/thanh toán + công nợ/credit.
+- **Chiết khấu**: `/sales/discount-rules` (manager); tự áp khi tạo BG (checkbox).
+- **Duyệt N cấp**: `/sales/approvals` cấu hình; gửi duyệt tạo chuỗi bước theo ngưỡng; Duyệt bước / Từ chối; owner override.
+- **SO confirm**: credit + ATP + `promise_check` CTP stub; modal hiện CTP reason.
+- **Outbox**: `DeliveryShipped`, `InvoiceCreated`, `InvoicePaid` → sẵn cho Kế toán.
+- **Verify**: typecheck/lint/build sạch; `scripts/test-sales-core-phase2.cjs` logic PASS.
+
 ### ✅ Module Kinh doanh — Phase 1 Order-to-Cash (2026-08-01)
 
 Blueprint: `docs/blueprints/2026-08-01-sales-module-blueprint.md` (aggregates + invariants + roadmap nhóm 2–5).

@@ -1,5 +1,6 @@
+import Link from 'next/link';
 import { Users } from 'lucide-react';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { formatMoney } from '@/lib/format';
 import { getOutstandingByCustomer, listCustomers } from '@/services/sales.service';
 import { CustomerDialog } from './customer-dialog';
@@ -13,7 +14,8 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function CustomersPage() {
-  const supabase = await createServerSupabase();
+  const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
+  const base = claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app';
   const [customers, outstanding] = await Promise.all([
     listCustomers(supabase),
     getOutstandingByCustomer(supabase),
@@ -66,7 +68,12 @@ export default async function CustomersPage() {
                     <tr key={c.id} className="border-b border-panel/20 last:border-0 hover:bg-glass-strong/40 transition-colors">
                       <td className="px-5 py-3.5 font-mono text-xs text-accent">{c.code}</td>
                       <td className="px-5 py-3.5">
-                        <p className="font-medium">{c.name}</p>
+                        <Link
+                          href={`${base}/sales/customers/${c.id}`}
+                          className="font-medium text-accent hover:underline"
+                        >
+                          {c.name}
+                        </Link>
                         {c.tax_code && <p className="text-xs text-ink-muted">MST: {c.tax_code}</p>}
                       </td>
                       <td className="px-5 py-3.5">

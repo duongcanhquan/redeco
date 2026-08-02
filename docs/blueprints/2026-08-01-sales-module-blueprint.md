@@ -47,8 +47,14 @@ Khách hàng (CRM cơ bản) → Báo giá (duyệt) → Đơn hàng (credit che
 - Phê duyệt báo giá / xác nhận đơn: kiểm tra role owner/admin ở service layer (member được tạo draft).
 - Superadmin không có quyền đọc dữ liệu nghiệp vụ tenant (không thêm policy platform).
 
+## Phase 2 — Core siết chặt (2026-08-02)
+
+Spec: `docs/superpowers/specs/2026-08-02-sales-core-phase2-design.md`
+
+- CRM timeline khách hàng; `discount_rules`; duyệt báo giá N cấp (`approval_workflows` + steps + `quotation_approval_actions`); `promise_check` ATP+CTP stub; `sales_outbox` cho Kế toán.
+
 ## Roadmap các nhóm còn lại
-- **Nhóm 2** (CPQ+BOM động, Dynamic Pricing, AI Forecasting, B2B Portal+EDI, Profitability): cần module Kỹ thuật (BOM), Kho, Sản xuất, Kế toán + data pipeline → sau khi Phase 1 chạy và các module nền ra đời. B2B Portal dùng lại subdomain + role mới `customer`.
-- **Nhóm 3** (Churn scoring, Next Best Action, ERP Copilot): cần ≥ vài tháng dữ liệu giao dịch; Copilot đọc qua các hàm SQL/views đã chuẩn hóa từ Phase 1 (thiết kế bảng đã tính trước: mọi giao dịch có timestamps + attributes JSONB).
-- **Nhóm 4** (n8n): bảng `webhook_endpoints`/platform_settings + gọi webhook khi có Domain Events (QuotationSent, SalesOrderConfirmed...) — Phase 2, cần n8n instance của doanh nghiệp.
-- **Nhóm 5**: theo yêu cầu riêng từng doanh nghiệp, phát triển sau.
+- **Nhóm Advanced** (CPQ+BOM động, Dynamic Pricing, AI Forecasting, B2B Portal+EDI, Profitability): cần module Kỹ thuật (BOM), Kho, Sản xuất, Kế toán.
+- **Nhóm AI Workflow** (NLP Order Parsing, Smart Approval Routing): thay/ bổ sung quy tắc duyệt cứng bằng mô hình rủi ro + LLM/OCR.
+- **Nhóm AI Revenue** (Churn/NBA/Copilot): cần dữ liệu lịch sử; đọc qua views chuẩn hóa + outbox/events.
+- **n8n / chuyên biệt DN**: consume `sales_outbox` + domain events.

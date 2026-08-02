@@ -28,7 +28,6 @@ export default async function QuotationsPage() {
     listCustomers(supabase),
     listProducts(supabase),
   ]);
-  const canApprove = ctx.role === 'owner' || ctx.role === 'admin';
   const activeProducts = products
     .filter((p) => p.is_active)
     .map((p) => ({ id: p.id, sku: p.sku, name: p.name, uom: p.uom, base_price: Number(p.base_price) }));
@@ -45,7 +44,8 @@ export default async function QuotationsPage() {
             Báo giá
           </h1>
           <p className="text-sm text-ink-muted mt-1">
-            Quy trình: Nháp → Gửi duyệt → Duyệt (owner/admin) → Chuyển thành đơn hàng.
+            Nháp → Gửi duyệt (chuỗi N cấp) → Duyệt từng bước → Chuyển thành đơn hàng. Có thể tự áp
+            quy tắc chiết khấu.
           </p>
         </div>
         <QuotationDialog customers={activeCustomers} products={activeProducts} />
@@ -105,7 +105,9 @@ export default async function QuotationsPage() {
                         <QuotationRowActions
                           quotationId={q.id}
                           status={q.status}
-                          canApprove={canApprove}
+                          role={ctx.role}
+                          currentStepOrder={q.current_step_order}
+                          actions={q.quotation_approval_actions ?? []}
                         />
                       </td>
                     </tr>

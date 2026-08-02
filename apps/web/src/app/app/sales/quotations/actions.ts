@@ -12,7 +12,7 @@ import {
 
 export async function createQuotationAction(
   input: QuotationInput,
-): Promise<ActionResult<{ id: string; code: string }>> {
+): Promise<ActionResult<{ id: string; code: string; appliedRuleId: string | null }>> {
   const result = await createQuotation(input);
   if (result.ok) revalidatePath('/app/sales/quotations');
   return result;
@@ -21,7 +21,7 @@ export async function createQuotationAction(
 export async function setQuotationStatusAction(
   quotationId: string,
   to: QuotationStatus,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ currentStep?: number; done?: boolean }>> {
   try {
     const result = await setQuotationStatus(quotationId, to);
     if (result.ok) revalidatePath('/app/sales/quotations');

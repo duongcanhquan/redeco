@@ -1,54 +1,35 @@
 import 'server-only';
 import {
+  buildPromiseCheck,
+  canActOnApprovalStep,
   canTransitionQuotation,
   checkCredit,
   computeDocTotal,
   computeLineTotal,
+  pickWinningDiscountRule,
+  requiredApprovalSteps,
+  type ApprovalStepDef,
   type CreditCheckResult,
   type CustomerKind,
   type CustomerStatus,
   type DeliveryStatus,
+  type DiscountRuleCandidate,
   type InvoiceStatus,
+  type PromiseLineResult,
   type QuotationStatus,
   type SalesOrderStatus,
 } from '@optimake/domain';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
+import {
+  getTenantContext,
+  requireManager,
+  type ActionResult,
+  type TenantContext,
+} from '@/services/sales-context';
+import { ensureDefaultQuotationWorkflow } from '@/services/sales-config.service';
 
-export type ActionResult<T = undefined> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
-
-// ------------------------------------------------------------
-// Ngữ cảnh tenant + quyền
-// ------------------------------------------------------------
-
-export interface TenantContext {
-  supabase: SupabaseClient;
-  userId: string;
-  tenantId: string;
-  role: 'owner' | 'admin' | 'member';
-}
-
-export async function getTenantContext(): Promise<TenantContext> {
-  // Claims decode từ access token (0 round-trip tới Auth). Bước đọc role
-  // dưới đây chạy qua RLS với chính token đó — token giả sẽ bị Supabase
-  // từ chối, query trả rỗng => role 'member' => các assert quyền sẽ chặn.
-  const [supabase, claims] = await Promise.all([createServerSupabase(), getSessionClaims()]);
-  if (!claims) throw new Error('Chưa đăng nhập.');
-  if (!claims.tenantId) throw new Error('Tài khoản không thuộc công ty nào.');
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('id', claims.userId)
-    .single();
-  return {
-    supabase,
-    userId: claims.userId,
-    tenantId: claims.tenantId,
-    role: ((profile as { role?: string } | null)?.role ?? 'member') as TenantContext['role'],
-  };
-}
+export type { ActionResult, TenantContext };
+export { getTenantContext, requireManager };
 
 /** Menu workspace: các module gốc user được dùng. */
 export interface EntitledModule {
@@ -115,6 +96,16 @@ export interface DocItemRow {
   atp_qty?: number | null;
 }
 
+export interface QuotationApprovalActionRow {
+  id: string;
+  step_order: number;
+  step_name: string;
+  status: 'pending' | 'approved' | 'rejected' | 'skipped';
+  acted_by: string | null;
+  acted_at: string | null;
+  comment: string | null;
+}
+
 export interface QuotationRow {
   id: string;
   code: string;
@@ -125,8 +116,12 @@ export interface QuotationRow {
   total: number;
   notes: string | null;
   created_at: string;
+  approval_workflow_id: string | null;
+  current_step_order: number | null;
+  applied_discount_rule_id: string | null;
   customers?: { name: string } | null;
   quotation_items?: DocItemRow[];
+  quotation_approval_actions?: QuotationApprovalActionRow[];
 }
 
 export interface SalesOrderRow {
@@ -139,6 +134,7 @@ export interface SalesOrderRow {
   discount_pct: number;
   total: number;
   credit_check: Partial<CreditCheckResult> & { checked_at?: string };
+  promise_check: { lines?: PromiseLineResult[]; allCovered?: boolean };
   notes: string | null;
   created_at: string;
   customers?: { name: string } | null;
@@ -211,7 +207,7 @@ export async function listQuotations(supabase: SupabaseClient): Promise<Quotatio
   const { data, error } = await supabase
     .from('quotations')
     .select(
-      'id, code, customer_id, status, valid_until, discount_pct, total, notes, created_at, customers(name), quotation_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total)',
+      'id, code, customer_id, status, valid_until, discount_pct, total, notes, created_at, approval_workflow_id, current_step_order, applied_discount_rule_id, customers(name), quotation_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total), quotation_approval_actions(id, step_order, step_name, status, acted_by, acted_at, comment)',
     )
     .order('created_at', { ascending: false });
   if (error) throw new Error(`Không tải được báo giá: ${error.message}`);
@@ -222,7 +218,7 @@ export async function listSalesOrders(supabase: SupabaseClient): Promise<SalesOr
   const { data, error } = await supabase
     .from('sales_orders')
     .select(
-      'id, code, customer_id, quotation_id, status, expected_delivery_date, discount_pct, total, credit_check, notes, created_at, customers(name), sales_order_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total, atp_qty), invoices(id)',
+      'id, code, customer_id, quotation_id, status, expected_delivery_date, discount_pct, total, credit_check, promise_check, notes, created_at, customers(name), sales_order_items(id, product_id, product_name, qty, unit_price, discount_pct, line_total, atp_qty), invoices(id)',
     )
     .order('created_at', { ascending: false });
   if (error) throw new Error(`Không tải được đơn hàng: ${error.message}`);
@@ -262,12 +258,6 @@ async function nextCode(
 ): Promise<string> {
   const { count } = await supabase.from(table).select('id', { count: 'exact', head: true });
   return `${prefix}-${String((count ?? 0) + 1).padStart(4, '0')}`;
-}
-
-function requireManager(ctx: TenantContext): void {
-  if (ctx.role !== 'owner' && ctx.role !== 'admin') {
-    throw new Error('Chỉ quản trị công ty (owner/admin) được thực hiện thao tác này.');
-  }
 }
 
 export interface DocItemInput {
@@ -439,14 +429,17 @@ export async function updateProduct(
 export interface QuotationInput {
   customerId: string;
   validUntil: string | null;
-  discountPct: number;
+  /** Nếu null/undefined → tự áp quy tắc chiết khấu thắng cuộc (nếu có). */
+  discountPct: number | null;
   notes: string;
   items: DocItemInput[];
+  /** true = tự match discount_rules (mặc định). */
+  autoApplyDiscountRule?: boolean;
 }
 
 export async function createQuotation(
   input: QuotationInput,
-): Promise<ActionResult<{ id: string; code: string }>> {
+): Promise<ActionResult<{ id: string; code: string; appliedRuleId: string | null }>> {
   const ctx = await getTenantContext();
   if (!input.customerId) return { ok: false, error: 'Hãy chọn khách hàng.' };
   const itemError = validateItems(input.items);
@@ -455,7 +448,55 @@ export async function createQuotation(
   const lineTotals = input.items.map((it) =>
     computeLineTotal({ qty: it.qty, unitPrice: it.unitPrice, discountPct: it.discountPct }),
   );
-  const total = computeDocTotal(lineTotals, input.discountPct);
+  const subtotal = lineTotals.reduce((s, t) => s + t, 0);
+
+  let discountPct = input.discountPct ?? 0;
+  let appliedRuleId: string | null = null;
+  if (input.autoApplyDiscountRule !== false) {
+    const { data: customer } = await ctx.supabase
+      .from('customers')
+      .select('id, kind')
+      .eq('id', input.customerId)
+      .single();
+    const { data: rules } = await ctx.supabase
+      .from('discount_rules')
+      .select('id, priority, is_active, valid_from, valid_until, discount_pct, conditions');
+    const candidates: DiscountRuleCandidate[] = (
+      (rules ?? []) as {
+        id: string;
+        priority: number;
+        is_active: boolean;
+        valid_from: string | null;
+        valid_until: string | null;
+        discount_pct: number;
+        conditions: DiscountRuleCandidate['conditions'];
+      }[]
+    ).map((r) => ({
+      id: r.id,
+      priority: r.priority,
+      isActive: r.is_active,
+      validFrom: r.valid_from,
+      validUntil: r.valid_until,
+      discountPct: Number(r.discount_pct),
+      conditions: r.conditions ?? {},
+    }));
+    const today = new Date().toISOString().slice(0, 10);
+    const winner = pickWinningDiscountRule(candidates, {
+      customerId: input.customerId,
+      customerKind: ((customer as { kind?: CustomerKind } | null)?.kind ?? 'b2b') as CustomerKind,
+      docSubtotal: subtotal,
+      productIds: input.items.map((i) => i.productId),
+      onDate: today,
+    });
+    if (winner && (input.discountPct === null || input.discountPct === undefined)) {
+      discountPct = winner.discountPct;
+      appliedRuleId = winner.id;
+    } else if (winner && input.discountPct === winner.discountPct) {
+      appliedRuleId = winner.id;
+    }
+  }
+
+  const total = computeDocTotal(lineTotals, discountPct);
   const code = await nextCode(ctx.supabase, 'quotations', 'BG');
 
   const { data, error } = await ctx.supabase
@@ -465,10 +506,11 @@ export async function createQuotation(
       code,
       customer_id: input.customerId,
       valid_until: input.validUntil,
-      discount_pct: input.discountPct,
+      discount_pct: discountPct,
       total,
       notes: input.notes.trim() || null,
       created_by: ctx.userId,
+      applied_discount_rule_id: appliedRuleId,
     })
     .select('id')
     .single();
@@ -492,34 +534,206 @@ export async function createQuotation(
     await ctx.supabase.from('quotations').delete().eq('id', quotationId);
     return { ok: false, error: `Lưu dòng báo giá thất bại: ${itemsError.message}` };
   }
-  return { ok: true, data: { id: quotationId, code } };
+  return { ok: true, data: { id: quotationId, code, appliedRuleId } };
 }
 
+/**
+ * Gửi duyệt / duyệt bước / từ chối.
+ * - draft → sent: khởi tạo chuỗi N cấp
+ * - sent + approved: duyệt bước hiện tại (có thể còn bước tiếp)
+ * - sent + rejected: từ chối toàn bộ
+ */
 export async function setQuotationStatus(
   quotationId: string,
   to: QuotationStatus,
-): Promise<ActionResult> {
+  comment?: string,
+): Promise<ActionResult<{ currentStep?: number; done?: boolean }>> {
   const ctx = await getTenantContext();
-  // Duyệt / từ chối chỉ dành cho quản trị công ty (phê duyệt 1 cấp — blueprint)
-  if (to === 'approved' || to === 'rejected') requireManager(ctx);
 
   const { data: current } = await ctx.supabase
     .from('quotations')
-    .select('status')
+    .select('id, status, total, approval_workflow_id, current_step_order')
     .eq('id', quotationId)
     .single();
-  const from = (current as { status: QuotationStatus } | null)?.status;
-  if (!from) return { ok: false, error: 'Không tìm thấy báo giá.' };
-  if (!canTransitionQuotation(from, to)) {
-    return { ok: false, error: `Không thể chuyển báo giá từ "${from}" sang "${to}".` };
+  const q = current as {
+    id: string;
+    status: QuotationStatus;
+    total: number;
+    approval_workflow_id: string | null;
+    current_step_order: number | null;
+  } | null;
+  if (!q) return { ok: false, error: 'Không tìm thấy báo giá.' };
+
+  if (to === 'sent') {
+    if (!canTransitionQuotation(q.status, 'sent')) {
+      return { ok: false, error: `Không thể gửi duyệt từ trạng thái "${q.status}".` };
+    }
+    return submitQuotationForApproval(ctx, q);
+  }
+
+  if (to === 'approved' || to === 'rejected') {
+    if (q.status !== 'sent') {
+      return { ok: false, error: 'Chỉ duyệt/từ chối báo giá đang chờ duyệt.' };
+    }
+    return actOnQuotationStep(ctx, q, to, comment ?? null);
+  }
+
+  if (!canTransitionQuotation(q.status, to)) {
+    return { ok: false, error: `Không thể chuyển báo giá từ "${q.status}" sang "${to}".` };
+  }
+  const { error } = await ctx.supabase.from('quotations').update({ status: to }).eq('id', quotationId);
+  if (error) return { ok: false, error: `Đổi trạng thái thất bại: ${error.message}` };
+  return { ok: true, data: {} };
+}
+
+async function submitQuotationForApproval(
+  ctx: TenantContext,
+  q: { id: string; total: number },
+): Promise<ActionResult<{ currentStep?: number; done?: boolean }>> {
+  const workflowId = await ensureDefaultQuotationWorkflow(ctx);
+  const { data: stepsData } = await ctx.supabase
+    .from('approval_workflow_steps')
+    .select('step_order, name, min_amount, assignee_role, assignee_user_id')
+    .eq('workflow_id', workflowId)
+    .order('step_order');
+  const steps: ApprovalStepDef[] = (
+    (stepsData ?? []) as {
+      step_order: number;
+      name: string;
+      min_amount: number;
+      assignee_role: ApprovalStepDef['assigneeRole'];
+      assignee_user_id: string | null;
+    }[]
+  ).map((s) => ({
+    stepOrder: s.step_order,
+    name: s.name,
+    minAmount: Number(s.min_amount),
+    assigneeRole: s.assignee_role,
+    assigneeUserId: s.assignee_user_id,
+  }));
+  const required = requiredApprovalSteps(steps, Number(q.total));
+  if (required.length === 0) {
+    return { ok: false, error: 'Quy trình duyệt chưa có bước phù hợp với giá trị báo giá.' };
+  }
+
+  await ctx.supabase.from('quotation_approval_actions').delete().eq('quotation_id', q.id);
+  const { error: actError } = await ctx.supabase.from('quotation_approval_actions').insert(
+    required.map((s) => ({
+      tenant_id: ctx.tenantId,
+      quotation_id: q.id,
+      workflow_id: workflowId,
+      step_order: s.stepOrder,
+      step_name: s.name,
+      status: 'pending' as const,
+    })),
+  );
+  if (actError) return { ok: false, error: `Khởi tạo chuỗi duyệt thất bại: ${actError.message}` };
+
+  const first = required[0]!.stepOrder;
+  const { error } = await ctx.supabase
+    .from('quotations')
+    .update({
+      status: 'sent',
+      approval_workflow_id: workflowId,
+      current_step_order: first,
+    })
+    .eq('id', q.id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { currentStep: first, done: false } };
+}
+
+async function actOnQuotationStep(
+  ctx: TenantContext,
+  q: {
+    id: string;
+    total: number;
+    approval_workflow_id: string | null;
+    current_step_order: number | null;
+  },
+  decision: 'approved' | 'rejected',
+  comment: string | null,
+): Promise<ActionResult<{ currentStep?: number; done?: boolean }>> {
+  if (!q.approval_workflow_id || !q.current_step_order) {
+    // Fallback Phase 1: manager duyệt 1 cấp
+    requireManager(ctx);
+    const { error } = await ctx.supabase
+      .from('quotations')
+      .update({ status: decision })
+      .eq('id', q.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: { done: true } };
+  }
+
+  const { data: stepRow } = await ctx.supabase
+    .from('approval_workflow_steps')
+    .select('step_order, name, min_amount, assignee_role, assignee_user_id')
+    .eq('workflow_id', q.approval_workflow_id)
+    .eq('step_order', q.current_step_order)
+    .single();
+  if (!stepRow) return { ok: false, error: 'Không tìm thấy bước duyệt hiện tại.' };
+  const step: ApprovalStepDef = {
+    stepOrder: (stepRow as { step_order: number }).step_order,
+    name: (stepRow as { name: string }).name,
+    minAmount: Number((stepRow as { min_amount: number }).min_amount),
+    assigneeRole: (stepRow as { assignee_role: ApprovalStepDef['assigneeRole'] }).assignee_role,
+    assigneeUserId: (stepRow as { assignee_user_id: string | null }).assignee_user_id,
+  };
+
+  if (
+    !canActOnApprovalStep({
+      actorUserId: ctx.userId,
+      actorRole: ctx.role,
+      step,
+    })
+  ) {
+    return { ok: false, error: `Bạn không được phân công duyệt bước "${step.name}".` };
+  }
+
+  const { error: logError } = await ctx.supabase
+    .from('quotation_approval_actions')
+    .update({
+      status: decision,
+      acted_by: ctx.userId,
+      acted_at: new Date().toISOString(),
+      comment,
+    })
+    .eq('quotation_id', q.id)
+    .eq('step_order', step.stepOrder)
+    .eq('status', 'pending');
+  if (logError) return { ok: false, error: logError.message };
+
+  if (decision === 'rejected') {
+    const { error } = await ctx.supabase
+      .from('quotations')
+      .update({ status: 'rejected', current_step_order: step.stepOrder })
+      .eq('id', q.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: { currentStep: step.stepOrder, done: true } };
+  }
+
+  const { data: pending } = await ctx.supabase
+    .from('quotation_approval_actions')
+    .select('step_order')
+    .eq('quotation_id', q.id)
+    .eq('status', 'pending')
+    .order('step_order')
+    .limit(1);
+  const next = (pending ?? [])[0] as { step_order: number } | undefined;
+  if (!next) {
+    const { error } = await ctx.supabase
+      .from('quotations')
+      .update({ status: 'approved', current_step_order: step.stepOrder })
+      .eq('id', q.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: { currentStep: step.stepOrder, done: true } };
   }
 
   const { error } = await ctx.supabase
     .from('quotations')
-    .update({ status: to })
-    .eq('id', quotationId);
-  if (error) return { ok: false, error: `Đổi trạng thái thất bại: ${error.message}` };
-  return { ok: true, data: undefined };
+    .update({ current_step_order: next.step_order })
+    .eq('id', q.id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { currentStep: next.step_order, done: false } };
 }
 
 /** Chuyển báo giá đã duyệt thành đơn hàng (copy dòng). */
@@ -646,9 +860,10 @@ export async function createSalesOrder(
 export interface ConfirmOrderOutput {
   credit: CreditCheckResult;
   atp: { productName: string; requested: number; available: number; enough: boolean }[];
+  promise: { lines: PromiseLineResult[]; allCovered: boolean };
 }
 
-/** Xác nhận đơn: BẮT BUỘC pass credit check; ATP snapshot từng dòng. */
+/** Xác nhận đơn: BẮT BUỘC pass credit check; ATP + CTP stub snapshot. */
 export async function confirmSalesOrder(
   orderId: string,
 ): Promise<ActionResult<ConfirmOrderOutput>> {
@@ -672,7 +887,6 @@ export async function confirmSalesOrder(
   if (!order) return { ok: false, error: 'Không tìm thấy đơn hàng.' };
   if (order.status !== 'draft') return { ok: false, error: 'Chỉ xác nhận được đơn ở trạng thái nháp.' };
 
-  // 1) Credit check (invariant bắt buộc)
   const outstandingMap = await getOutstandingByCustomer(ctx.supabase);
   const outstanding = outstandingMap.get(order.customer_id) ?? 0;
   const credit = checkCredit(
@@ -687,7 +901,6 @@ export async function confirmSalesOrder(
     };
   }
 
-  // 2) ATP: so tồn kho khả dụng từng dòng (thiếu vẫn cho xác nhận — giao sau; CTP ở Phase 2)
   const productIds = order.sales_order_items.map((it) => it.product_id);
   const { data: stocks } = await ctx.supabase
     .from('product_stock')
@@ -699,6 +912,17 @@ export async function confirmSalesOrder(
       Number(s.qty_on_hand),
     ]),
   );
+
+  // open_wo_qty = 0 cho đến khi module Sản xuất cung cấp adapter
+  const promise = buildPromiseCheck(
+    order.sales_order_items.map((it) => ({
+      productId: it.product_id,
+      qty: Number(it.qty),
+      atpQty: stockMap.get(it.product_id) ?? 0,
+      openWoQty: 0,
+    })),
+  );
+
   const atp = order.sales_order_items.map((it) => {
     const available = stockMap.get(it.product_id) ?? 0;
     return {
@@ -709,7 +933,6 @@ export async function confirmSalesOrder(
     };
   });
 
-  // 3) Lưu snapshot + chuyển trạng thái
   for (const it of order.sales_order_items) {
     await ctx.supabase
       .from('sales_order_items')
@@ -721,11 +944,28 @@ export async function confirmSalesOrder(
     .update({
       status: 'confirmed',
       credit_check: { ...credit, checked_at: new Date().toISOString() },
+      promise_check: { ...promise, checked_at: new Date().toISOString() },
     })
     .eq('id', orderId);
   if (error) return { ok: false, error: `Xác nhận đơn thất bại: ${error.message}` };
 
-  return { ok: true, data: { credit, atp } };
+  return { ok: true, data: { credit, atp, promise } };
+}
+
+async function appendSalesOutbox(
+  ctx: TenantContext,
+  eventType: string,
+  aggregateType: string,
+  aggregateId: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await ctx.supabase.from('sales_outbox').insert({
+    tenant_id: ctx.tenantId,
+    event_type: eventType,
+    aggregate_type: aggregateType,
+    aggregate_id: aggregateId,
+    payload,
+  });
 }
 
 export async function cancelSalesOrder(orderId: string): Promise<ActionResult> {
@@ -822,6 +1062,11 @@ export async function shipDelivery(deliveryId: string): Promise<ActionResult> {
     .from('sales_orders')
     .update({ status: 'completed' })
     .eq('id', delivery.sales_order_id);
+
+  await appendSalesOutbox(ctx, 'DeliveryShipped', 'delivery_note', deliveryId, {
+    sales_order_id: delivery.sales_order_id,
+    lines: lines.map((l) => ({ product_id: l.product_id, qty: l.qty })),
+  });
   return { ok: true, data: undefined };
 }
 
@@ -856,18 +1101,194 @@ export async function createInvoice(
     .select('id')
     .single();
   if (error) return { ok: false, error: `Xuất hóa đơn thất bại: ${error.message}` };
-  return { ok: true, data: { id: (data as { id: string }).id, code } };
+  const invoiceId = (data as { id: string }).id;
+  await appendSalesOutbox(ctx, 'InvoiceCreated', 'invoice', invoiceId, {
+    code,
+    sales_order_id: salesOrderId,
+    customer_id: order.customer_id,
+    total: order.total,
+  });
+  return { ok: true, data: { id: invoiceId, code } };
 }
 
 export async function markInvoicePaid(invoiceId: string): Promise<ActionResult> {
   const ctx = await getTenantContext();
+  const { data: inv } = await ctx.supabase
+    .from('invoices')
+    .select('id, code, total, customer_id, sales_order_id')
+    .eq('id', invoiceId)
+    .eq('status', 'unpaid')
+    .maybeSingle();
   const { error } = await ctx.supabase
     .from('invoices')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', invoiceId)
     .eq('status', 'unpaid');
   if (error) return { ok: false, error: `Ghi nhận thanh toán thất bại: ${error.message}` };
+  if (inv) {
+    await appendSalesOutbox(ctx, 'InvoicePaid', 'invoice', invoiceId, {
+      code: (inv as { code: string }).code,
+      total: (inv as { total: number }).total,
+      customer_id: (inv as { customer_id: string }).customer_id,
+      sales_order_id: (inv as { sales_order_id: string }).sales_order_id,
+    });
+  }
   return { ok: true, data: undefined };
+}
+
+// ------------------------------------------------------------
+// CRM — lịch sử giao dịch khách hàng
+// ------------------------------------------------------------
+
+export type CustomerTimelineKind =
+  | 'quotation'
+  | 'sales_order'
+  | 'delivery'
+  | 'invoice'
+  | 'payment';
+
+export interface CustomerTimelineEvent {
+  kind: CustomerTimelineKind;
+  id: string;
+  code: string;
+  status: string;
+  amount: number | null;
+  at: string;
+  title: string;
+}
+
+export interface CustomerDetail {
+  customer: CustomerRow;
+  outstanding: number;
+  timeline: CustomerTimelineEvent[];
+}
+
+export async function getCustomerDetail(customerId: string): Promise<CustomerDetail | null> {
+  const ctx = await getTenantContext();
+  const { data: c } = await ctx.supabase
+    .from('customers')
+    .select('id, code, name, kind, tax_code, credit_limit, status, attributes, created_at')
+    .eq('id', customerId)
+    .maybeSingle();
+  if (!c) return null;
+  const customer = c as CustomerRow;
+
+  const [{ data: quotes }, { data: orders }, { data: invoices }] = await Promise.all([
+    ctx.supabase
+      .from('quotations')
+      .select('id, code, status, total, created_at, updated_at')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false }),
+    ctx.supabase
+      .from('sales_orders')
+      .select('id, code, status, total, created_at, updated_at')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false }),
+    ctx.supabase
+      .from('invoices')
+      .select('id, code, status, total, issued_on, paid_at, created_at, sales_order_id')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  const orderIds = ((orders ?? []) as { id: string }[]).map((o) => o.id);
+  const { data: deliveries } =
+    orderIds.length > 0
+      ? await ctx.supabase
+          .from('delivery_notes')
+          .select('id, code, status, shipped_at, created_at, sales_order_id')
+          .in('sales_order_id', orderIds)
+      : { data: [] };
+
+  const timeline: CustomerTimelineEvent[] = [];
+  for (const q of (quotes ?? []) as {
+    id: string;
+    code: string;
+    status: string;
+    total: number;
+    created_at: string;
+  }[]) {
+    timeline.push({
+      kind: 'quotation',
+      id: q.id,
+      code: q.code,
+      status: q.status,
+      amount: Number(q.total),
+      at: q.created_at,
+      title: `Báo giá ${q.code}`,
+    });
+  }
+  for (const o of (orders ?? []) as {
+    id: string;
+    code: string;
+    status: string;
+    total: number;
+    created_at: string;
+  }[]) {
+    timeline.push({
+      kind: 'sales_order',
+      id: o.id,
+      code: o.code,
+      status: o.status,
+      amount: Number(o.total),
+      at: o.created_at,
+      title: `Đơn hàng ${o.code}`,
+    });
+  }
+  for (const d of (deliveries ?? []) as {
+    id: string;
+    code: string;
+    status: string;
+    shipped_at: string | null;
+    created_at: string;
+  }[]) {
+    timeline.push({
+      kind: 'delivery',
+      id: d.id,
+      code: d.code,
+      status: d.status,
+      amount: null,
+      at: d.shipped_at ?? d.created_at,
+      title: `Giao hàng ${d.code}`,
+    });
+  }
+  for (const inv of (invoices ?? []) as {
+    id: string;
+    code: string;
+    status: string;
+    total: number;
+    issued_on: string;
+    paid_at: string | null;
+    created_at: string;
+  }[]) {
+    timeline.push({
+      kind: 'invoice',
+      id: inv.id,
+      code: inv.code,
+      status: inv.status,
+      amount: Number(inv.total),
+      at: inv.created_at,
+      title: `Hóa đơn ${inv.code}`,
+    });
+    if (inv.status === 'paid' && inv.paid_at) {
+      timeline.push({
+        kind: 'payment',
+        id: `${inv.id}-paid`,
+        code: inv.code,
+        status: 'paid',
+        amount: Number(inv.total),
+        at: inv.paid_at,
+        title: `Thanh toán ${inv.code}`,
+      });
+    }
+  }
+  timeline.sort((a, b) => (a.at < b.at ? 1 : -1));
+
+  const outstanding = ((invoices ?? []) as { status: string; total: number }[])
+    .filter((i) => i.status === 'unpaid')
+    .reduce((s, i) => s + Number(i.total), 0);
+
+  return { customer, outstanding, timeline };
 }
 
 function fmt(n: number): string {

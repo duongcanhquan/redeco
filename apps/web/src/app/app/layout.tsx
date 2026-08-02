@@ -1,8 +1,10 @@
 import {
   Boxes,
   FileText,
+  GitBranch,
   LayoutDashboard,
   Package,
+  Percent,
   ScrollText,
   Settings,
   Truck,
@@ -25,6 +27,11 @@ const SALES_LINKS = [
   { path: '/sales/orders', label: 'Đơn hàng', icon: ScrollText },
   { path: '/sales/deliveries', label: 'Giao hàng', icon: Truck },
   { path: '/sales/invoices', label: 'Hóa đơn', icon: FileText },
+] as const;
+
+const SALES_CONFIG_LINKS = [
+  { path: '/sales/discount-rules', label: 'Chiết khấu / KM', icon: Percent },
+  { path: '/sales/approvals', label: 'Quy trình duyệt', icon: GitBranch },
 ] as const;
 
 export default async function WorkspaceLayout({
@@ -83,6 +90,15 @@ export default async function WorkspaceLayout({
                   icon={<Icon size={18} aria-hidden />}
                 />
               ))}
+              {isManager &&
+                SALES_CONFIG_LINKS.map(({ path, label, icon: Icon }) => (
+                  <NavLink
+                    key={path}
+                    href={`${base}${path}`}
+                    label={label}
+                    icon={<Icon size={18} aria-hidden />}
+                  />
+                ))}
             </>
           )}
 

@@ -29,6 +29,7 @@ export function QuotationDialog({
   const [customerId, setCustomerId] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [discountPct, setDiscountPct] = useState('0');
+  const [autoRule, setAutoRule] = useState(true);
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<EditableItem[]>([emptyItem()]);
 
@@ -40,7 +41,7 @@ export function QuotationDialog({
       return;
     }
     const docDiscount = Number(discountPct || '0');
-    if (docDiscount < 0 || docDiscount > 100) {
+    if (!autoRule && (docDiscount < 0 || docDiscount > 100)) {
       setError('Chiết khấu tổng phải trong 0–100%.');
       return;
     }
@@ -48,7 +49,8 @@ export function QuotationDialog({
     const result = await createQuotationAction({
       customerId,
       validUntil: validUntil || null,
-      discountPct: docDiscount,
+      discountPct: autoRule ? null : docDiscount,
+      autoApplyDiscountRule: autoRule,
       notes,
       items: parsed.items,
     });
@@ -127,6 +129,16 @@ export function QuotationDialog({
             <ItemsEditor products={products} rows={rows} onChange={setRows} />
           </div>
 
+          <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRule}
+              onChange={(e) => setAutoRule(e.target.checked)}
+              className="size-4 accent-accent"
+            />
+            Tự áp quy tắc chiết khấu / KM phù hợp nhất
+          </label>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <Field id="quo-discount" label="Chiết khấu tổng (%)">
               <input
@@ -135,13 +147,14 @@ export function QuotationDialog({
                 min={0}
                 max={100}
                 step="0.5"
+                disabled={autoRule}
                 value={discountPct}
                 onChange={(e) => setDiscountPct(e.target.value)}
-                className={inputClass}
+                className={`${inputClass} disabled:opacity-50`}
               />
             </Field>
             <div className="sm:col-span-2">
-              <TotalBar rows={rows} docDiscountPct={discountPct} />
+              <TotalBar rows={rows} docDiscountPct={autoRule ? '0' : discountPct} />
             </div>
           </div>
 

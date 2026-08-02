@@ -74,7 +74,7 @@ export function OrderRowActions({
               className={`${btn} border-success/40 text-success hover:bg-success/10`}
             >
               <BadgeCheck size={13} aria-hidden />
-              Xác nhận (credit + ATP)
+              Xác nhận (credit + ATP/CTP)
             </button>
             <button
               type="button"
@@ -151,31 +151,40 @@ export function OrderRowActions({
             </div>
 
             <div>
-              <p className="text-sm font-medium mb-2">Tồn kho khả dụng (ATP) từng dòng</p>
+              <p className="text-sm font-medium mb-2">ATP / CTP từng dòng</p>
               <ul className="space-y-1.5">
-                {atpResult.atp.map((line) => (
-                  <li
-                    key={line.productName}
-                    className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm border ${
-                      line.enough
-                        ? 'bg-success/5 border-success/20'
-                        : 'bg-warning/10 border-warning/30'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2 min-w-0">
-                      {line.enough ? (
-                        <PackageCheck size={15} className="text-success shrink-0" aria-hidden />
-                      ) : (
-                        <PackageX size={15} className="text-warning shrink-0" aria-hidden />
-                      )}
-                      <span className="truncate">{line.productName}</span>
-                    </span>
-                    <span className="text-xs text-ink-muted whitespace-nowrap">
-                      cần {line.requested} / tồn {line.available}
-                      {!line.enough && ' — giao sau khi sản xuất (CTP: Phase 2)'}
-                    </span>
-                  </li>
-                ))}
+                {atpResult.atp.map((line, idx) => {
+                  const promise = atpResult.promise.lines[idx];
+                  return (
+                    <li
+                      key={line.productName}
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm border ${
+                        line.enough
+                          ? 'bg-success/5 border-success/20'
+                          : 'bg-warning/10 border-warning/30'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        {line.enough ? (
+                          <PackageCheck size={15} className="text-success shrink-0" aria-hidden />
+                        ) : (
+                          <PackageX size={15} className="text-warning shrink-0" aria-hidden />
+                        )}
+                        <span className="truncate">{line.productName}</span>
+                      </span>
+                      <span className="text-xs text-ink-muted text-right">
+                        cần {line.requested} / ATP {line.available}
+                        {!line.enough && promise && (
+                          <>
+                            <br />
+                            CTP: {promise.ctpStatus}
+                            {promise.reason ? ` — ${promise.reason}` : ''}
+                          </>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
