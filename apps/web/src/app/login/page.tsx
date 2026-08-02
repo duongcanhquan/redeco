@@ -101,91 +101,85 @@ function LoginForm() {
   };
 
   return (
-    <main className="min-h-dvh flex items-center justify-center overflow-hidden py-24">
-      <div className="login-scene">
-        {RING_SEGMENTS.map((i) => (
-          <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden />
-        ))}
+    <main className="min-h-dvh flex items-center justify-center overflow-hidden px-3 py-16 sm:py-20">
+      <div className="flex w-full max-w-md flex-col items-center gap-5 sm:gap-6">
+        {/* Brand Optimake — ngoài vòng tròn login */}
+        <Logo markSize={48} textClassName="text-3xl sm:text-4xl tracking-tight" />
 
-        <div className="login-box">
-          <div className="flex flex-col items-center gap-3 mb-6 sm:mb-7">
-            <Logo
-              markSize={companySlug ? 52 : 64}
-              textClassName={
-                companySlug
-                  ? 'text-3xl sm:text-4xl tracking-tight'
-                  : 'text-4xl sm:text-5xl tracking-tight'
-              }
-            />
+        <div className="login-scene">
+          {RING_SEGMENTS.map((i) => (
+            <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden />
+          ))}
+
+          <div className="login-box">
             {companySlug && companyName !== null && (
-              <p className="flex items-center justify-center gap-2.5 text-center px-2">
-                <Building2 size={32} className="shrink-0 text-accent" aria-hidden />
-                <span className="text-2xl sm:text-3xl font-bold leading-tight text-ink tracking-tight">
+              <p className="mb-2 flex items-center justify-center gap-1.5 px-2 text-center">
+                <Building2 size={16} className="shrink-0 text-accent" aria-hidden />
+                <span className="text-sm font-semibold leading-snug text-ink tracking-tight sm:text-base">
                   {companyName ?? companySlug}
                 </span>
               </p>
             )}
-          </div>
-          {companySlug && companyName === null && (
-            <p
-              role="alert"
-              className="rounded-xl bg-warning/10 border border-warning/30 px-3 py-2 text-warning text-sm text-center mb-4"
-            >
-              Không tìm thấy công ty với tên miền “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên
-              hệ Optimake.
-            </p>
-          )}
-          <h1 className="sr-only">
-            {companySlug
-              ? `Đăng nhập ${companyName ?? companySlug}`
-              : 'Đăng nhập Optimake'}
-          </h1>
-          <form onSubmit={(e) => void handleSubmit(e)} noValidate>
-            <div className="input-box">
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <label htmlFor="email">Email</label>
-            </div>
-            <div className="input-box">
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <label htmlFor="password">Mật khẩu</label>
-            </div>
-
-            {error && (
-              <p role="alert" className="text-danger text-sm text-center -mt-2 mb-3">
-                {error}
+            {companySlug && companyName === null && (
+              <p
+                role="alert"
+                className="mb-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-center text-xs text-warning"
+              >
+                Không tìm thấy công ty “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên hệ Optimake.
               </p>
             )}
-
-            <div className="flex items-center -mt-1 mb-4">
-              <label className="flex min-h-11 items-center gap-2 cursor-pointer select-none">
+            <h1 className="sr-only">
+              {companySlug
+                ? `Đăng nhập ${companyName ?? companySlug}`
+                : 'Đăng nhập Optimake'}
+            </h1>
+            <form onSubmit={(e) => void handleSubmit(e)} noValidate>
+              <div className="input-box">
                 <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="size-4 rounded accent-accent cursor-pointer"
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
-                <span className="text-ink-muted text-sm">Ghi nhớ đăng nhập</span>
-              </label>
-            </div>
+                <label htmlFor="email">Email</label>
+              </div>
+              <div className="input-box">
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <label htmlFor="password">Mật khẩu</label>
+              </div>
 
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
-            </button>
-          </form>
+              {error && (
+                <p role="alert" className="-mt-1 mb-2 text-center text-xs text-danger sm:text-sm">
+                  {error}
+                </p>
+              )}
+
+              <div className="mb-3 flex items-center">
+                <label className="flex min-h-10 cursor-pointer select-none items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="size-3.5 cursor-pointer rounded accent-accent"
+                  />
+                  <span className="text-xs text-ink-muted sm:text-sm">Ghi nhớ đăng nhập</span>
+                </label>
+              </div>
+
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </main>
