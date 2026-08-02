@@ -36,13 +36,18 @@ export const dynamic = 'force-dynamic';
 const TABS = [
   { key: 'proposals', label: 'Đề xuất báo giá' },
   { key: 'import', label: 'Nhập đề xuất' },
-  { key: 'filters', label: 'Bộ lọc phân loại' },
   { key: 'calc', label: 'Tính báo giá' },
   { key: 'done', label: 'Báo giá đã xong' },
-  { key: 'settings', label: 'Cài đặt tính' },
+  { key: 'settings', label: 'Cài đặt' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
+
+function resolveTab(raw: string | undefined): TabKey {
+  if (raw === 'filters') return 'settings';
+  if (TABS.some((t) => t.key === raw)) return raw as TabKey;
+  return 'proposals';
+}
 
 function classificationOf(tags: string[]): ClassificationTag | null {
   for (const t of CLASSIFICATION_TAGS) {
@@ -117,9 +122,7 @@ export default async function KinhDoanhRedecoHubPage({
   }>;
 }) {
   const sp = await searchParams;
-  const tab: TabKey = TABS.some((t) => t.key === sp.tab)
-    ? (sp.tab as TabKey)
-    : 'proposals';
+  const tab = resolveTab(sp.tab);
   const tag = sp.tag;
   const onlyDuplicates = tag === 'trung';
   const classification =
@@ -152,7 +155,7 @@ export default async function KinhDoanhRedecoHubPage({
   }
 
   const needRequests = tab === 'proposals' || tab === 'calc';
-  const needFilters = tab === 'filters';
+  const needFilters = tab === 'settings';
   const needCalcs = tab === 'done';
   const needProfiles = tab === 'calc' || tab === 'settings';
 
@@ -438,15 +441,6 @@ export default async function KinhDoanhRedecoHubPage({
         </div>
       )}
 
-      {tab === 'filters' && profile && (
-        <BentoSection
-          title="Bộ lọc phân loại"
-          description="Quy tắc nếu–thì gắn tag tiềm năng / cần cân nhắc / không tiềm năng."
-        >
-          <FilterRulesPanel basePath={base} initialRules={profile.rules} />
-        </BentoSection>
-      )}
-
       {tab === 'calc' && (
         <BentoSection title="Tính báo giá" description="Chọn đề xuất và profile tính.">
           <CalcPanel
@@ -504,10 +498,21 @@ export default async function KinhDoanhRedecoHubPage({
         </div>
       )}
 
-      {tab === 'settings' && (
-        <BentoSection title="Cài đặt tính báo giá" description="Profile công thức (stub H4).">
-          <SettingsPanel basePath={base} profiles={calcProfiles} />
-        </BentoSection>
+      {tab === 'settings' && profile && (
+        <div className="grid gap-4">
+          <BentoSection
+            title="1. Cài đặt bộ lọc báo giá"
+            description="Quy tắc nếu–thì gắn tag tiềm năng / cần cân nhắc / không tiềm năng khi import."
+          >
+            <FilterRulesPanel basePath={base} initialRules={profile.rules} />
+          </BentoSection>
+          <BentoSection
+            title="2. Cài đặt tính toán báo giá"
+            description="Profile công thức tính cost/giá (stub — công thức REDECO đầy đủ ở phase sau)."
+          >
+            <SettingsPanel basePath={base} profiles={calcProfiles} />
+          </BentoSection>
+        </div>
       )}
     </div>
   );
