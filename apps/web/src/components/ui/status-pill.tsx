@@ -18,7 +18,7 @@ const TONE: Record<string, string> = {
   unpaid: 'bg-warning/15 text-warning',
 };
 
-/** Nhãn trạng thái ngắn + màu — không chỉ dựa vào màu (có chữ). */
+/** Nhãn trạng thái ngắn + màu — chữ đủ lớn để đọc nhanh trên phone. */
 export function StatusPill({
   status,
   label,
@@ -30,7 +30,7 @@ export function StatusPill({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${TONE[status] ?? 'bg-panel/40 text-ink'}`}
+      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold ${TONE[status] ?? 'bg-panel/40 text-ink'}`}
     >
       {icon}
       {label}

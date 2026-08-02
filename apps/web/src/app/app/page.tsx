@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { BentoBarChart, BentoStackBars } from '@/components/sales/bento-charts';
+import { BentoPanel, KpiTile } from '@/components/ui/bento';
 import { formatMoney } from '@/lib/format';
 import { createServerSupabase, getSessionClaims } from '@/lib/supabase/server';
 import { getSalesDashboardData } from '@/services/sales-analytics.service';
@@ -24,10 +25,10 @@ export default async function WorkspaceDashboard() {
 
   if (!hasSales) {
     return (
-      <div className="glass rounded-2xl py-16 text-center">
-        <AlertTriangle className="mx-auto text-warning" size={32} aria-hidden />
-        <p className="mt-4 font-medium">Chưa có module nào được kích hoạt cho bạn</p>
-        <p className="mt-1 text-sm text-ink-muted">
+      <div className="glass rounded-3xl py-16 text-center">
+        <AlertTriangle className="mx-auto text-warning" size={36} aria-hidden />
+        <p className="mt-4 text-lg font-semibold">Chưa có module nào được kích hoạt cho bạn</p>
+        <p className="mt-2 px-4 text-base text-ink-muted">
           Liên hệ quản trị công ty để được phân công module, hoặc kiểm tra hợp đồng còn hiệu lực.
         </p>
       </div>
@@ -38,94 +39,73 @@ export default async function WorkspaceDashboard() {
   const revenueSum = data.revenue14d.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-5 sm:space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tổng quan</h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Bức tranh vận hành hôm nay — nhấn vào từng ô để đi sâu.
-          </p>
+          <h1 className="text-2xl font-bold sm:text-3xl">Tổng quan</h1>
+          <p className="mt-1 text-base text-ink-muted">Nhấn vào từng ô để thao tác nhanh.</p>
         </div>
         <Link
           href={`${base}/sales`}
-          className="inline-flex h-11 items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent hover:bg-accent/20 transition-colors"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-accent/40 bg-accent-soft px-5 text-base font-semibold text-accent transition-colors hover:bg-accent/20"
         >
-          <ShoppingCart size={16} aria-hidden />
+          <ShoppingCart size={18} aria-hidden />
           Hub Kinh doanh
-          <ArrowRight size={14} aria-hidden />
+          <ArrowRight size={16} aria-hidden />
         </Link>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">
-        <Link
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
+        <KpiTile
+          className="lg:col-span-3"
+          label="Khách hàng"
+          value={data.kpis.activeCustomers}
           href={`${base}/sales/customers`}
-          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
-        >
-          <p className="text-xs text-ink-muted flex items-center gap-1.5">
-            <Users size={14} aria-hidden /> Khách hàng
-          </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums">{data.kpis.activeCustomers}</p>
-        </Link>
-        <Link
+          icon={<Users size={22} aria-hidden />}
+        />
+        <KpiTile
+          className="lg:col-span-3"
+          label="Báo giá chờ"
+          value={data.kpis.quotesPending}
           href={`${base}/sales/quotations`}
-          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
-        >
-          <p className="text-xs text-ink-muted flex items-center gap-1.5">
-            <FileText size={14} aria-hidden /> Báo giá chờ
-          </p>
-          <p
-            className={`mt-2 text-2xl font-bold tabular-nums ${
-              data.kpis.quotesPending > 0 ? 'text-warning' : ''
-            }`}
-          >
-            {data.kpis.quotesPending}
-          </p>
-        </Link>
-        <Link
+          icon={<FileText size={22} aria-hidden />}
+          tone={data.kpis.quotesPending > 0 ? 'warning' : 'default'}
+        />
+        <KpiTile
+          className="lg:col-span-3"
+          label="Đơn đang chạy"
+          value={data.kpis.ordersActive}
           href={`${base}/sales/orders`}
-          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
-        >
-          <p className="text-xs text-ink-muted flex items-center gap-1.5">
-            <ScrollText size={14} aria-hidden /> Đơn đang chạy
-          </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums">{data.kpis.ordersActive}</p>
-        </Link>
-        <Link
+          icon={<ScrollText size={22} aria-hidden />}
+        />
+        <KpiTile
+          className="lg:col-span-3"
+          label="Công nợ"
+          value={formatMoney(data.kpis.unpaidTotal)}
           href={`${base}/sales/invoices`}
-          className="col-span-1 lg:col-span-3 glass glass-hover rounded-2xl p-4 min-h-28"
-        >
-          <p className="text-xs text-ink-muted flex items-center gap-1.5">
-            <Wallet size={14} aria-hidden /> Công nợ
-          </p>
-          <p
-            className={`mt-2 text-xl sm:text-2xl font-bold tabular-nums break-words ${
-              data.kpis.unpaidTotal > 0 ? 'text-warning' : ''
-            }`}
-          >
-            {formatMoney(data.kpis.unpaidTotal)}
-          </p>
-          {data.kpis.overdueCount > 0 && (
-            <p className="text-[11px] text-danger mt-0.5">{data.kpis.overdueCount} quá hạn</p>
-          )}
-        </Link>
+          icon={<Wallet size={22} aria-hidden />}
+          tone={data.kpis.unpaidTotal > 0 ? 'warning' : 'default'}
+          sub={data.kpis.overdueCount > 0 ? `${data.kpis.overdueCount} quá hạn` : undefined}
+        />
 
-        <section className="col-span-2 lg:col-span-7 glass rounded-2xl p-4 sm:p-5">
-          <div className="flex justify-between gap-2 mb-2">
-            <h2 className="font-semibold text-sm">Hóa đơn 14 ngày</h2>
-            <span className="text-sm font-bold text-accent tabular-nums">
+        <BentoPanel
+          className="sm:col-span-2 lg:col-span-7"
+          title="Hóa đơn 14 ngày"
+          action={
+            <span className="text-lg font-bold tabular-nums text-accent sm:text-xl">
               {formatMoney(revenueSum)}
             </span>
-          </div>
+          }
+        >
           <BentoBarChart
             points={data.revenue14d.map((p) => ({ label: p.label, amount: p.amount }))}
             ariaLabel="Biểu đồ hóa đơn 14 ngày"
           />
-        </section>
+        </BentoPanel>
 
-        <section className="col-span-2 lg:col-span-5 glass rounded-2xl p-4 sm:p-5">
-          <h2 className="font-semibold text-sm mb-3">Pipeline đơn</h2>
+        <BentoPanel className="sm:col-span-2 lg:col-span-5" title="Pipeline đơn">
           <BentoStackBars slices={data.pipeline} ariaLabel="Pipeline đơn hàng" />
-        </section>
+        </BentoPanel>
       </div>
     </div>
   );

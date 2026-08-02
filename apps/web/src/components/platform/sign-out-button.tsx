@@ -21,7 +21,7 @@ export function SignOutButton({ redirectTo = '/login' }: { redirectTo?: string }
       type="button"
       onClick={() => void handleSignOut()}
       disabled={loading}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger cursor-pointer disabled:opacity-50"
+      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
     >
       <LogOut size={18} aria-hidden />
       <span>{loading ? 'Đang thoát…' : 'Đăng xuất'}</span>

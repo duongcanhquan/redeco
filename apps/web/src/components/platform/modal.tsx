@@ -59,7 +59,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Đóng hộp thoại"
-            className="grid size-9 place-items-center rounded-xl text-ink-muted hover:bg-glass-strong hover:text-ink transition-colors cursor-pointer"
+            className="grid size-11 place-items-center rounded-xl text-ink-muted hover:bg-glass-strong hover:text-ink transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             <X size={18} aria-hidden />
           </button>

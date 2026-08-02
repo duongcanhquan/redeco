@@ -69,14 +69,14 @@ export default async function SalesOrdersPage({
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ScrollText className="text-accent" size={24} aria-hidden />
+          <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+            <ScrollText className="text-accent" size={28} aria-hidden />
             Đơn đặt hàng
           </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Xác nhận đơn kiểm tra hạn mức tín dụng và tồn kho khả dụng (ATP).
+          <p className="mt-1 text-base text-ink-muted">
+            Xác nhận đơn · kiểm tra tín dụng · tồn kho (ATP).
           </p>
         </div>
         <OrderDialog customers={activeCustomers} products={activeProducts} />
