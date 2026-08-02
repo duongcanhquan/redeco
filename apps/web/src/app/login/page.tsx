@@ -108,25 +108,38 @@ function LoginForm() {
         ))}
 
         <div className="login-box">
-          <div className="flex justify-center mb-2">
-            <Logo markSize={34} textClassName="text-2xl" />
+          <div className="flex flex-col items-center gap-3 mb-6 sm:mb-7">
+            <Logo
+              markSize={companySlug ? 52 : 64}
+              textClassName={
+                companySlug
+                  ? 'text-3xl sm:text-4xl tracking-tight'
+                  : 'text-4xl sm:text-5xl tracking-tight'
+              }
+            />
+            {companySlug && companyName !== null && (
+              <p className="flex items-center justify-center gap-2.5 text-center px-2">
+                <Building2 size={32} className="shrink-0 text-accent" aria-hidden />
+                <span className="text-2xl sm:text-3xl font-bold leading-tight text-ink tracking-tight">
+                  {companyName ?? companySlug}
+                </span>
+              </p>
+            )}
           </div>
-          {companySlug && companyName !== null && (
-            <p className="flex items-center justify-center gap-1.5 text-accent text-sm font-semibold mb-1">
-              <Building2 size={15} aria-hidden />
-              {companyName ?? companySlug}
-            </p>
-          )}
           {companySlug && companyName === null && (
             <p
               role="alert"
-              className="rounded-xl bg-warning/10 border border-warning/30 px-3 py-2 text-warning text-xs text-center mb-2"
+              className="rounded-xl bg-warning/10 border border-warning/30 px-3 py-2 text-warning text-sm text-center mb-4"
             >
               Không tìm thấy công ty với tên miền “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên
               hệ Optimake.
             </p>
           )}
-          <h1 className="login-title">Đăng nhập</h1>
+          <h1 className="sr-only">
+            {companySlug
+              ? `Đăng nhập ${companyName ?? companySlug}`
+              : 'Đăng nhập Optimake'}
+          </h1>
           <form onSubmit={(e) => void handleSubmit(e)} noValidate>
             <div className="input-box">
               <input
@@ -157,8 +170,8 @@ function LoginForm() {
               </p>
             )}
 
-            <div className="flex items-center justify-between -mt-1 mb-4">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className="flex items-center -mt-1 mb-4">
+              <label className="flex min-h-11 items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={remember}
@@ -167,24 +180,11 @@ function LoginForm() {
                 />
                 <span className="text-ink-muted text-sm">Ghi nhớ đăng nhập</span>
               </label>
-              <a
-                href="mailto:superadmin@gmail.com?subject=Quên mật khẩu Optimake"
-                className="text-ink-muted text-sm hover:underline"
-              >
-                Quên mật khẩu?
-              </a>
             </div>
 
             <button type="submit" className="login-btn" disabled={loading}>
               {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </button>
-
-            <div className="text-center mt-5 mb-3">
-              <span className="text-ink-muted text-sm">Chưa có tài khoản? </span>
-              <a href="mailto:superadmin@gmail.com" className="text-accent text-sm font-semibold hover:underline">
-                Liên hệ quản trị
-              </a>
-            </div>
           </form>
         </div>
       </div>
