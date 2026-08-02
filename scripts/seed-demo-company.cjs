@@ -47,7 +47,7 @@ async function main() {
         email: 'demo@optimake.com',
         password: 'Demo@123',
         email_confirm: true,
-        app_metadata: { tenant_id: tenantId },
+        app_metadata: { tenant_id: tenantId, tenant_slug: 'demo' },
         user_metadata: { full_name: 'Quản trị Demo' },
       }),
     });

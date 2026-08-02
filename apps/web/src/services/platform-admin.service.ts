@@ -1,13 +1,13 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { validateTenantSlug } from '@/lib/tenant-slug';
 
 /** Kết quả chuẩn cho mọi mutation từ superadmin console. */
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Chặn mọi mutation nếu người gọi không phải superadmin (kiểm tra JWT server-side). */
@@ -54,9 +54,8 @@ export async function createCompanyWithAdmin(
   const adminEmail = input.adminEmail.trim().toLowerCase();
 
   if (!name) return { ok: false, error: 'Tên công ty không được để trống.' };
-  if (!SLUG_PATTERN.test(slug)) {
-    return { ok: false, error: 'Tên miền chỉ gồm chữ thường, số và dấu gạch ngang (vd: cong-ty-a).' };
-  }
+  const slugError = validateTenantSlug(slug);
+  if (slugError) return { ok: false, error: slugError };
   if (!EMAIL_PATTERN.test(adminEmail)) return { ok: false, error: 'Email admin không hợp lệ.' };
   if (input.adminPassword.length < 6) {
     return { ok: false, error: 'Mật khẩu admin phải có ít nhất 6 ký tự.' };
@@ -140,9 +139,8 @@ export async function updateTenantSlug(
   await assertPlatformAdmin();
 
   const slug = newSlug.trim().toLowerCase();
-  if (!SLUG_PATTERN.test(slug)) {
-    return { ok: false, error: 'Tên miền chỉ gồm chữ thường, số và dấu gạch ngang (vd: cong-ty-a).' };
-  }
+  const slugError = validateTenantSlug(slug);
+  if (slugError) return { ok: false, error: slugError };
 
   const admin = createAdminClient();
   const { error } = await admin.from('tenants').update({ slug }).eq('id', tenantId);

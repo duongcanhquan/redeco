@@ -20,7 +20,8 @@ function LoginForm() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const companySlug = slugFromPath(pathname);
-  const [companyName, setCompanyName] = useState<string | null>(null);
+  // undefined = đang tra cứu, null = tên miền không tồn tại, string = tên công ty
+  const [companyName, setCompanyName] = useState<string | null | undefined>(undefined);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -47,7 +48,8 @@ function LoginForm() {
     void createClient()
       .rpc('tenant_public_name', { p_slug: companySlug })
       .then(({ data }) => {
-        if (!cancelled && typeof data === 'string' && data) setCompanyName(data);
+        if (cancelled) return;
+        setCompanyName(typeof data === 'string' && data ? data : null);
       });
     return () => {
       cancelled = true;
@@ -109,10 +111,19 @@ function LoginForm() {
           <div className="flex justify-center mb-2">
             <Logo markSize={34} textClassName="text-2xl" />
           </div>
-          {companySlug && (
+          {companySlug && companyName !== null && (
             <p className="flex items-center justify-center gap-1.5 text-accent text-sm font-semibold mb-1">
               <Building2 size={15} aria-hidden />
               {companyName ?? companySlug}
+            </p>
+          )}
+          {companySlug && companyName === null && (
+            <p
+              role="alert"
+              className="rounded-xl bg-warning/10 border border-warning/30 px-3 py-2 text-warning text-xs text-center mb-2"
+            >
+              Không tìm thấy công ty với tên miền “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên
+              hệ Optimake.
             </p>
           )}
           <h1 className="login-title">Đăng nhập</h1>

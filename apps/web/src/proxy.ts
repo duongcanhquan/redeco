@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isTenantPathSegment, RESERVED_TENANT_SLUGS } from '@/lib/tenant-slug';
 
 /**
  * Định tuyến đa tenant theo TÊN MIỀN CÔNG TY (path prefix):
@@ -8,9 +9,6 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Người dùng công ty LUÔN bị ép về đúng prefix của công ty mình
  * (kể cả gõ /app trực tiếp hay prefix của công ty khác).
  */
-const RESERVED_SEGMENTS = new Set(['', 'login', 'platform', 'app', 'api']);
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -71,15 +69,25 @@ export default async function proxy(request: NextRequest) {
   };
 
   const firstSegment = path.split('/')[1] ?? '';
-  const isTenantPath = !RESERVED_SEGMENTS.has(firstSegment) && SLUG_PATTERN.test(firstSegment);
+
+  // Gõ URL có chữ hoa (vd /Demo) -> tự chuyển về chữ thường thay vì 404
+  if (
+    !RESERVED_TENANT_SLUGS.has(firstSegment.toLowerCase()) &&
+    /^[A-Za-z0-9-]+$/.test(firstSegment) &&
+    firstSegment !== firstSegment.toLowerCase()
+  ) {
+    return redirectTo(path.toLowerCase(), request.nextUrl.search.replace(/^\?/, ''));
+  }
+
+  const isTenantPath = isTenantPathSegment(firstSegment);
 
   // ---------- URL theo tên miền công ty: /{slug}/... ----------
   if (isTenantPath) {
     const rest = path.slice(firstSegment.length + 1); // '' | '/login' | '/sales/...'
 
     if (rest === '/login') {
+      // Chỉ user công ty bị ép về workspace; superadmin/khách xem được trang login công ty
       if (isTenantUser) return redirectTo(`/${tenantSlug ?? firstSegment}`);
-      if (isPlatformAdminUser) return redirectTo('/platform');
       return rewriteTo('/login'); // URL vẫn là /{slug}/login — trang login nhận diện công ty
     }
 
@@ -95,7 +103,8 @@ export default async function proxy(request: NextRequest) {
     }
     if (!tenantSlug) return redirectTo(`/app${rest}`); // user cũ chưa có claim slug
 
-    return rewriteTo(`/app${rest}`);
+    // rest rỗng = /{slug} -> /app ; rest = /sales/... -> /app/sales/...
+    return rewriteTo(rest ? `/app${rest}` : '/app');
   }
 
   // Đã đăng nhập -> vào thẳng khu làm việc, khỏi login lại

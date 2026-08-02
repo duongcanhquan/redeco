@@ -4,6 +4,7 @@ import { CheckCircle2, Globe } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Field, Modal, inputClass } from '@/components/platform/modal';
+import { slugifyTenantName } from '@/lib/tenant-slug';
 import { updateTenantSlugAction } from './actions';
 
 /**
@@ -70,9 +71,14 @@ export function CompanyDomainDialog({
               <CheckCircle2 size={17} aria-hidden />
               Đã đổi tên miền. Địa chỉ đăng nhập mới của công ty:
             </p>
-            <p className="rounded-xl bg-app/70 border border-panel/40 px-4 py-3 font-mono text-sm break-all">
+            <a
+              href={`/${savedSlug}/login`}
+              target="_blank"
+              rel="noopener"
+              className="block rounded-xl bg-app/70 border border-panel/40 px-4 py-3 font-mono text-sm break-all text-accent hover:underline"
+            >
               /{savedSlug}/login
-            </p>
+            </a>
             <p className="text-xs text-warning">
               User đang đăng nhập sẽ được tự động chuyển sang địa chỉ mới ở lần tải trang kế tiếp.
             </p>
@@ -90,14 +96,14 @@ export function CompanyDomainDialog({
               id="tenant-slug"
               label="Tên miền công ty"
               required
-              hint={`Địa chỉ truy cập: optimake.com/${slug || '…'} — chữ thường, số, dấu gạch ngang.`}
+              hint={`Địa chỉ đăng nhập: /${slug || '…'}/login — chữ thường, số, dấu gạch ngang.`}
             >
               <input
                 id="tenant-slug"
                 className={`${inputClass} font-mono`}
                 required
                 value={slug}
-                onChange={(e) => setSlug(e.target.value)}
+                onChange={(e) => setSlug(slugifyTenantName(e.target.value))}
                 placeholder="cong-ty-abc"
               />
             </Field>

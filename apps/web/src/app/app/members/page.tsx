@@ -1,5 +1,6 @@
 import { ShieldCheck, UserRound, Users } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { getSessionClaims } from '@/lib/supabase/server';
 import type { ModuleTreeNode } from '@/services/platform.service';
 import { getTenantContext } from '@/services/sales.service';
 import { getEntitledModuleTree, getSeatInfo, listMembers } from '@/services/tenant-admin.service';
@@ -20,8 +21,10 @@ function rootNamesFor(tree: ModuleTreeNode[], ids: Set<string>): string[] {
 }
 
 export default async function MembersPage() {
-  const ctx = await getTenantContext();
-  if (ctx.role !== 'owner' && ctx.role !== 'admin') redirect('/app');
+  const [ctx, claims] = await Promise.all([getTenantContext(), getSessionClaims()]);
+  if (ctx.role !== 'owner' && ctx.role !== 'admin') {
+    redirect(claims?.tenantSlug ? `/${claims.tenantSlug}` : '/app');
+  }
 
   const [members, { tree }, seat] = await Promise.all([
     listMembers(ctx.supabase),

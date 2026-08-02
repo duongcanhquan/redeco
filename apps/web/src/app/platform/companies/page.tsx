@@ -1,4 +1,4 @@
-import { AlarmClock, Boxes, Building2, ScrollText } from 'lucide-react';
+import { AlarmClock, Boxes, Building2, ExternalLink, ScrollText } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { TabBar } from '@/components/platform/tab-bar';
 import {
@@ -152,7 +152,17 @@ function CompaniesSection({
               <tr key={t.id} className="hover:bg-glass transition-colors align-top">
                 <td className="px-5 py-3.5">
                   <p className="font-medium">{t.name}</p>
-                  <p className="font-mono text-xs text-ink-muted">optimake.com/{t.slug}</p>
+                  <a
+                    href={`/${t.slug}/login`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Mở trang đăng nhập của ${t.name}`}
+                    className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent-soft px-2 py-1 font-mono text-xs text-accent hover:bg-accent/20 transition-colors"
+                  >
+                    /{t.slug}/login
+                    <ExternalLink size={11} aria-hidden />
+                    <span className="sr-only">Mở trang đăng nhập đối tác</span>
+                  </a>
                 </td>
                 <td className="px-5 py-3.5 text-ink-muted break-all">
                   {t.attributes.admin_email ?? '—'}

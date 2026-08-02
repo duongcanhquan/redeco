@@ -50,8 +50,9 @@ async function main() {
   let pass = 0;
   let fail = 0;
 
-  async function check(label, url, expect) {
-    const res = await fetch(`${BASE}${url}`, { redirect: 'manual', headers: { cookie } });
+  async function check(label, url, expect, cookieHeader = cookie) {
+    const headers = cookieHeader ? { cookie: cookieHeader } : {};
+    const res = await fetch(`${BASE}${url}`, { redirect: 'manual', headers });
     const loc = res.headers.get('location') || '';
     const ok =
       expect.status === res.status &&
@@ -74,6 +75,28 @@ async function main() {
   await check('tên miền công ty khác bị chặn', '/redeco', { status: 307, location: '/demo' });
   await check('login chung khi đã đăng nhập', '/login', { status: 307, location: '/demo' });
   await check('login công ty khi đã đăng nhập', '/demo/login', { status: 307, location: '/demo' });
+
+  // Khách chưa đăng nhập
+  await check('URL chữ hoa tự về chữ thường', '/Demo', { status: 307, location: '/demo' }, '');
+  await check('tên miền lạ vẫn ra trang login', '/khong-ton-tai/login', { status: 200 }, '');
+
+  // Superadmin xem được trang login của công ty (link từ console)
+  const saLogin = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: env.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'superadmin@gmail.com', password: '123456' }),
+  });
+  if (saLogin.ok) {
+    const saSession = await saLogin.json();
+    const saCookie = sessionCookies(projectRef, saSession).join('; ');
+    await check('superadmin mở login công ty', '/demo/login', { status: 200 }, saCookie);
+    await check('superadmin vào workspace công ty -> /platform', '/demo', {
+      status: 307,
+      location: '/platform',
+    }, saCookie);
+  } else {
+    console.log('SKIP superadmin (đăng nhập thất bại)');
+  }
 
   // 2) RPC tên công ty công khai cho trang login
   const rpc = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/tenant_public_name`, {

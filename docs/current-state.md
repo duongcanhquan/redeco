@@ -145,15 +145,16 @@ Trang chủ marketing giới thiệu Optimake (trước đó `/` chỉ redirect 
 
 ### ✅ Tên miền công ty — /{slug}/... + login riêng từng công ty (2026-08-01)
 
-Mỗi công ty khách hàng hoạt động dưới đường dẫn riêng `optimake.com/{slug}/...` trong MỌI tình huống; superadmin đặt/đổi được "tên miền" (slug) dễ nhớ.
+Mỗi công ty khách hàng hoạt động dưới đường dẫn riêng `/{slug}/...` (vd `/demo/login`) trong MỌI tình huống — **không** dùng subdomain `slug.optimake.com`. Superadmin đặt/đổi được "tên miền" (slug) dễ nhớ.
 
 - **Claim `tenant_slug` trong JWT** (`app_metadata`): set khi tạo công ty (`createCompanyWithAdmin`) và tạo member (`createMember`); user cũ đã backfill bằng `scripts/backfill-tenant-slug.cjs` (idempotent). `getSessionClaims()` trả thêm `tenantSlug`.
-- **Proxy** (`apps/web/src/proxy.ts`): segment đầu không thuộc reserved (`login/platform/app/api`) = tên miền công ty. `/{slug}/...` **rewrite** nội bộ về `/app/...` (URL trình duyệt giữ nguyên); `/{slug}/login` rewrite về `/login`. Ép chặt: chưa đăng nhập → `/{slug}/login`; gõ `/app/...` trực tiếp → redirect `/{slug}/...`; vào prefix công ty KHÁC → redirect về prefix công ty mình; đã đăng nhập vào `/login` hay `/{slug}/login` → về `/{slug}`.
-- **Login riêng công ty**: trang `/login` nhận diện slug từ pathname, hiện tên công ty qua RPC **`tenant_public_name(p_slug)`** (migration 0007 `20260801210000`, security definer, chỉ lộ TÊN tenant active, grant anon). Sau đăng nhập luôn về `/{slug}`.
-- **Đăng xuất về login công ty**: `SignOutButton` nhận prop `redirectTo`; workspace layout + trang tài khoản truyền `/{slug}/login`.
-- **Workspace layout**: mọi nav link prefix `/{slug}` (NavLink thêm prop `exact` cho route gốc); tenant không bao giờ thấy `/app` trên URL.
-- **Superadmin**: cột khách hàng hiển thị `optimake.com/{slug}`; nút **"Tên miền"** (`company-domain-dialog.tsx`) đổi slug → `updateTenantSlug` cập nhật `tenants.slug` + đồng bộ `app_metadata.tenant_slug` cho TOÀN BỘ user công ty; dialog tạo công ty đổi nhãn "Subdomain" → "Tên miền công ty", copy kèm địa chỉ đăng nhập `/{slug}/login`.
-- **Đã verify**: typecheck/lint/build sạch; smoke test `scripts/test-tenant-domain.cjs` 8/8 PASS (rewrite 200, ép /app → /{slug}, chặn prefix công ty khác, login redirect, RPC tên công ty).
+- **Chuẩn hóa slug** (`lib/tenant-slug.ts`): `RESERVED_TENANT_SLUGS`, `slugifyTenantName`, `validateTenantSlug`, `isTenantPathSegment` — dùng chung proxy + superadmin + form tạo/đổi tên miền.
+- **Proxy** (`apps/web/src/proxy.ts`): `/{slug}/...` **rewrite** nội bộ về `/app/...`; `/{slug}/login` rewrite về `/login`. Ép chặt: chưa đăng nhập → `/{slug}/login`; gõ `/app/...` → `/{slug}/...`; vào prefix công ty KHÁC → về đúng công ty mình; chữ hoa `/Demo` → `/demo`. Superadmin vẫn mở được `/{slug}/login` (không bị đá về `/platform`).
+- **Login riêng công ty**: nhận diện slug từ pathname; hiện tên qua RPC `tenant_public_name`; cảnh báo nếu slug không tồn tại. Sau đăng nhập → `/{slug}`.
+- **Đăng xuất**: luôn về `/{slug}/login` của chính công ty.
+- **Superadmin**: cột khách hàng có **link bấm được** `/{slug}/login` (mở tab mới); nút **"Tên miền"** đổi slug + đồng bộ claim toàn bộ user.
+- **Nguyên nhân 404 thường gặp**: mở nhầm dạng subdomain `slug.optimake.com` (chưa cấu hình DNS) thay vì path `/{slug}/login`; hoặc deploy cũ chưa có proxy rewrite.
+- **Đã verify**: typecheck/lint/build sạch; smoke test `scripts/test-tenant-domain.cjs` 12/12 PASS.
 
 ### ✅ Monorepo Scaffold (2026-08-01)
 

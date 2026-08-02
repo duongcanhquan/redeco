@@ -10,19 +10,9 @@ import {
 import { useState, type FormEvent } from 'react';
 import { Field, Modal, inputClass } from '@/components/platform/modal';
 import { ModuleTreePicker } from '@/components/platform/module-tree-picker';
+import { slugifyTenantName } from '@/lib/tenant-slug';
 import type { ModuleTreeNode } from '@/services/platform.service';
 import { createCompanyAction } from './actions';
-
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 function randomPassword(): string {
   const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -128,7 +118,6 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
             <dl className="rounded-2xl bg-app/70 border border-panel/40 divide-y divide-panel/30 text-sm">
               {[
                 ['Công ty', created.companyName],
-                ['Địa chỉ đăng nhập', `/${created.slug}/login`],
                 ['Email đăng nhập', created.email],
                 ['Mật khẩu', created.password],
               ].map(([k, v]) => (
@@ -137,6 +126,19 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
                   <dd className="font-mono font-medium text-right break-all">{v}</dd>
                 </div>
               ))}
+              <div className="flex justify-between gap-4 px-4 py-2.5">
+                <dt className="text-ink-muted">Địa chỉ đăng nhập</dt>
+                <dd className="font-mono font-medium text-right break-all">
+                  <a
+                    href={`/${created.slug}/login`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-accent hover:underline"
+                  >
+                    /{created.slug}/login
+                  </a>
+                </dd>
+              </div>
             </dl>
             <div className="flex gap-3">
               <button
@@ -169,7 +171,7 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  if (!slugTouched) setSlug(slugify(e.target.value));
+                  if (!slugTouched) setSlug(slugifyTenantName(e.target.value));
                 }}
                 placeholder="Công ty TNHH ABC"
               />
@@ -178,7 +180,11 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
               id="company-slug"
               label="Tên miền công ty"
               required
-              hint={slug ? `Địa chỉ truy cập: optimake.com/${slug}` : 'Chữ thường, số, dấu gạch ngang.'}
+              hint={
+                slug
+                  ? `Địa chỉ đăng nhập: /${slug}/login (không dùng dạng ${slug}.optimake.com)`
+                  : 'Chữ thường, số, dấu gạch ngang. Đường dẫn dạng /ten-mien/login'
+              }
             >
               <input
                 id="company-slug"
@@ -187,7 +193,7 @@ export function CreateCompanyDialog({ moduleTree }: { moduleTree: ModuleTreeNode
                 value={slug}
                 onChange={(e) => {
                   setSlugTouched(true);
-                  setSlug(e.target.value);
+                  setSlug(slugifyTenantName(e.target.value));
                 }}
                 placeholder="cong-ty-abc"
               />
