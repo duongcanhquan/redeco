@@ -103,19 +103,20 @@ function LoginForm() {
   const showCompany = typeof companyName === 'string' && companyName.length > 0;
 
   return (
-    <main className="min-h-dvh flex items-center justify-center overflow-x-hidden px-3 py-10 sm:py-14">
-      <div className="login-stack">
-        {/* Optimake trên cùng — ngoài / phía trên mép vòng neon */}
-        <div className="login-brand">
-          <Logo markSize={48} textClassName="text-3xl sm:text-4xl tracking-tight" />
-        </div>
+    <main className="login-page">
+      {/* Giữa đỉnh màn hình và mép ngoài vòng neon */}
+      <div className="login-brand">
+        <Logo markSize={48} textClassName="text-3xl sm:text-4xl tracking-tight" />
+      </div>
 
-        <div className="login-scene">
-          {RING_SEGMENTS.map((i) => (
-            <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden />
-          ))}
+      {/* Vòng đăng nhập — giữa màn hình */}
+      <div className="login-scene">
+        {RING_SEGMENTS.map((i) => (
+          <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden />
+        ))}
 
-          <div className={`login-box${showCompany ? ' login-box--company' : ''}`}>
+        <div className={`login-box${showCompany ? ' login-box--company' : ''}`}>
+          <div className="login-box-top">
             {showCompany && (
               <p className="login-company">
                 <Building2 size={16} className="shrink-0 text-accent" aria-hidden />
@@ -123,65 +124,68 @@ function LoginForm() {
               </p>
             )}
             {companySlug && companyName === null && (
-              <p
-                role="alert"
-                className="login-company-alert"
-              >
+              <p role="alert" className="login-company-alert">
                 Không tìm thấy công ty “{companySlug}”. Kiểm tra lại địa chỉ hoặc liên hệ Optimake.
               </p>
             )}
-            <h1 className="sr-only">
-              {companySlug
-                ? `Đăng nhập ${companyName ?? companySlug}`
-                : 'Đăng nhập Optimake'}
-            </h1>
-            <form onSubmit={(e) => void handleSubmit(e)} noValidate>
-              <div className="input-box">
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <label htmlFor="email">Email</label>
-              </div>
-              <div className="input-box">
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <label htmlFor="password">Mật khẩu</label>
-              </div>
-
-              {error && (
-                <p role="alert" className="-mt-1 mb-2 text-center text-xs text-danger sm:text-sm">
-                  {error}
-                </p>
-              )}
-
-              <div className="mb-3 flex items-center">
-                <label className="flex min-h-10 cursor-pointer select-none items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="size-3.5 cursor-pointer rounded accent-accent"
-                  />
-                  <span className="text-xs text-ink-muted sm:text-sm">Ghi nhớ đăng nhập</span>
-                </label>
-              </div>
-
-              <button type="submit" className="login-btn" disabled={loading}>
-                {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
-              </button>
-            </form>
           </div>
+
+          <h1 className="sr-only">
+            {companySlug
+              ? `Đăng nhập ${companyName ?? companySlug}`
+              : 'Đăng nhập Optimake'}
+          </h1>
+
+          <form
+            className="login-form"
+            onSubmit={(e) => void handleSubmit(e)}
+            noValidate
+          >
+            <div className="input-box">
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <label htmlFor="email">Email</label>
+            </div>
+            <div className="input-box">
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <label htmlFor="password">Mật khẩu</label>
+            </div>
+
+            {error && (
+              <p role="alert" className="-mt-1 mb-2 text-center text-xs text-danger sm:text-sm">
+                {error}
+              </p>
+            )}
+
+            <div className="mb-2.5 flex items-center">
+              <label className="flex min-h-10 cursor-pointer select-none items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="size-3.5 cursor-pointer rounded accent-accent"
+                />
+                <span className="text-xs text-ink-muted sm:text-sm">Ghi nhớ đăng nhập</span>
+              </label>
+            </div>
+
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
+            </button>
+          </form>
         </div>
       </div>
     </main>
